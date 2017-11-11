@@ -5,7 +5,6 @@ const socketIO = require('socket.io');
 
 const PORT = process.env.PORT || 3000;
 
-console.log(__dirname);
 const server = express()
   .use(express.static(__dirname + '/public'))
   // note: the '/../node_modules' bit is because the app

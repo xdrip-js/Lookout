@@ -7,16 +7,20 @@ angular.module('AngularOpenAPS.cgm.sensor', [
     templateUrl: 'cgm/sensor/sensor.html',
     controller: 'SensorController'
   });
-  $routeProvider.when('cgm/sensor/calibration', {
+  $routeProvider.when('/cgm/sensor/calibrate', {
+    templateUrl: 'cgm/sensor/calibrate.html',
+    controller: 'SensorController'
+  });
+  $routeProvider.when('/cgm/sensor/calibration', {
     templateUrl: 'cgm/sensor/calibration.html',
     controller: 'SensorController'
   });
 })
 
 .controller('SensorController', ['$scope', 'G5', function ($scope, G5) {
+  // TODO: all I have done here is wrap G5.sensor
+  // maybe just keep an explicit ref to it
   $scope.sensor = G5.sensor;
-  $scope.insertionDate = Date.now() - 5*24*60*60*1000;
-  // $scope.state = 0x0a;
 
   $scope.age = function() {
     return G5.sensor.age();
@@ -32,6 +36,10 @@ angular.module('AngularOpenAPS.cgm.sensor', [
 
   $scope.stop = function() {
     G5.stop();
+  };
+
+  $scope.calibrate = function(value) {
+    G5.sensor.calibrate(value);
   };
 }])
 

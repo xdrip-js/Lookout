@@ -1,7 +1,6 @@
 angular.module('AngularOpenAPS', [
   'AngularOpenAPS.home',
   'AngularOpenAPS.cgm',
-  // 'AngularOpenAPS.calibrate',
   'ngRoute',
   'ngCookies',
   // 'ngTouch',
@@ -10,9 +9,8 @@ angular.module('AngularOpenAPS', [
   'chart.js'
 ])
 
-.config(function($routeProvider, $locationProvider) {
+.config(function($locationProvider) {
   $locationProvider.html5Mode(true);
-  $routeProvider.when('/settings', {templateUrl: 'settings.html', reloadOnSearch: false});
 })
 
 .service('G5', ['socketFactory', function (socketFactory) {

@@ -1,6 +1,8 @@
 angular.module('AngularOpenAPS', [
   'AngularOpenAPS.home',
   'AngularOpenAPS.cgm',
+  'AngularOpenAPS.loop',
+  'AngularOpenAPS.pump',
   'ngRoute',
   'ngCookies',
   // 'ngTouch',

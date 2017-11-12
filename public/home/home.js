@@ -15,6 +15,10 @@ angular.module('AngularOpenAPS.home', [
     return G5.sensor.glucose();
   };
 
+  $scope.glucoseAge = function() {
+    return G5.sensor.glucoseAge();
+  };
+
   $scope.arrow = function() {
     const trend = $scope.glucose().trend;
     if (trend <= -30) {

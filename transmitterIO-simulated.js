@@ -1,5 +1,5 @@
 const xDripAPS = require("./xDripAPS")();
-const Transmitter = require('..');
+const Transmitter = require('xdrip-js');
 
 module.exports = (io) => {
   let id = 'ABCDEF';

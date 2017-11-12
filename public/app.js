@@ -15,6 +15,7 @@ angular.module('AngularOpenAPS', [
   $locationProvider.html5Mode(true);
 })
 
+// TODO: consider if this is best placed within the cgm module
 .service('G5', ['socketFactory', function (socketFactory) {
   const socket = socketFactory();
 
@@ -51,12 +52,18 @@ angular.module('AngularOpenAPS', [
 
   this.sensor = {
     glucose: function() {
+      console.log("in glucose");
+      // TODO: perhaps remove this bit and use glucoseAge below
       if (glucose) {
         glucose.age = (Date.now() - glucose.readDate) / 1000
+        console.log("in glucose");
       }
       // TODO: work out if we want to expose this whole thing
       // or create a new object with just the propertiess of interest
       return glucose;
+    },
+    glucoseAge: function() {
+      return glucose ? (Date.now() - glucose.readDate) / 1000 : null;
     },
     age: function() {
       return (glucose && glucose.sessionStartDate) ? (Date.now() - glucose.sessionStartDate) / 1000 : null;

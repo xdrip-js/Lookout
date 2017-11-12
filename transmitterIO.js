@@ -1,6 +1,6 @@
 const http = require("http");
 const xDripAPS = require("./xDripAPS")();
-const Transmitter = require('..');
+const Transmitter = require('xdrip-js');
 const storage = require('node-persist');
 
 module.exports = (io) => {

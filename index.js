@@ -11,7 +11,7 @@ const server = express()
   // doesn't have its own packge.json file
   // could be an idea to separate the app out as a separate repo
   .use('/node_modules', express.static(__dirname + '/../node_modules'))
-  .use('/css', express.static(__dirname + '/../node_modules/bootstrap/dist/css')) // redirect CSS bootstrap
+  // .use('/css', express.static(__dirname + '/../node_modules/bootstrap/dist/css')) // redirect CSS bootstrap
   // prevent error message on reloads as per https://stackoverflow.com/a/35284602
   .get('/*', function(req, res){
     res.sendFile(__dirname + '/public/index.html');

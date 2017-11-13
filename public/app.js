@@ -19,64 +19,58 @@ angular.module('AngularOpenAPS', [
 .service('G5', ['socketFactory', function (socketFactory) {
   const socket = socketFactory();
 
-  let glucose;
   let id;
-
-  this.transmitter = {
-    age: function() {
-      return (glucose && glucose.activationDate) ? (Date.now() - glucose.activationDate) / 1000 : null;
-    },
-    status: function() {
-      return glucose ? glucose.status : null;
-    }
-
-    // id: function() {
-    //   return id;
-    // },
-    //
-    // // id: '123456',
-    // // version: '1.2.3.4',
-    // setID: function(id) {
-    //   socket.emit('id', id);
-    // }
+  let glucose;
+  // TODO: replace these with the real thing (faked for now)
+  let version = "1.2.3.4";
+  let lastCalibration = {
+    date: Date.now() - 12*60*60*1000,
+    glucose: 100
   };
 
-  Object.defineProperty(this.transmitter, 'id', {
-    get: function() {
+
+  this.transmitter = {
+    // properties
+    get id() {
       return id;
     },
-    set: function(id) {
-      socket.emit('id', id)
+    set id(value) {
+      socket.emit('id', value)
+    },
+    get version() {
+      return version;
+    },
+    get activationDate() {
+      return glucose ? glucose.activationDate : null;
+    },
+    get status() {
+      return glucose ? glucose.status : null;
     }
-  });
+  };
 
   this.sensor = {
-    glucose: function() {
-      console.log("in glucose");
-      // TODO: perhaps remove this bit and use glucoseAge below
-      if (glucose) {
-        glucose.age = (Date.now() - glucose.readDate) / 1000
-        console.log("in glucose");
-      }
-      // TODO: work out if we want to expose this whole thing
-      // or create a new object with just the propertiess of interest
-      return glucose;
+    // properties
+    get sessionStartDate() {
+      return glucose ? glucose.sessionStartDate : null;
     },
-    glucoseAge: function() {
-      return glucose ? (Date.now() - glucose.readDate) / 1000 : null;
+    get glucose() {
+      // only return the properties glucose, readDate and trend
+      // - we don't need the rest
+      return glucose ?
+        (({ glucose, filtered, readDate, trend }) => ({ glucose, filtered, readDate, trend }))(glucose) :
+        null;
     },
-    age: function() {
-      return (glucose && glucose.sessionStartDate) ? (Date.now() - glucose.sessionStartDate) / 1000 : null;
-    },
-    state: function() {
+    get state() {
       return glucose ? glucose.state : null;
     },
-    // insertionDate: Date.now() - 5*24*60*60*1000,
-    // state: 0x0a,
-    // calibration: {
-    //   date: Date.now() - 12*60*60*1000,
-    //   glucose: 100
-    // },
+    get lastCalibration() {
+      return lastCalibration;
+    },
+    get inSession() {
+      return glucose ? glucose.inSession : null;
+    },
+
+    // methods
     calibrate: function(value) {
       console.log('emitting a cal value of ' + value);
       socket.emit('calibrate', value);
@@ -100,7 +94,6 @@ angular.module('AngularOpenAPS', [
   });
 
   socket.on('glucose', value => {
-    console.log('got glucose of ' + value.glucose);
     glucose = value;
   });
 

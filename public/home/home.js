@@ -10,17 +10,18 @@ angular.module('AngularOpenAPS.home', [
   });
 })
 
-.controller('HomeController', ['$scope', 'G5', function ($scope, G5) {
-  $scope.glucose = function() {
-    return G5.sensor.glucose();
-  };
+.controller('HomeController', ['$scope', '$interval', 'G5', function ($scope, $interval, G5) {
+  $scope.sensor = G5.sensor;
 
-  $scope.glucoseAge = function() {
-    return G5.sensor.glucoseAge();
+  const tick = function() {
+    const glucose = G5.sensor.glucose;
+    $scope.glucoseAge = glucose ? (Date.now() - glucose.readDate) / 1000 : null;
   };
+  tick()
+  $interval(tick, 1000);
 
   $scope.arrow = function() {
-    const trend = $scope.glucose().trend;
+    const trend = G5.sensor.glucose.trend;
     if (trend <= -30) {
       return '&ddarr;'
     } else if (trend <= -20) {

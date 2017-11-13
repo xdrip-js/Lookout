@@ -17,30 +17,15 @@ angular.module('AngularOpenAPS.cgm.sensor', [
   });
 })
 
-.controller('SensorController', ['$scope', 'G5', function ($scope, G5) {
-  // TODO: all I have done here is wrap G5.sensor
-  // maybe just keep an explicit ref to it
+.controller('SensorController', ['$scope', '$interval', 'G5', function ($scope, $interval, G5) {
   $scope.sensor = G5.sensor;
 
-  $scope.age = function() {
-    return G5.sensor.age();
-  }
-
-  $scope.state = function() {
-    return G5.sensor.state();
-  }
-
-  $scope.start = function() {
-    G5.start();
+  const tick = function() {
+    const sessionStartDate = G5.sensor.sessionStartDate;
+    $scope.age = sessionStartDate ? (Date.now() - sessionStartDate) / 1000 : null;
   };
-
-  $scope.stop = function() {
-    G5.stop();
-  };
-
-  $scope.calibrate = function(value) {
-    G5.sensor.calibrate(value);
-  };
+  tick()
+  $interval(tick, 1000);
 }])
 
 .filter('state', function() {

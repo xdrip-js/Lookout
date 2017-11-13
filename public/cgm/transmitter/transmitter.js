@@ -13,26 +13,28 @@ angular.module('AngularOpenAPS.cgm.transmitter', [
   });
 })
 
-.controller('TransmitterController', ['$scope', 'G5', function ($scope, G5) {
+.controller('TransmitterController', ['$scope', '$interval', 'G5', function ($scope, $interval, G5) {
+  $scope.transmitter = G5.transmitter;
 
-  // TODO: an alternative to the following is something like
-  // $scope.transmitter = G5.transmitter;
-  // and then accessing transmitter functions using dot notation
-  $scope.id = function() {
-    return G5.transmitter.id;
-  }
+  // // and then accessing transmitter functions using dot notation
+  // $scope.id = function() {
+  //   return G5.transmitter.id;
+  // }
 
-  $scope.age = function() {
-    return G5.transmitter.age();
-  }
-
-  $scope.status = function() {
-    return G5.transmitter.status();
-  }
-
-  $scope.setID = function(id) {
-    G5.transmitter.id = id;
+  const tick = function() {
+    const activationDate = G5.transmitter.activationDate;
+    $scope.age = activationDate ? (Date.now() - activationDate) / 1000 : null;
   };
+  tick()
+  $interval(tick, 1000);
+
+  // $scope.status = function() {
+  //   return G5.transmitter.status;
+  // }
+
+  // $scope.setID = function(id) {
+  //   G5.transmitter.id = id;
+  // };
 }])
 
 .filter('status', function() {

@@ -7,11 +7,7 @@ const PORT = process.env.PORT || 3000;
 
 const server = express()
   .use(express.static(__dirname + '/public'))
-  // note: the '/../node_modules' bit is because the app
-  // doesn't have its own packge.json file
-  // could be an idea to separate the app out as a separate repo
-  .use('/node_modules', express.static(__dirname + '/../node_modules'))
-  .use('/css', express.static(__dirname + '/../node_modules/bootstrap/dist/css')) // redirect CSS bootstrap
+  .use('/node_modules', express.static(__dirname + '/node_modules'))
   // prevent error message on reloads as per https://stackoverflow.com/a/35284602
   .get('/*', function(req, res){
     res.sendFile(__dirname + '/public/index.html');

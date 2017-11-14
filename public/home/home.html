@@ -1,29 +1,29 @@
 <div class="scrollable">
   <div class="scrollable-content section">
     <div class="list-group text-center">
-      <div class="list-group-item list-group-item-home text-primary" ng-if="glucose().inSession">
+      <div class="list-group-item list-group-item-home text-primary" ng-if="sensor.inSession">
         <div >
-          {{ glucose().age | time }} ago
+          {{ glucoseAge | time }} ago
           <br>
-          {{ glucose().state | state }}
+          {{ sensor.state | state }}
         </div>
         <div>
             <h1 class="home-heading">
-              {{ glucose().glucose | glucose }} <span ng-bind-html="arrow()"></span>
+              {{ sensor.glucose.glucose | glucose }} <span ng-bind-html="arrow()"></span>
               <!-- <small><i class="fa fa-long-arrow-right text-primary"></i></small> -->
             </h1>
-            (filtered: {{ glucose().filtered | glucose }})
+            (filtered: {{ sensor.glucose.filtered | glucose }})
             <!-- +4 mg/dl -->
         </div>
       </div>
 
-      <div class="list-group-item list-group-item-home" ng-if="!glucose().inSession">
+      <div class="list-group-item list-group-item-home" ng-if="!sensor.inSession">
         <button class="btn btn-warning" ng-click="startSensor()">Start sensor</button>
       </div>
 
 
       <div class="list-group-item list-group-item-home">
-        <a class="list-group-item" href="/calibrate">Calibrate</a>
+        <a class="list-group-item" href="/cgm/sensor/calibrate">Calibrate</a>
       </div>
 
 

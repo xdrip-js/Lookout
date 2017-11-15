@@ -18,10 +18,10 @@ module.exports = (io) => {
     const transmitter = new Transmitter(id);
 
     console.log('waiting for version info');
-    transmitter.getVersion()
-    .then(version => {
-      io.emit('version', version);
-    });
+    // transmitter.getVersion()
+    // .then(version => {
+    //   io.emit('version', version);
+    // });
 
     console.log('about to hook up glucose handler');
     // hook up the tranmitter object

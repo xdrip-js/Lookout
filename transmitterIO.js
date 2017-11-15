@@ -14,8 +14,10 @@ module.exports = (io) => {
     console.log('got id of ' + id);
     id = id ? id : '500000';
 
+    console.log('instantiationg transmitter with id ' + id);
     const transmitter = new Transmitter(id);
 
+    console.log('waiting for version info');
     transmitter.getVersion()
     .then(version => {
       io.emit('version', version);

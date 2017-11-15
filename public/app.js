@@ -41,7 +41,7 @@ angular.module('AngularOpenAPS', [
       return version;
     },
     get activationDate() {
-      return glucose ? glucose.activationDate : null;
+      return glucose ? glucose.transmitterStartDate : null;
     },
     get status() {
       return glucose ? glucose.status : null;

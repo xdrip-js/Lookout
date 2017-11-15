@@ -9,8 +9,10 @@ angular.module('AngularOpenAPS.loop', [
   });
 })
 
-.controller('LoopController', ['$scope', function ($scope) {
-  $scope.iob = 3.5;
+.controller('LoopController', ['$scope', '$http', function ($scope, $http) {
+  $http.get('/root/myopenaps/monitor.iob.json').then(data => {
+    $scope.iob = data[0];
+  });
   $scope.cob = 85;
 }])
 

@@ -2,7 +2,7 @@
 
 const express = require('express');
 const socketIO = require('socket.io');
-const LoopIO = requre('./loopIO');
+const LoopIO = require('./loopIO');
 
 const PORT = process.env.PORT || 3000;
 

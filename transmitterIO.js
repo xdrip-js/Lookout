@@ -21,6 +21,7 @@ module.exports = (io) => {
       io.emit('version', version);
     });
 
+    console.log('about to hook up glucose handler');
     // hook up the tranmitter object
     transmitter.on('glucose', glucose => {
       console.log('got glucose: ' + glucose.glucose);
@@ -31,7 +32,8 @@ module.exports = (io) => {
       });
     });
 
-    io.on('connection', (socket) => {
+    console.log('about to hook up connection handler');
+    io.on('connection', socket => {
       console.log("in socket connection handler");
       // TODO: should this just be a 'data' message?
       // how do we initialise the connection with

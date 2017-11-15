@@ -11,6 +11,7 @@ angular.module('AngularOpenAPS.loop', [
 
 .controller('LoopController', ['$scope', '$http', function ($scope, $http) {
   $http.get('/root/myopenaps/monitor/iob.json').then(data => {
+    console.log(data);
     $scope.iob = data[0]["iob"];
   });
   $scope.cob = 85;

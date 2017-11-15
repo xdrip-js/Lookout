@@ -11,11 +11,12 @@ angular.module('AngularOpenAPS.loop', [
 
 .controller('LoopController', ['$scope', '$http', function ($scope, $http) {
   // $http.get('iob.json').then(data => {
-  $http.get('../../../myopenaps/monitor/iob.json').then(data => {
-    console.log(data.data);
-    console.log(data.data[0]);
-    $scope.iob = data.data[0]["iob"];
-  });
+  // $http.get('./../../../myopenaps/monitor/iob.json').then(data => {
+  //   console.log(data.data);
+  //   console.log(data.data[0]);
+  //   $scope.iob = data.data[0]["iob"];
+  // });
+  $scope.iob = 2.4;
   $scope.cob = 85;
 }])
 

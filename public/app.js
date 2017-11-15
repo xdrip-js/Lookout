@@ -102,6 +102,13 @@ angular.module('AngularOpenAPS', [
     this.sensor.calibration = calibration;
   });
 
+  // this doesn't really belong here
+  // but will stay until it finds a home
+  // in an OpenAPS service
+  socket.on('iob', iob => {
+    console.log('got iob of ' + iob);
+  })
+
 }])
 
 

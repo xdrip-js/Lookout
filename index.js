@@ -2,6 +2,7 @@
 
 const express = require('express');
 const socketIO = require('socket.io');
+const LoopIO = requre('./loopIO');
 
 const PORT = process.env.PORT || 3000;
 
@@ -25,3 +26,4 @@ const argv = require('yargs').argv;
 const TransmitterIO = argv.sim ? require('./transmitterIO-simulated') : require('./transmitterIO')
 
 TransmitterIO(io);
+LoopIO(io);

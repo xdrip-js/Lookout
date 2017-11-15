@@ -9,15 +9,33 @@ angular.module('AngularOpenAPS.loop', [
   });
 })
 
-.controller('LoopController', ['$scope', '$http', function ($scope, $http) {
+.service('OpenAPS', ['socketFactory', function (socketFactory) {
+  const socket = socketFactory({
+    ioSocket: io.connect('/loop')
+  });
+
+  this.loop = {
+    get iob() {
+      return 1.23;
+    },
+    get cob() {
+      return 84;
+    }
+  };
+
+  socket.on('iob', iob => {
+    console.log('got iob of ' + iob);
+  })
+}])
+
+.controller('LoopController', ['$scope', 'OpenAPS', function ($scope, OpenAPS) {
   // $http.get('iob.json').then(data => {
   // $http.get('./../../../myopenaps/monitor/iob.json').then(data => {
   //   console.log(data.data);
   //   console.log(data.data[0]);
   //   $scope.iob = data.data[0]["iob"];
   // });
-  $scope.iob = 2.4;
-  $scope.cob = 85;
+  $scope.loop = OpenAPS.loop;
 }])
 
 .filter('units', function() {

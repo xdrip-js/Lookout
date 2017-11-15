@@ -25,5 +25,5 @@ io.on('connection', (socket) => {
 const argv = require('yargs').argv;
 const TransmitterIO = argv.sim ? require('./transmitterIO-simulated') : require('./transmitterIO')
 
-TransmitterIO(io);
-LoopIO(io);
+TransmitterIO(io.of('/cgm'));
+LoopIO(io.of('/loop'));

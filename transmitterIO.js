@@ -1,4 +1,3 @@
-const http = require("http");
 const xDripAPS = require("./xDripAPS")();
 const Transmitter = require('xdrip-js');
 const storage = require('node-persist');
@@ -33,9 +32,12 @@ module.exports = (io) => {
     });
 
     io.on('connection', (socket) => {
+      console.log("in socket connection handler");
       // TODO: should this just be a 'data' message?
       // how do we initialise the connection with
       // all the data it needs?
+
+      console.log("about to emit id " + transmitter.id);
       socket.emit('id', transmitter.id);
       storage.getItem('glucose')
       .then(glucose => {

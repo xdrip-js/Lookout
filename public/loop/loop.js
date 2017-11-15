@@ -11,7 +11,7 @@ angular.module('AngularOpenAPS.loop', [
 
 .controller('LoopController', ['$scope', '$http', function ($scope, $http) {
   $http.get('iob.json').then(data => {
-    console.log(data);
+    console.log(data.data);
     console.log(data[0]);
     $scope.iob = data[0]["iob"];
   });

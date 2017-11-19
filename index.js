@@ -3,6 +3,7 @@
 const express = require('express');
 const socketIO = require('socket.io');
 const LoopIO = require('./loopIO');
+const PumpIO = require('./pumpIO');
 
 const PORT = process.env.PORT || 3000;
 
@@ -27,3 +28,4 @@ const TransmitterIO = argv.sim ? require('./transmitterIO-simulated') : require(
 
 TransmitterIO(io.of('/cgm'));
 LoopIO(io.of('/loop'));
+PumpIO(io.of('/pump'));

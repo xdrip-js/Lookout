@@ -10,12 +10,15 @@ angular.module('AngularOpenAPS.home', [
   });
 })
 
-.controller('HomeController', ['$scope', '$interval', 'G5', function ($scope, $interval, G5) {
+.controller('HomeController', ['$scope', '$interval', 'G5', 'OpenAPS', function ($scope, $interval, G5, OpenAPS) {
   $scope.sensor = G5.sensor;
+  $scope.loop = OpenAPS.loop;
 
   const tick = function() {
     const glucose = G5.sensor.glucose;
     $scope.glucoseAge = glucose ? (Date.now() - glucose.readDate) / 1000 : null;
+    const enacted = OpenAPS.loop.enacted;
+    $scope.enactedAge = enacted ? (Date.now() - enacted.date) / 1000 : null;
   };
   tick()
   $interval(tick, 1000);

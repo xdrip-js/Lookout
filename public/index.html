@@ -33,11 +33,19 @@
 
     <script src="app.js"></script>
     <script src="home/home.js"></script>
+    <script src="preferences/preferences.js"></script>
+
+    <!-- cgm stuff -->
     <script src="cgm/cgm.js"></script>
     <script src="cgm/transmitter/transmitter.js"></script>
     <script src="cgm/sensor/sensor.js"></script>
+
+    <!-- loop stuff -->
     <script src="loop/loop.js"></script>
+
+    <!-- pump stuff -->
     <script src="pump/pump.js"></script>
+    <script src="pump/basal/basal.js"></script>
   </head>
   <body ng-app="AngularOpenAPS" ng-controller="MyCtrl">
 
@@ -53,8 +61,11 @@
             <!-- Settings -->
             <a class="list-group-item" href="/loop">OpenAPS
               <i class="fa fa-chevron-right pull-right"></i></a>
-            <!-- Stop Sensor -->
+            <!-- Pump -->
             <a class="list-group-item" href="/pump">Pump
+              <i class="fa fa-chevron-right pull-right"></i></a>
+            <!-- Preferences -->
+            <a class="list-group-item" href="/preferences">Preferences
               <i class="fa fa-chevron-right pull-right"></i></a>
           </div>
         </div>

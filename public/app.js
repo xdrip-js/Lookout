@@ -1,5 +1,6 @@
 angular.module('AngularOpenAPS', [
   'AngularOpenAPS.home',
+  'AngularOpenAPS.preferences',
   'AngularOpenAPS.cgm',
   'AngularOpenAPS.loop',
   'AngularOpenAPS.pump',
@@ -88,6 +89,25 @@ angular.module('AngularOpenAPS', [
   return function(glucose) {
     return glucose ? (glucose/18).toFixed(1) : '--';
   };
+})
+
+.directive('glucose', function () {
+  return {
+    restrict: 'A',
+    require: 'ngModel',
+    link: function (scope, element, attrs, ngModel) {
+
+      // convert value going to user (model to view)
+      ngModel.$formatters.push(function(value) {
+        return value / 18;
+      });
+
+      // value from the user (view to model)
+      ngModel.$parsers.push(function(value) {
+        return Math.round(value * 18);
+      });
+    }
+  }
 });
 
 //

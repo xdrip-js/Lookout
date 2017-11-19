@@ -1,0 +1,25 @@
+<div ui-content-for="title">
+  <span>Preferences</span>
+</div>
+
+<div ui-content-for="navbar-left">
+  <a ui-toggle="uiSidebarLeft" class="btn btn-navbar btn-icon-only"><i class="fa fa-chevron-left fa-navbar"></i></a>
+</div>
+
+<div class="scrollable">
+  <div class="scrollable-content">
+    <div class="container-fluid section section-break">
+      <h5>Glucose units</h5>
+      <ui-shared-state id="glucoseUnits" default="0"></ui-shared-state>
+      <div class="btn-group">
+        <a href class="btn btn-default" ui-set="{glucoseUnits: 0}" ui-class="{'active': glucoseUnits == 0}">mg/dL</a>
+        <a href class="btn btn-default" ui-set="{glucoseUnits: 1}" ui-class="{'active': glucoseUnits == 1}">mmol/L</a>
+
+        <!-- <a href class="btn btn-default" ui-turn-on="button1" ui-shared-state="button1" ui-class="{'active': button1}" ui-exclusion-group="glucoseUnits">mg/dL</a>
+        <a href class="btn btn-default" ui-turn-on="button2" ui-shared-state="button2" ui-class="{'active': button2}" ui-exclusion-group="glucoseUnits">mmol/L</a> -->
+        <p>{{ button1 }}</p>
+        <p>{{ button2 }}</p>
+      </div>
+    </div>
+  </div>
+</div>

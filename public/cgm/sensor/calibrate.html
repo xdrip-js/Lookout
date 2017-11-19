@@ -12,10 +12,12 @@
       <fieldset>
         <legend>Enter BG meter value</legend>
         <div class="form-group has-success has-feedback">
-          <label>BGL (mg/dL)</label>
-          <input type="number"
-                 min="40"
-                 max="400"
+          <label>BGL (mmol/L)</label>
+          <input glucose
+                 type="number"
+                 step="0.1"
+                 ng-min="40"
+                 ng-max="400"
                  ng-model="value"
                  class="form-control"
                  placeholder="BGL">

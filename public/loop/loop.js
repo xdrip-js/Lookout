@@ -14,18 +14,30 @@ angular.module('AngularOpenAPS.loop', [
     ioSocket: io.connect('/loop')
   });
 
+  let iob;
+  let enacted;
+
   this.loop = {
     get iob() {
-      return 1.23;
+      return iob;
     },
     get cob() {
       return 84;
+    },
+    get enacted() {
+      return enacted;
     }
   };
 
-  socket.on('iob', iob => {
-    console.log('got iob of ' + iob);
-  })
+  socket.on('iob', value => {
+    console.log('got iob of ' + value);
+    iob = value;
+  });
+
+  socket.on('enacted', value => {
+    console.log('got enacted at ' + value.date);
+    enacted = value;
+  });
 }])
 
 .controller('LoopController', ['$scope', 'OpenAPS', function ($scope, OpenAPS) {
@@ -40,7 +52,7 @@ angular.module('AngularOpenAPS.loop', [
 
 .filter('units', function() {
   return function(value) {
-    return value.toFixed(1) + ' U'
+    return value ? value.toFixed(1) + ' U' : '--';
   };
 })
 

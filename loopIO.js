@@ -10,16 +10,18 @@ module.exports = (io) => {
 
   const readIOB = (path) => {
     console.log(`Reading file ${path}`);
-    fs.readFile(path, 'utf8', function (err, data) {
-      if (err) return; // we'll not consider error handling for now
-      try {
-        const obj = JSON.parse(data);
-        iob = obj[0]['iob'];
-        io.emit('iob', iob);
-      } catch(e) {
-        return;
-      }
-    });
+    setTimeout(function () {
+      fs.readFile(path, 'utf8', function (err, data) {
+        if (err) return; // we'll not consider error handling for now
+        try {
+          const obj = JSON.parse(data);
+          iob = obj[0]['iob'];
+          io.emit('iob', iob);
+        } catch(e) {
+          return;
+        }
+      });
+    }, 1000);
   }
   chokidar.watch(openapsDir + '/iob.json')
   .on('change', readIOB)
@@ -27,27 +29,31 @@ module.exports = (io) => {
 
   const readEnacted = (path) => {
     console.log(`Reading file ${path}`);
-    fs.readFile(path, 'utf8', function (err, data) {
-      if (err) return; // we'll not consider error handling for now
-      try {
-        const obj = JSON.parse(data);
-        enacted = (({
-          timestamp,
-          rate,
-          duration,
-          units
-        }) => ({
-          date: moment(timestamp).toDate().getTime(),
-          rate,
-          duration,
-          units
-        }))(obj);
-        console.log(enacted);
-        io.emit('enacted', enacted);
-      } catch(e) {
-        return;
-      }
-    });
+    // use timeout of 1 s to make sure the write operation is finished
+    // as per https://github.com/paulmillr/chokidar/issues/365#issuecomment-146896170
+    setTimeout(function () {
+      fs.readFile(path, 'utf8', function (err, data) {
+        if (err) return; // we'll not consider error handling for now
+        try {
+          const obj = JSON.parse(data);
+          enacted = (({
+            timestamp,
+            rate,
+            duration,
+            units
+          }) => ({
+            date: moment(timestamp).toDate().getTime(),
+            rate,
+            duration,
+            units
+          }))(obj);
+          console.log(enacted);
+          io.emit('enacted', enacted);
+        } catch(e) {
+          return;
+        }
+      });
+    }, 1000);
   }
   chokidar.watch(openapsDir + '/enact/enacted.json')
   .on('change', readEnacted)

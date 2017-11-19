@@ -1,5 +1,6 @@
 const chokidar = require('chokidar');
 const fs = require('fs');
+const moment = require('moment');
 
 module.exports = (io) => {
   const openapsDir = '/root/myopenaps';
@@ -36,7 +37,7 @@ module.exports = (io) => {
           duration,
           units
         }) => ({
-          date: new Date(Date(timestamp)).getTime(),
+          date: moment(timestamp).toDate().getTime(),
           rate,
           duration,
           units

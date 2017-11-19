@@ -6,11 +6,17 @@ module.exports = (io) => {
 
   const readBasalProfile = (path) => {
     console.log(`Reading file ${path}`);
-    fs.readFile(path, 'utf8', function (err, data) {
-      if (err) throw err; // we'll not consider error handling for now
-      basalProfile = JSON.parse(data);
-      io.emit('basalProfile', basalProfile);
-    });
+    setTimeout(function() {
+      fs.readFile(path, 'utf8', function (err, data) {
+        if (err) return; // we'll not consider error handling for now
+        try {
+          basalProfile = JSON.parse(data);
+          io.emit('basalProfile', basalProfile);
+        } catch (e) {
+          return;
+        }
+      });
+    }, 1000);
   }
 
   chokidar.watch('myopenaps/settings/basal_profile.json')

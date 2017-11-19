@@ -36,7 +36,7 @@ module.exports = (io) => {
           duration,
           units
         }) => ({
-          date: new Date(timestamp).getTime(),
+          date: new Date(Date(timestamp)).getTime(),
           rate,
           duration,
           units

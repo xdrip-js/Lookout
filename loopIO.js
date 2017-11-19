@@ -10,10 +10,14 @@ module.exports = (io) => {
   const readIOB = (path) => {
     console.log(`Reading file ${path}`);
     fs.readFile(path, 'utf8', function (err, data) {
-      if (err) throw err; // we'll not consider error handling for now
-      const obj = JSON.parse(data);
-      iob = obj[0]['iob'];
-      io.emit('iob', iob);
+      if (err) return; // we'll not consider error handling for now
+      try {
+        const obj = JSON.parse(data);
+        iob = obj[0]['iob'];
+        io.emit('iob', iob);
+      } catch(e) {
+        return;
+      }
     });
   }
   chokidar.watch(openapsDir + '/iob.json')
@@ -23,20 +27,25 @@ module.exports = (io) => {
   const readEnacted = (path) => {
     console.log(`Reading file ${path}`);
     fs.readFile(path, 'utf8', function (err, data) {
-      if (err) throw err; // we'll not consider error handling for now
-      enacted = (({
-        timestamp,
-        rate,
-        duration,
-        units
-      }) => ({
-        date: new Date(timestamp).getTime(),
-        rate,
-        duration,
-        units
-      }))(JSON.parse(data));
-      console.log(enacted);
-      io.emit('enacted', enacted);
+      if (err) return; // we'll not consider error handling for now
+      try {
+        const obj = JSON.parse(data);
+        enacted = (({
+          timestamp,
+          rate,
+          duration,
+          units
+        }) => ({
+          date: new Date(timestamp).getTime(),
+          rate,
+          duration,
+          units
+        }))(obj);
+        console.log(enacted);
+        io.emit('enacted', enacted);
+      } catch(e) {
+        return;
+      }
     });
   }
   chokidar.watch(openapsDir + '/enact/enacted.json')

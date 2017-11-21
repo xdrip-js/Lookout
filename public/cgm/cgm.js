@@ -10,7 +10,6 @@ angular.module('AngularOpenAPS.cgm', [
   });
 })
 
-// TODO: consider if this is best placed within the cgm module
 .service('G5', ['socketFactory', function (socketFactory) {
   const socket = socketFactory({
     ioSocket: io.connect('/cgm')
@@ -73,6 +72,7 @@ angular.module('AngularOpenAPS.cgm', [
       socket.emit('calibrate', value);
     },
     start: function() {
+      console.log('starting sensor');
       socket.emit('startSensor');
     },
     stop: function() {

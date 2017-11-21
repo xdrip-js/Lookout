@@ -15,10 +15,24 @@ angular.module('AngularOpenAPS.cgm.sensor', [
     templateUrl: 'cgm/sensor/calibration.html',
     controller: 'SensorController'
   });
+  $routeProvider.when('/cgm/sensor/pending', {
+    templateUrl: 'cgm/sensor/pending.html',
+    controller: 'SensorController'
+  });
 })
 
 .controller('SensorController', ['$scope', '$interval', 'G5', function ($scope, $interval, G5) {
   $scope.sensor = G5.sensor;
+
+  // TODO: move this into the G5 service - it doesn't belong here in the controller
+  $scope.pendings = [
+    {date: Date.now(), glucose: 100},
+    {date: Date.now() - 1*60*1000, glucose: 100},
+    {date: Date.now() - 2*60*1000, glucose: 100},
+    {date: Date.now() - 3*60*1000, glucose: 100},
+    {date: Date.now() - 4*60*1000, glucose: 100},
+    {date: Date.now() - 5*60*1000, glucose: 100}
+  ];
 
   const tick = function() {
     const sessionStartDate = G5.sensor.sessionStartDate;

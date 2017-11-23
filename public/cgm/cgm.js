@@ -24,6 +24,14 @@ angular.module('AngularOpenAPS.cgm', [
     glucose: 100
   };
 
+  let pendingActions = [
+    {date: Date.now(), glucose: 100},
+    {date: Date.now() - 1*60*1000, glucose: 100},
+    {date: Date.now() - 2*60*1000, glucose: 100},
+    {date: Date.now() - 3*60*1000, glucose: 100},
+    {date: Date.now() - 4*60*1000, glucose: 100},
+    {date: Date.now() - 5*60*1000, glucose: 100}
+  ];
 
   this.transmitter = {
     // properties
@@ -50,7 +58,7 @@ angular.module('AngularOpenAPS.cgm', [
       return glucose ? glucose.sessionStartDate : null;
     },
     get glucose() {
-      // only return the properties glucose, readDate and trend
+      // only return the properties glucose, filtered, readDate and trend
       // - we don't need the rest
       return glucose ?
         (({ glucose, filtered, readDate, trend }) => ({ glucose, filtered, readDate, trend }))(glucose) :
@@ -64,6 +72,9 @@ angular.module('AngularOpenAPS.cgm', [
     },
     get inSession() {
       return glucose ? glucose.inSession : null;
+    },
+    get pendingActions() {
+      return pendingActions;
     },
 
     // methods

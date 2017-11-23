@@ -9,8 +9,9 @@
 <div class="scrollable">
   <div class="scrollable-content">
     <div class="list-group">
-      <span ng-repeat="pending in pendings" class="list-group-item">{{ pending.date | date:'short' }}
-        <span class="pull-right">5.6 mmol/L</span></span>
+      <em ng-show="!sensor.pendingActions.length" class="list-group-item">No pending actions</em>
+      <span ng-repeat="action in sensor.pendingActions" class="list-group-item">{{ action.date | date:'short' }}
+        <span class="pull-right">{{ action.glucose | glucose }} mmol/L</span></span>
     </div>
   </div>
 </div>

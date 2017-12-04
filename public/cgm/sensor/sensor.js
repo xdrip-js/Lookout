@@ -21,7 +21,7 @@ angular.module('AngularOpenAPS.cgm.sensor', [
   });
 })
 
-.controller('SensorController', ['$scope', '$interval', 'G5', function ($scope, $interval, G5) {
+.controller('SensorController', ['$scope', '$interval', '$location', 'G5', function ($scope, $interval, $location, G5) {
   $scope.sensor = G5.sensor;
 
   const tick = function() {
@@ -30,6 +30,12 @@ angular.module('AngularOpenAPS.cgm.sensor', [
   };
   tick()
   $interval(tick, 1000);
+
+  $scope.calibrate = function(value) {
+    console.log('in new valibrate');
+    G5.sensor.calibrate(value);
+    $location.path('/cgm/sensor/pending');
+  };
 }])
 
 .filter('state', function() {

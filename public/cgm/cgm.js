@@ -24,14 +24,14 @@ angular.module('AngularOpenAPS.cgm', [
     glucose: 100
   };
 
-  let pendingActions = [
-    {date: Date.now(), glucose: 100},
-    {date: Date.now() - 1*60*1000, glucose: 100},
-    {date: Date.now() - 2*60*1000, glucose: 100},
-    {date: Date.now() - 3*60*1000, glucose: 100},
-    {date: Date.now() - 4*60*1000, glucose: 100},
-    {date: Date.now() - 5*60*1000, glucose: 100}
-  ];
+  let pendingActions;// = [
+  //   {date: Date.now(), glucose: 100},
+  //   {date: Date.now() - 1*60*1000, glucose: 100},
+  //   {date: Date.now() - 2*60*1000, glucose: 100},
+  //   {date: Date.now() - 3*60*1000, glucose: 100},
+  //   {date: Date.now() - 4*60*1000, glucose: 100},
+  //   {date: Date.now() - 5*60*1000, glucose: 100}
+  // ];
 
   this.transmitter = {
     // properties
@@ -108,5 +108,10 @@ angular.module('AngularOpenAPS.cgm', [
   socket.on('calibration', calibration => {
     console.log('got calibration');
     this.sensor.calibration = calibration;
+  });
+
+  socket.on('pending', pending => {
+    console.log('got pending');
+    pendingActions = pending;
   });
 }]);

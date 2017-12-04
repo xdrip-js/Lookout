@@ -13,8 +13,12 @@ function listenToTransmitter() {
   });
 
   worker.on('message', function(m) {
-    // Receive results from child process
-    console.log('received filtered glucose of : ' + m.filtered);
+    if (m.cmd == "getMessages") {
+      worker.send([]);
+    } else if (m.cmd == "glucose"){
+      // Receive results from child process
+      console.log('received filtered glucose of : ' + m.data.filtered);
+    }
   });
 
   worker.on('exit', function(m) {
@@ -22,9 +26,6 @@ function listenToTransmitter() {
     console.log('exited');
     setTimeout(listenToTransmitter, 60000);
   });
-
-  // TODO: we will send an array of messages here
-  worker.send(100);
 }
 
 listenToTransmitter();

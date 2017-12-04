@@ -24,16 +24,6 @@ angular.module('AngularOpenAPS.cgm.sensor', [
 .controller('SensorController', ['$scope', '$interval', 'G5', function ($scope, $interval, G5) {
   $scope.sensor = G5.sensor;
 
-  // TODO: move this into the G5 service - it doesn't belong here in the controller
-  $scope.pendings = [
-    {date: Date.now(), glucose: 100},
-    {date: Date.now() - 1*60*1000, glucose: 100},
-    {date: Date.now() - 2*60*1000, glucose: 100},
-    {date: Date.now() - 3*60*1000, glucose: 100},
-    {date: Date.now() - 4*60*1000, glucose: 100},
-    {date: Date.now() - 5*60*1000, glucose: 100}
-  ];
-
   const tick = function() {
     const sessionStartDate = G5.sensor.sessionStartDate;
     $scope.age = sessionStartDate ? (Date.now() - sessionStartDate) / 1000 : null;
@@ -61,7 +51,7 @@ angular.module('AngularOpenAPS.cgm.sensor', [
        return "Enter new BG meter value";
      case 0x0b:
        return "Failed sensor";
-     case 0x0c:
+     case 0x12:
        return "???";
      default:
        return state ? "Unknown: 0x" + state.toString(16) : '--';

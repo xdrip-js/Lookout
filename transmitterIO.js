@@ -6,6 +6,7 @@ module.exports = (io) => {
   let id;
   let pending = [];
 
+  // TODO: this should timeout, and cancel when we get a new id.
   const listenToTransmitter = (id) => {
     const worker = cp.fork('./transmitter-worker', [id], {
       env: {

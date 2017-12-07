@@ -8,7 +8,7 @@ module.exports = (io) => {
 
   // TODO: this should timeout, and cancel when we get a new id.
   const listenToTransmitter = (id) => {
-    const worker = cp.fork('./transmitter-worker', [id], {
+    const worker = cp.fork(__dirname + '/transmitter-worker', [id], {
       env: {
         DEBUG: 'transmitter,bluetooth-manager'
       }

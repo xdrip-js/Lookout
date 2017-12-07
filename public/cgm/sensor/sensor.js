@@ -32,7 +32,6 @@ angular.module('AngularOpenAPS.cgm.sensor', [
   $interval(tick, 1000);
 
   $scope.calibrate = function(value) {
-    console.log('in new valibrate');
     G5.sensor.calibrate(value);
     $location.path('/cgm/sensor/pending');
   };

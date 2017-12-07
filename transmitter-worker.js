@@ -19,4 +19,8 @@ transmitter.on('glucose', glucose => {
   process.send({msg: "glucose", data: glucose});
 });
 
+transmitter.on('messageProcessed', data => {
+  process.send({msg: 'messageProcessed', data});
+});
+
 transmitter.on('disconnect', process.exit);

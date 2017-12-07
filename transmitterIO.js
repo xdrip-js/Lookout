@@ -21,7 +21,6 @@ module.exports = (io) => {
         // shuts down before acting on them, or in the
         // event of lost comms
         // better to return something from the worker
-        pending = [];
         io.emit('pending', pending);
       } else if (m.msg == "glucose") {
         const glucose = m.data;
@@ -31,6 +30,10 @@ module.exports = (io) => {
           io.emit('glucose', glucose);
           xDripAPS.post(glucose);
         });
+      } else if (m.msg == 'messageProcessed') {
+        // TODO: check that dates match
+        pending.shift();
+        io.emit('pending', pending);
       }
     });
 

@@ -11,7 +11,7 @@
     <div class="list-group">
       <em ng-show="!sensor.pendingActions.length" class="list-group-item">No pending actions</em>
       <span ng-repeat="action in sensor.pendingActions" class="list-group-item">{{ action.date | date:'shortTime' }}
-        <span class="pull-right">{{ action.glucose | glucose }} mmol/L</span></span>
+        <span class="pull-right">Calibrate @ {{ action.glucose | glucose }} mmol/L</span></span>
     </div>
   </div>
 </div>

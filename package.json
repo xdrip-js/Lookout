@@ -24,7 +24,7 @@
     "node-persist": "^2.1.0",
     "request": "^2.83.0",
     "socket.io": "^1.7.3",
-    "xdrip-js": "thebookins/xdrip-js#v1.1.1",
+    "xdrip-js": "thebookins/xdrip-js#dev",
     "yargs": "^10.0.3"
   },
   "devDependencies": {

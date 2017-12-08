@@ -79,19 +79,18 @@ module.exports = (io) => {
       });
       socket.on('startSensor', () => {
         console.log('received startSensor command');
-        // transmitter.startSensor();
+        pending.push({date: Date.now(), type: "StartSensor"});
+        io.emit('pending', pending)
       });
       socket.on('stopSensor', () => {
         console.log('received stopSensor command');
+        pending.push({date: Date.now(), type: "StopSensor"});
+        io.emit('pending', pending)
       });
       socket.on('calibrate', glucose => {
         console.log('received calibration of ' + glucose);
-        pending.push({date: Date.now(), glucose});
+        pending.push({date: Date.now(), type: "CalibrateSensor", glucose});
         io.emit('pending', pending)
-        // transmitter.calibrate(glucose);
-        // const pending = transmitter.calibrate(glucose);
-        // storage.setItemSync('calibration', pending);
-        // io.emit('calibration', pending);
       });
       socket.on('id', value => {
         console.log('received id of ' + value);

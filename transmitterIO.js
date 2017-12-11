@@ -35,7 +35,11 @@ module.exports = (io) => {
         pending.shift();
         io.emit('pending', pending);
       } else if (m.msg == "calibrationData") {
-        io.emit('calibrationData', m.data);
+        // TODO: save to node-persist?
+        storage.setItem('calibration', m.data)
+        .then(() => {
+          io.emit('calibrationData', m.data);
+        })
       }
     });
 
@@ -76,7 +80,7 @@ module.exports = (io) => {
       storage.getItem('calibration')
       .then(calibration => {
         if (calibration) {
-          socket.emit('calibration', calibration);
+          socket.emit('calibrationData', calibration);
         }
       });
       socket.on('startSensor', () => {

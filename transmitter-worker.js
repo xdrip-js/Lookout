@@ -23,4 +23,8 @@ transmitter.on('messageProcessed', data => {
   process.send({msg: 'messageProcessed', data});
 });
 
+transmitter.on('calibrationData', data => {
+  process.send({msg: 'calibrationData', data});
+});
+
 transmitter.on('disconnect', process.exit);

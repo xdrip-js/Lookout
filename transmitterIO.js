@@ -34,6 +34,8 @@ module.exports = (io) => {
         // TODO: check that dates match
         pending.shift();
         io.emit('pending', pending);
+      } else if (m.msg == "calibrationData") {
+        io.emit('calibrationData', m.data);
       }
     });
 

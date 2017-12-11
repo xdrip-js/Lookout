@@ -19,10 +19,7 @@ angular.module('AngularOpenAPS.cgm', [
   let glucose;
   // TODO: replace these with the real thing (faked for now)
   let version = "1.2.3.4";
-  let lastCalibration = {
-    date: Date.now() - 12*60*60*1000,
-    glucose: 100
-  };
+  let lastCalibration;
 
   let pendingActions;// = [
   //   {date: Date.now(), glucose: 100},
@@ -113,5 +110,10 @@ angular.module('AngularOpenAPS.cgm', [
   socket.on('pending', pending => {
     console.log('got pending');
     pendingActions = pending;
+  });
+
+  socket.on('calibrationData', data => {
+    console.log('got calibration data');
+    lastCalibration = data;
   });
 }]);

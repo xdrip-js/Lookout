@@ -94,15 +94,17 @@ angular.module('AngularOpenAPS', [
 })
 
 .filter('glucose', ['SharedState', function(SharedState) {
-  return function(glucose, displayUnits) {
+  return function(glucose) {
     displayUnits = displayUnits || true;
     const units = SharedState.get('glucoseUnits');
     if (!glucose) return '--';
     switch (units) {
       case 'mg/dL':
-        return glucose.toFixed(0) + (displayUnits) ? ' ' + units : '';
+        // return glucose.toFixed(0) + (displayUnits) ? ' ' + units : '';
+        return glucose.toFixed(0) + ' ' + units;
       case 'mmol/L':
-        return (glucose/18).toFixed(1) + (displayUnits) ? ' ' + units : '';
+        // return (glucose/18).toFixed(1) + (displayUnits) ? ' ' + units : '';
+        return glucose.toFixed(0) + ' ' + units;
       default:
         return 'ERR';
     }

@@ -95,7 +95,7 @@ angular.module('AngularOpenAPS', [
 
 .filter('glucose', ['SharedState', function(SharedState) {
   return function(glucose) {
-    displayUnits = displayUnits || true;
+    // displayUnits = displayUnits || true;
     const units = SharedState.get('glucoseUnits');
     if (!glucose) return '--';
     switch (units) {

@@ -12,7 +12,8 @@
       <fieldset>
         <legend>Enter BG meter value</legend>
         <div class="form-group has-success has-feedback">
-          <label>BGL (mmol/L)</label>
+          <label ui-if="glucoseUnits == 'mmol/L'">BGL (mmol/L)</label>
+          <label ui-if="glucoseUnits == 'mg/dL'">BGL (mg/dL)</label>
           <input glucose
                  type="number"
                  step="0.1"

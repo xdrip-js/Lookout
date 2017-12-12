@@ -11,7 +11,7 @@
     <div class="list-group">
       <em ng-if="!sensor.lastCalibration" class="list-group-item">No calibrations</em>
       <span ng-if="sensor.lastCalibration" class="list-group-item">{{ sensor.lastCalibration.date | date:'MMM d, y @ h:mm a' }}
-        <span class="pull-right">{{ sensor.lastCalibration.glucose | glucose }} mmol/L</span></span>
+        <span class="pull-right">{{ sensor.lastCalibration.glucose | glucose }}</span></span>
     </div>
   </div>
 </div>

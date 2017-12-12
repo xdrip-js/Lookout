@@ -6,6 +6,7 @@ angular.module('AngularOpenAPS', [
   'AngularOpenAPS.pump',
   'ngRoute',
   'ngCookies',
+  'mobile-angular-ui.core.sharedState',
   // 'ngTouch',
   'mobile-angular-ui',
   'btford.socket-io',
@@ -16,7 +17,7 @@ angular.module('AngularOpenAPS', [
   $locationProvider.html5Mode(true);
 })
 
-.controller('MyCtrl', ['$rootScope', '$scope', '$cookies', function ($rootScope, $scope, $cookies) {
+.controller('MyCtrl', ['$rootScope', '$scope', '$cookies', 'SharedState', function ($rootScope, $scope, $cookies, SharedState) {
   $rootScope.$on('$routeChangeStart', function() {
     $rootScope.loading = true;
   });
@@ -25,10 +26,17 @@ angular.module('AngularOpenAPS', [
     $rootScope.loading = false;
   });
 
-  $scope.units = $cookies.get('units') || 'mg/dl';
+  SharedState.initialize($scope, 'glucoseUnits', {defaultValue: $cookies.get('glucoseUnits') || 'mg/dL'});
+  $scope.$on('mobile-angular-ui.state.changed.glucoseUnits', function(e, newVal, oldVal) {
+    $cookies.put('glucoseUnits', newVal);
+  });
+
+  // app.controller('controller1', function($scope, SharedState){
+  // SharedState.initialize($scope, 'myId');
+// });
+
 
   // $cookies.put('myFavorite', 'oatmeal');
-  console.log('units = ' + $scope.units);
 
   //   // for demo chart
   //   $scope.labels = ["January", "February", "March", "April", "May", "June", "July"];
@@ -85,13 +93,22 @@ angular.module('AngularOpenAPS', [
   };
 })
 
-.filter('glucose', function() {
+.filter('glucose', ['SharedState', function(SharedState) {
   return function(glucose) {
-    return glucose ? (glucose/18).toFixed(1) : '--';
+    const units = SharedState.get('glucoseUnits');
+    if (!glucose) return '--';
+    switch (units) {
+      case 'mg/dL':
+        return glucose.toFixed(0) + ' ' + units;
+      case 'mmol/L':
+        return (glucose/18).toFixed(1) + ' ' + units;
+      default:
+        return 'ERR';
+    }
   };
-})
+}])
 
-.directive('glucose', function () {
+.directive('glucose', ['SharedState', function (SharedState) {
   return {
     restrict: 'A',
     require: 'ngModel',
@@ -99,16 +116,34 @@ angular.module('AngularOpenAPS', [
 
       // convert value going to user (model to view)
       ngModel.$formatters.push(function(value) {
-        return value / 18;
+        const units = SharedState.get('glucoseUnits');
+        switch (units) {
+          case 'mmol/L':
+            factor = 18;
+            break;
+          case 'mg/dL':
+          default:
+            factor = 1;
+        }
+        return value / factor;
       });
 
       // value from the user (view to model)
       ngModel.$parsers.push(function(value) {
-        return Math.round(value * 18);
+        const units = SharedState.get('glucoseUnits');
+        switch (units) {
+          case 'mmol/L':
+            factor = 18;
+            break;
+          case 'mg/dL':
+          default:
+            factor = 1;
+        }
+        return Math.round(value * factor);
       });
     }
   }
-});
+}]);
 
 //
 // app.filter('mg_per_dl', function() {

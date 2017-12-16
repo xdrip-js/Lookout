@@ -72,7 +72,7 @@ module.exports = () => {
       // req.end();
 
       const optionsNS = {
-          url: 'http://second15.herokuapp.com/api/v1/entries',
+          url: ns_url + '/api/v1/entries',
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

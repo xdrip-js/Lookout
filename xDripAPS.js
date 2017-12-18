@@ -46,8 +46,20 @@ module.exports = () => {
 
       const data = JSON.stringify(entry);
 
-      const ns_url = process.env.NIGHTSCOUT_HOST;
       const secret = process.env.API_SECRET;
+      let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json';
+      let ns_headers = {
+          'Content-Type': 'application/json'
+      };
+
+      if (secret.startsWith("token=")) {
+        ns_url = ns_url + '?' + secret;
+      } else {
+        ns_headers = {
+          'Content-Type': 'application/json',
+          'API-SECRET': secret
+        };
+      }
 
       // // first post to localhost
       // let options = {
@@ -72,12 +84,9 @@ module.exports = () => {
       // req.end();
 
       const optionsNS = {
-          url: ns_url + '/api/v1/entries',
+          url: ns_url,
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'API-SECRET': secret
-          },
+          headers: ns_headers,
           body: entry,
           json: true
       };

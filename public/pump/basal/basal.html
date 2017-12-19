@@ -1,0 +1,16 @@
+<div ui-content-for="title">
+  <span>Basal</span>
+</div>
+
+<div ui-content-for="navbar-left">
+  <a href="/pump" class="btn btn-navbar btn-icon-only"><i class="fa fa-chevron-left fa-navbar"></i></a>
+</div>
+
+<div class="scrollable">
+  <div class="scrollable-content">
+    <div class="list-group">
+      <span ng-repeat="rate in basal.profile" class="list-group-item">{{ rate.minutes | basalMinute}}
+        <span class="pull-right">{{ rate.rate | basalRate }}</span></span>
+    </div>
+  </div>
+</div>

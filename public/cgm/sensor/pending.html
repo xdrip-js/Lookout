@@ -1,16 +1,20 @@
 <div ui-content-for="title">
-  <span>Pending Actions</span>
+  <span>Pending</span>
 </div>
 
 <div ui-content-for="navbar-left">
-  <a href="/settings" class="btn btn-navbar btn-icon-only"><i class="fa fa-chevron-left fa-navbar"></i></a>
+  <a href="/cgm/sensor" class="btn btn-navbar btn-icon-only"><i class="fa fa-chevron-left fa-navbar"></i></a>
 </div>
 
 <div class="scrollable">
   <div class="scrollable-content">
     <div class="list-group">
-      <span class="list-group-item">Calibration
-        <span class="pull-right">{{ calibration.glucose }} mg/dl @ {{ calibration.time | date:'shortTime' }}</span></span>
+      <em ng-show="!sensor.pendingActions.length" class="list-group-item">No pending actions</em>
+      <span ng-repeat="action in sensor.pendingActions" class="list-group-item">{{ action.date | date:'shortTime' }}
+        <span ng-if="action.type=='StartSensor'" class="pull-right">Start sensor</span>
+        <span ng-if="action.type=='CalibrateSensor'" class="pull-right">Calibrate @ {{ action.glucose | glucose }}</span>
+        <span ng-if="action.type=='StopSensor'" class="pull-right">Stop sensor</span>
+      </span>
     </div>
   </div>
 </div>

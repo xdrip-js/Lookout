@@ -15,6 +15,10 @@ module.exports = (io) => {
     sessionStartDate: Date.now(),
     activationDate: Date.now() - 17*24*60*60*1000
   };
+  const glucoseHistory = [
+    {readDate: Date.now(), glucose: 100},
+    {readDate: Date.now() - 15*60000, glucose: 80}
+  ];
   let calibration = {
     date: Date.now() - 12*60*60*1000,
     glucose: 100
@@ -33,9 +37,9 @@ module.exports = (io) => {
   io.on('connection', (socket) => {
     socket.emit('id', id);
     socket.emit('version', '1.2.3.4');
-    console.log('emitting glucose of ' + glucose.glucose);
     socket.emit('glucose', glucose);
     socket.emit('calibration', calibration);
+    socket.emit('glucoseHistory', glucoseHistory);
 
     socket.on('startSensor', () => {
       // transmitter.startSensor();

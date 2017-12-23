@@ -12,7 +12,7 @@
               {{ sensor.glucose.glucose | glucose: true }}
               <span ng-bind-html="arrow()"></span>
             </h1>
-            (filtered: {{ sensor.glucose.filtered | glucose }})
+            (filtered: {{ sensor.glucose.filtered | glucose: true }}, unfiltered: {{ sensor.glucose.unfiltered | glucose }})
             <!-- +4 mg/dl -->
         </div>
       </div>
@@ -32,14 +32,9 @@
         <p ng-if="loop.enacted.units">SMB {{ loop.enacted.units | number:2 }} U</p>
         <!--  {{ data.enacted.duration }} + SMB {{ data.enacted.units|default("0", true) }}U</p> -->
       </div>
-
-
-      <!-- <div class="list-group-item list-group-item-home">
-        <canvas id="line" class="chart chart-line" chart-data="data"
-          chart-labels="labels" chart-series="series" chart-options="options"
-          chart-dataset-override="datasetOverride" chart-click="onClick">
-        </canvas>
-      </div> -->
+      <div class="list-group-item list-group-item-home">
+        <glucose-chart></glucose-chart>
+      </div>
   </div>
 </div>
 
@@ -52,14 +47,5 @@
         <button class="btn btn-primary" type="submit" ng-disabled="!form.$valid || (!calibration.value)">Calibrate</button>
       </form> -->
     <!-- </div>
-    <div>
-      <h2>Transmitter Details</h2>
-      <p>Status: {{ status | status }}</p>
-      <p>State: {{ state | state }}</p>
-      <p>Glucose time: {{ time | date:'medium' }}</p>
-      <p>Glucose: {{ glucose | mg_per_dl }}</p>
-      <p>Unfiltered glucose: {{ unfiltered | mg_per_dl }}</p>
-      <p>In session: {{ inSession }}</p>
-    </div>
   </div>
 </div> -->

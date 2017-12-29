@@ -30,7 +30,7 @@ To view the app, open a browser and navigate to `http://<local IP address>:3000`
 ![app](https://user-images.githubusercontent.com/12263040/29741914-36d4bfe4-8ab9-11e7-891e-6c23263db499.png)
 
 ## Start at Boot
-When you are comfortable with the Lookout's performance, you can configure the system to start it as a daemon at boot time by adding the following line to root's crontab.
+When you are comfortable with the Lookout's performance, you can configure the system to start it as a daemon at boot time by adding a line to root's crontab.
 
 To edit root's crontab execute:
 ```

@@ -117,6 +117,48 @@ module.exports = () => {
           console.log('uploaded to xDripAPS, statusCode = ' + response.statusCode);
         }
       })
+    },
+
+    postCalibration: (calData) => {
+
+      const entry = [{
+        'device': 'openaps://' + os.hostname(),
+        'type': 'cal',
+        'date': calData.date,
+        'scale': calData.scale,
+        'intercept': calData.intercept,
+        'slope': calData.slope,
+      }];
+
+      const data = JSON.stringify(entry);
+
+      const secret = process.env.API_SECRET;
+      let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json';
+      let ns_headers = {
+          'Content-Type': 'application/json'
+      };
+
+      if (secret.startsWith("token=")) {
+        ns_url = ns_url + '?' + secret;
+      } else {
+        ns_headers['API-SECRET'] = secret;
+      }
+
+      const optionsNS = {
+          url: ns_url,
+          method: 'POST',
+          headers: ns_headers,
+          body: entry,
+          json: true
+      };
+
+      request(optionsNS, function (error, response, body) {
+        if (error) {
+          console.error('error posting json: ', error)
+        } else {
+          console.log('uploaded new calibration to NS, statusCode = ' + response.statusCode);
+        }
+      })
     }
   };
 };

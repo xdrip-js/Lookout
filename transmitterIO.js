@@ -1,6 +1,7 @@
 const xDripAPS = require("./xDripAPS")();
 const storage = require('node-persist');
 const cp = require('child_process');
+const request = require("request")
 
 module.exports = (io) => {
   let id;
@@ -18,6 +19,100 @@ module.exports = (io) => {
       console.log('Removed BT Device: '+btName);
       console.log(`stdout: ${stdout}`);
       console.log(`stderr: ${stderr}`);
+    });
+  }
+
+  const calculateNewNSCalibration = (lastCal, lastSGV, currSGV) => {
+    // set it to a high number so we upload a new cal
+    // if we don't have a previous calibration
+
+    // Do not calculate a new calibration value
+    // if we don't have a valid calibrated glucose reading
+    if (currSGV.glucose > 800 || currSGV.glucose < 20) {
+      console.log('Current glucose out of range to calibrate: ' + currSGV.glucose);
+      return null;
+    }
+
+    var calErr = 100;
+    var calValue;
+
+    if (lastCal) {
+      calValue = (currSGV.unfiltered-lastCal.intercept)/lastCal.slope;
+      calErr = calValue - currSGV.glucose;
+
+      console.log('Current calibration error: ' + calErr + ' calibrated value: ' + calValue + ' slope: ' + lastCal.slope + ' intercept: ' + lastCal.intercept);
+    }
+
+    // Check if we need a calibration and if so, make sure we have enough
+    // separation between the numbers to get a meaningful calibration.
+    if (!lastCal || (Math.abs(calErr) > 5)) {
+      if ((Math.abs(lastSGV.unfiltered - currSGV.unfiltered) > 2) && (Math.abs(lastSGV.glucose - currSGV.glucose) > 2)) {
+        var scale = 1.0;
+        var slope =  (lastSGV.unfiltered - currSGV.unfiltered) / (lastSGV.glucose - currSGV.glucose);
+        var intercept = currSGV.unfiltered - currSGV.glucose*slope;
+
+        if ((slope > 12.5) || (slope < 0.75)) {
+          console.log('Slope out of range to calibrate: ' + slope);
+          // wait until the next opportunity
+          return null;
+        }
+
+        return {
+          date: Date.now(),
+          scale: scale,
+          intercept: intercept,
+          slope: slope
+        };
+      } else {
+        console.log('Calibration needed, but not enough separation between last and current values.');
+        return null;
+      }
+    } else {
+      console.log('No calibration update needed.');
+      return null;
+    }
+  }
+
+  const storeAndPostNewGlucose = (sgv) => {
+    let lastCal = null;
+
+    storage.getItem('nsCalibration')
+    .then(calibration => {
+      lastCal = calibration;
+    })
+    .catch(() => {
+      lastCal = null;
+      console.log('Unable to obtain current NS Calibration');
+    })
+    .then(() => {
+      return storage.getItem('glucose');
+    })
+    .then(lastSGV => {
+      var newCal = calculateNewNSCalibration(lastCal, lastSGV, sgv);
+
+      if (newCal) {
+        console.log('New calibration: slope = ' + newCal.slope + ', intercept = ' + newCal.intercept + ', scale = ' + newCal.scale);
+
+        storage.setItem('nsCalibration', newCal)
+        .then(() => {
+          xDripAPS.postCalibration(newCal);
+        })
+        .catch(() => {
+          console.log('Unable to post new NS Calibration to Nightscout');
+        });
+      }
+
+      return storage.setItem('glucose', sgv);
+    })
+    .catch(() => {
+       console.log('Unable to store current SGV');
+    })
+    .then(() => {
+      io.emit('glucose', sgv);
+      xDripAPS.post(sgv);
+    })
+    .catch(() => {
+       console.log('Unable to post current SGV to Nightscount and / or OpenAPS');
     });
   }
 
@@ -39,12 +134,8 @@ module.exports = (io) => {
         io.emit('pending', pending);
       } else if (m.msg == "glucose") {
         const glucose = m.data;
-        console.log('got glucose: ' + glucose.glucose);
-        storage.setItem('glucose', glucose)
-        .then(() => {
-          io.emit('glucose', glucose);
-          xDripAPS.post(glucose);
-        });
+        console.log('got glucose: ' + glucose.glucose + ' unfiltered: ' + glucose.unfiltered);
+        storeAndPostNewGlucose(glucose);
       } else if (m.msg == 'messageProcessed') {
         // TODO: check that dates match
         pending.shift();

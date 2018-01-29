@@ -4,8 +4,19 @@
 
 *Please note this project is neither created nor backed by Dexcom, Inc. This software is not intended for use in therapy.*
 
-## Prerequisites
-This project depends on xdrip-js at https://github.com/thebookins/xdrip-js. Following the installation instructions will automatically install xdrip-js; however, xdrip-js has some installation prerequisites that need to be accomplished manually. These steps can be found at https://github.com/thebookins/xdrip-js/wiki.
+## Pre-installation
+You must update your rig's NodeJS based on https://github.com/thebookins/xdrip-js/wiki (only use the "Updating NodeJS" section of those instructions, you should not install xdrip-js manually, it will be installed in the next step as part of Lookout.)
+As of 14-Jan-2018, these steps are:
+```
+The version of Node that ships with jubilinux is old (v0.10.something). Here are the instructions for updating Node:
+
+sudo apt-get remove nodered -y
+sudo apt-get remove nodejs nodejs-legacy -y
+sudo apt-get remove npm  -y # if you installed npm
+sudo curl -sL https://deb.nodesource.com/setup_6.x | sudo bash -
+sudo apt-get install nodejs -y
+```
+If you later need to revert your rig's NodeJS to the legacy version, follow the steps in the below section "Reverting NodeJS".
 
 ## Installation
 ```
@@ -29,17 +40,37 @@ To run in simulated mode, use `node index.js --sim`.
 To view the app, open a browser and navigate to `http://<local IP address>:3000`. E.g. http://localhost:3000 or http://192.168.1.3:3000. This will vary depending on your local network setup.
 ![app](https://user-images.githubusercontent.com/12263040/29741914-36d4bfe4-8ab9-11e7-891e-6c23263db499.png)
 
-## Start at Boot
-When you are comfortable with the Lookout's performance, you can configure the system to start it as a daemon at boot time by adding a line to root's crontab.
+## Using the browser to control your G5
+Once the browser is open to your Lookout page (see above steps), you can start the sensor and calibrate through it. (Note that you can also continue using the Dexcom receiver alongside Lookout to do these things as well. Both the receiver and Lookout will get the latest updates from the G5 transmitter after a reading or two, provided they are in range and connected.)
 
-To edit root's crontab execute:
+* click "Menu" (bottom right button) on the Lookout page, then "CGM" and "Transmitter", then "Pair new", and enter your transmitter ID (note it is case-sensitive), then "Save"
+* put the sensor/transmitter on your body, if you haven't already, and press the "Home"/person button at the bottom left of the lookout page, then click "Start sensor" (this part is identical to the receiver, which you can also use at the same time, alternatively, to start the sensor).
+* wait 5 minutes and press the "Menu" button, then "CGM" and "Sensor", the "State" should show as "Warmup". Press the "Home" screen (bottom left, person button), you will also see this state here after a while.
+* after 2 hours the state will change to "First calibration" - enter the first calibration by clicking the "Calibration" button and entering the value from a finger stick.
+* after 5 minutes the state will change to "Second calibration" - enter the second calibration by clicking the "Calibration" button and entering the value from a finger stick.
+* after 5 minutes the state will change to "OK" and dexcom-calibrated BG values will be displayed.
+
+## Making it permanent
+So far in the above you've only run Lookout from the command line - the next time you close your terminal, or reboot your rig, it will only run if you add it to your crontab:
 ```
-sudo crontab -e
+<type the command "crontab -e" (without quotes) and add this line:>
+@reboot Lookout >> /var/log/openaps/xdrip-js.log
+<save and exit your editor>
+<reboot your rig with the command "reboot" (without quotes)>
 ```
 
-Add the following line:
+## Debugging
+To look at the Lookout log, for debug purposes, type "cat /var/log/openaps/xdrip-js.log" or "tail -n 100 -F /var/log/openaps/xdrip-js.log" (without the quotes).
+
+## Reverting NodeJS
+
+in the future if you decide you do not want to use xdrip-js, or you are having trouble updating OpenAPS with the nodejs update, you can revert the nodejs install with:
 ```
-@reboot DEBUG=transmitter Lookout >> /var/log/openaps/xdrip-js.log
+sudo apt-get remove nodered -y
+sudo apt-get remove nodejs nodejs-legacy -y
+sudo apt-get remove npm -y
+sudo aptitude install nodejs-legacy
+<say no to the first prompt about keeping nodejs-legacy at current version, say yes to the 2nd prompt about installing nodejs 'oldstable' version>
 ```
 
 ## Interaction with Dexcom Receiver

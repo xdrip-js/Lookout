@@ -72,3 +72,6 @@ sudo apt-get remove npm -y
 sudo aptitude install nodejs-legacy
 <say no to the first prompt about keeping nodejs-legacy at current version, say yes to the 2nd prompt about installing nodejs 'oldstable' version>
 ```
+
+## Interaction with Dexcom Receiver
+YDMV, so test it until you are comfortable. A few people have run Lookout concurrently with their Dexcom receiver without perceiving negative impacts to either.

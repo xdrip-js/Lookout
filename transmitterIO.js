@@ -6,6 +6,21 @@ module.exports = (io) => {
   let id;
   let pending = [];
 
+  const removeBTDevice = (id) => {
+    var btName = "Dexcom"+id.slice(-2);
+
+    cp.exec('bt-device -r '+btName, (err, stdout, stderr) => {
+      if (err) {
+        console.log('Unable to remove BT Device: '+btName);
+        return;
+      }
+
+      console.log('Removed BT Device: '+btName);
+      console.log(`stdout: ${stdout}`);
+      console.log(`stderr: ${stderr}`);
+    });
+  }
+
   // TODO: this should timeout, and cancel when we get a new id.
   const listenToTransmitter = (id) => {
     const worker = cp.fork(__dirname + '/transmitter-worker', [id], {
@@ -47,6 +62,9 @@ module.exports = (io) => {
       // Receive results from child process
       console.log('exited');
       setTimeout(() => {
+        // Remove the BT device so it starts from scratch
+        removeBTDevice(id);
+
         listenToTransmitter(id);
       }, 60000);
     });
@@ -60,6 +78,9 @@ module.exports = (io) => {
   })
   .then(value => {
     id = value || '500000';
+
+    // Remove the BT device so it starts from scratch
+    removeBTDevice(id);
 
     listenToTransmitter(id);
 
@@ -99,6 +120,9 @@ module.exports = (io) => {
         io.emit('pending', pending)
       });
       socket.on('id', value => {
+        // Remove the old BT device so it starts from scratch
+        removeBTDevice(id);
+
         console.log('received id of ' + value);
         id = value;
         storage.setItemSync('id', id);

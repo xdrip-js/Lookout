@@ -26,6 +26,6 @@ io.on('connection', (socket) => {
 const argv = require('yargs').argv;
 const TransmitterIO = argv.sim ? require('./transmitterIO-simulated') : require('./transmitterIO')
 
-TransmitterIO(io.of('/cgm'));
+TransmitterIO(io.of('/cgm'), argv.extend_sensor);
 LoopIO(io.of('/loop'));
 PumpIO(io.of('/pump'));

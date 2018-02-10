@@ -1,7 +1,7 @@
 const xDripAPS = require("./xDripAPS")();
 const Transmitter = require('xdrip-js');
 
-module.exports = (io) => {
+module.exports = (io, extend_sensor) => {
   let id = 'ABCDEF';
   const version = '1.2.3.4';
   const glucose = {

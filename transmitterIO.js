@@ -123,13 +123,6 @@ module.exports = (io, extend_sensor_opt) => {
     .then(() => {
       return storage.getItem('glucose');
     })
-    .catch(() => {
-      lastCal = null;
-      console.log('Unable to obtain current NS Calibration');
-    })
-    .then(() => {
-      return storage.getItem('glucose');
-    })
     .then(lastSGV => {
       var newCal = calculateNewNSCalibration(lastCal, lastSGV, sgv);
 

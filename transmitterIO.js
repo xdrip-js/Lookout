@@ -3,6 +3,7 @@ const storage = require('node-persist');
 const cp = require('child_process');
 const request = require('request-promise-native');
 const moment = require('moment');
+var _ = require('lodash');
 
 module.exports = (io, extend_sensor_opt) => {
   let id;
@@ -108,9 +109,104 @@ module.exports = (io, extend_sensor_opt) => {
       return request(optionsNS);
   }
 
-  const storeAndPostNewGlucose = (sgv) => {
+  const calcSensorNoise = (glucoseHist) => {
+    const let MAXRECORDS=8;
+    const let MINRECORDS=4;
+    const let XINCREMENT=10000;
+    const let XINCREMENT_SQ=XINCREMENT*XINCREMENT;
+
+    var yarg = glucostHist.slice(-MAXRECORDS);
+
+    n=yarg.length;
+
+    // sod = sum of distances
+    var sod=0;
+    var overallsod=0;
+
+    for (var i=1; i < n; i++) {
+      let y1=yarr[i].glucose;
+      let y2=yarr[i-1].glucose;
+
+      sod=sod + Math.sqrt(XINCREMENT_SQ + Math.pow(y1 - y2, 2));
+    }
+
+    overallsod=Math.sqrt(Math.pow(yarr[n-1] - yarr[0], 2) + Math.pow(XINCREMENT*(n - 1), 2));
+
+    if (sod == 0) {
+      // assume no noise if no records
+      noise = 0;
+    } else {
+      noise=1 - (overallsod/sod);
+    }
+
+    return noise;
+  }
+
+  // Return 10 minute trend total
+  const calcTrend = (glucoseHist) => {
+    let direction = "NONE";
+    let sgvHist = null;
+    let totalDelta = 0;
+
+    let trend = 0;
+
+
+    if (glucoseHist.length > 1) {
+      let minDate = moment().subtract(15, 'minutes');
+      let maxDate = null;
+      let sliceStart = 0;
+      let timeSpan = 0;
+
+      // delete any deltas > 15 minutes
+      for (var i=0; i < glucoseHist.length); ++i) {
+        if (moment(glucoseHist[i].date).diff(minDate) < 0) {
+          sliceStart = i+1;
+        }
+      }
+
+      sgvHist = glucoseHist.slice(sliceStart);
+
+      for (var i=1; i < sgvHist.length; ++i) {
+        currentDelta=sgvHist[i].glucose - sgvHist[i-1].glucose;
+
+        totalDelta=totalDelta + currentDelta;
+      }
+
+      if (sgvHist.length > 1) {
+        minDate = moment(glucoseHist[0].date);
+        maxDate = moment(glucoseHist[glucoseHist.length-1].date);
+
+        timeSpan = maxDate.diff(minDate,'minutes');
+
+        trend=10 * totalDelta / timeSpan;
+      }
+    }
+
+    return trend;
+  }
+
+  // Return sensor noise
+  const calcNSNoise = (noise) => {
+    let nsNoise = 0; // Unknown
+
+    if (noise < 0.5) {
+      nsNoise = 1; // Clean
+    } else if (noise < 0.6) {
+      nsNoise = 2; // Light
+    } else if (noise < 0.75) {
+      nsNoise = 3; // Medium
+    } else if (noise >= 0.75) {
+      nsNoise = 4; // Heavy
+    }
+
+    return nsNoise;
+  }
+
+  const processNewGlucose = (sgv) => {
     let lastCal = null;
-    let sgvSent = false;
+    let glucoseHist = null;
+    let checkingSensorInsert = false;
+    let sendSGV = true;
 
     storage.getItem('nsCalibration')
     .then(calibration => {
@@ -121,10 +217,21 @@ module.exports = (io, extend_sensor_opt) => {
       console.log('Unable to obtain current NS Calibration');
     })
     .then(() => {
-      return storage.getItem('glucose');
+      return storage.getItem('glucoseHist');
     })
-    .then(lastSGV => {
-      var newCal = calculateNewNSCalibration(lastCal, lastSGV, sgv);
+    .then(storedGlucoseHist => {
+      glucoseHist = storedGlucoseHist;
+    })
+    .catch((err) => {
+      glucoseHist = null;
+      console.log('Error getting glucoseHist: ' + err);
+    })
+    .then(() => {
+      let newCal = null;
+
+      if (glucoseHist && (glucoseHist.length > 0)) {
+        newCal = calculateNewNSCalibration(lastCal, glucoseHist[glucoseHist.length - 1], sgv);
+      }
 
       if (newCal) {
         lastCal = newCal;
@@ -142,7 +249,6 @@ module.exports = (io, extend_sensor_opt) => {
 
       if (!sgv.glucose && extend_sensor && lastCal) {
         sgv.glucose = Math.round((sgv.unfiltered-lastCal.intercept)/lastCal.slope);
-        sgv.trend = 0;
 
         console.log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value');
         console.log('Calibrated SGV: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered + ' slope: ' + lastCal.slope + ' intercept: ' + lastCal.intercept);
@@ -150,44 +256,74 @@ module.exports = (io, extend_sensor_opt) => {
         // Check if a new sensor has been inserted.
         // If it has been, it will clear the calibration value
         // limiting an incorrect SGV to just one.
-        sensorInsertedCheck(lastCal)
-        .then((body) => {
+
+        checkingSensorInsert = true;
+        return sensorInsertedCheck(lastCal);
+      } else {
+        return null;
+      }
+    })
+    .then((body) => {
+
+      if (checkingSensorInsert) {
           if ((body.length > 0) && (moment(body[0]['created_at']).diff(moment(lastCal.date)) > 0)) {
             console.log('Found sensor insert after latest calibration. Deleting calibration data.');
             storage.del('nsCalibration');
-            storage.del('glucose');
-          } else {
-            io.emit('glucose', sgv);
-            xDripAPS.post(sgv);
-            sgvSent = true;
+            storage.del('glucoseHist');
+            sendSGV = false;
           }
-        })
-        .catch((err) => {
-          console.log('Unable to query NS for sensor insert.');
-          io.emit('glucose', sgv);
-          xDripAPS.post(sgv);
-          sgvSent = true;
-        });
-      } else {
-        io.emit('glucose', sgv);
-        xDripAPS.post(sgv);
-        sgvSent = true;
-      }
-    })
-    .catch(() => {
-      console.log('Failure getting previous gluclose value or new calibration required test or new calibration calculation.');
-    })
-    .finally(() => {
-      if (!sgvSent) {
-        io.emit('glucose', sgv);
-        xDripAPS.post(sgv);
       }
 
-      return storage.setItem('glucose', sgv);
+      if (!sendSGV) {
+        return null;
+      }
+
+      glucoseHist.push(sgv);
+
+      sgv.trend = calcTrend(glucoseHist);
+
+      sgv.noise = calcSensorNoise(glucoseHist);
+
+      sgv.nsNoise = calcNSNoise(sgv.noise);
+
+      console.log('Current sensor noise: ' + sgv.noise + ' NS Noise: ' + sgv.nsNoise);
+
+      storeNewGlucose(glucoseHist);
+      sendNewGlucose(sgv);
     })
-    .catch(() => {
-      console.log('Unable to store current SGV');
-    });
+    .catch((err) => {
+      console.log('Process SGV Error: ' + err);
+    })
+  }
+
+  // Store the last hour of glucose readings
+  const storeNewGlucose = (glucoseHist) => {
+
+      glucoseHist = _.sortBy(glucoseHist);
+
+      var minDate = moment().subtract(1, 'hours');
+      var sliceStart = 0;
+
+      // only the store the last hour of glucose
+      // the primary use is to determine the
+      // trend and the noise values
+      for (var i=0; i < glucoseHist.length); ++i) {
+        if (moment(glucoseHist[i].date).diff(minDate) < 0) {
+          sliceStart = i+1;
+        }
+      }
+
+      glucoseHist = glucoseHist.slice(sliceStart);
+
+      storage.setItem('glucoseHist', glucoseHist)
+      .catch((err) => {
+        console.log('Unable to store glucoseHist: ' + err);
+      });
+  }
+
+  const sendNewGlucose = (sgv) => {
+    io.emit('glucose', sgv);
+    xDripAPS.post(sgv);
   }
 
   // TODO: this should timeout, and cancel when we get a new id.
@@ -209,7 +345,7 @@ module.exports = (io, extend_sensor_opt) => {
       } else if (m.msg == "glucose") {
         const glucose = m.data;
         console.log('got glucose: ' + glucose.glucose + ' unfiltered: ' + glucose.unfiltered);
-        storeAndPostNewGlucose(glucose);
+        processNewGlucose(glucose);
       } else if (m.msg == 'messageProcessed') {
         // TODO: check that dates match
         pending.shift();
@@ -257,10 +393,10 @@ module.exports = (io, extend_sensor_opt) => {
       console.log("about to emit id " + id);
       socket.emit('id', id);
       socket.emit('pending', pending);
-      storage.getItem('glucose')
-      .then(glucose => {
-        if (glucose) {
-          socket.emit('glucose', glucose);
+      storage.getItem('glucoseHist')
+      .then(glucoseHist => {
+        if (glucoseHist) {
+          socket.emit('glucose', glucoseHist[glucoseHist.length - 1]);
         }
       });
       storage.getItem('calibration')

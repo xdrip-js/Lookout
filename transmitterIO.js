@@ -112,8 +112,6 @@ module.exports = (io, extend_sensor_opt) => {
   const calcSensorNoise = (glucoseHist) => {
     const let MAXRECORDS=8;
     const let MINRECORDS=4;
-    const let XINCREMENT=10000;
-    const let XINCREMENT_SQ=XINCREMENT*XINCREMENT;
 
     var yarg = glucostHist.slice(-MAXRECORDS);
 
@@ -121,16 +119,34 @@ module.exports = (io, extend_sensor_opt) => {
 
     // sod = sum of distances
     var sod=0;
-    var overallsod=0;
+    var lastDelta=0
 
     for (var i=1; i < n; i++) {
-      let y1=yarr[i].glucose;
-      let y2=yarr[i-1].glucose;
+      // y2y1Delta adds a multiplier that gives 
+      let y2y1Delta=(yarr[i].glucose - yarr[i-1].glucose) * (1 + i / (n*3));
 
-      sod=sod + Math.sqrt(XINCREMENT_SQ + Math.pow(y1 - y2, 2));
+      // higher priority to the latest BG's
+      let x2x1Delta=moment(yarr[i].date).diff(moment(yarr[i-1].date), 'seconds')*30;
+
+      if ((lastDelta > 0 && (y2y1Delta < 0)) {
+        // switched from positive delta to negative, increase noise impact  
+        y2y1Delta=y2y1Delta * 1.1;
+      }
+      else if ((lastDelta < 0) && (y2y1Delta > 0)) {
+        // switched from negative delta to positive, increase noise impact 
+        y2y1Delta=y2y1Delta} * 1.2;
+      }
+
+      sod=sod + Math.sqrt(Math.pow(x2x1Delta, 2) + Math.pow(y2y1Delta, 2));
     }
 
-    overallsod=Math.sqrt(Math.pow(yarr[n-1] - yarr[0], 2) + Math.pow(XINCREMENT*(n - 1), 2));
+    let firstSGV = yarr[0].glucose;
+    let firstTime = moment(yarr[0].date);
+
+    let lastSGV = yarr[n-1].glucose;
+    let lastSGV = moment(yarr[n-1].date);
+
+    var overallsod=Math.sqrt(Math.pow(lastSGV - firstSGV, 2) + Math.pow(lastSGV.diff(firstSGV,'seconds')*30, 2));
 
     if (sod == 0) {
       // assume no noise if no records

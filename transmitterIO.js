@@ -110,8 +110,8 @@ module.exports = (io, extend_sensor_opt) => {
   }
 
   const calcSensorNoise = (glucoseHist) => {
-    const let MAXRECORDS=8;
-    const let MINRECORDS=4;
+    const MAXRECORDS=8;
+    const MINRECORDS=4;
 
     var yarg = glucostHist.slice(-MAXRECORDS);
 

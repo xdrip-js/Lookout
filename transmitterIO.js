@@ -144,9 +144,9 @@ module.exports = (io, extend_sensor_opt) => {
     let firstTime = moment(yarr[0].date);
 
     let lastSGV = yarr[n-1].glucose;
-    let lastSGV = moment(yarr[n-1].date);
+    let lastTime = moment(yarr[n-1].date);
 
-    var overallsod=Math.sqrt(Math.pow(lastSGV - firstSGV, 2) + Math.pow(lastSGV.diff(firstSGV,'seconds')*30, 2));
+    var overallsod=Math.sqrt(Math.pow(lastSGV - firstSGV, 2) + Math.pow(lastTime.diff(firstTime,'seconds')*30, 2));
 
     if (sod == 0) {
       // assume no noise if no records

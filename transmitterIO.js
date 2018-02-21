@@ -113,7 +113,7 @@ module.exports = (io, extend_sensor_opt) => {
     const MAXRECORDS=8;
     const MINRECORDS=4;
 
-    var yarg = glucostHist.slice(-MAXRECORDS);
+    var yarg = glucoseHist.slice(-MAXRECORDS);
 
     n=yarg.length;
 

@@ -128,7 +128,7 @@ module.exports = (io, extend_sensor_opt) => {
       // higher priority to the latest BG's
       let x2x1Delta=moment(yarr[i].date).diff(moment(yarr[i-1].date), 'seconds')*30;
 
-      if ((lastDelta > 0 && (y2y1Delta < 0)) {
+      if ((lastDelta > 0) && (y2y1Delta < 0)) {
         // switched from positive delta to negative, increase noise impact  
         y2y1Delta=y2y1Delta * 1.1;
       }

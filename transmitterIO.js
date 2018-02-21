@@ -220,7 +220,7 @@ module.exports = (io, extend_sensor_opt) => {
 
   const processNewGlucose = (sgv) => {
     let lastCal = null;
-    let glucoseHist = null;
+    let glucoseHist = [];
     let checkingSensorInsert = false;
     let sendSGV = true;
 
@@ -239,13 +239,17 @@ module.exports = (io, extend_sensor_opt) => {
       glucoseHist = storedGlucoseHist;
     })
     .catch((err) => {
-      glucoseHist = null;
+      glucoseHist = [];
       console.log('Error getting glucoseHist: ' + err);
     })
     .then(() => {
       let newCal = null;
 
-      if (glucoseHist && (glucoseHist.length > 0)) {
+      if (!glucoseHist) {
+        glucoseHist = [];
+      }
+
+      if (glucoseHist.length > 0) {
         newCal = calculateNewNSCalibration(lastCal, glucoseHist[glucoseHist.length - 1], sgv);
       }
 

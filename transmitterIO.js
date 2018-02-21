@@ -323,7 +323,7 @@ module.exports = (io, extend_sensor_opt) => {
       // only the store the last hour of glucose
       // the primary use is to determine the
       // trend and the noise values
-      for (var i=0; i < glucoseHist.length); ++i) {
+      for (var i=0; i < glucoseHist.length; ++i) {
         if (moment(glucoseHist[i].date).diff(minDate) < 0) {
           sliceStart = i+1;
         }

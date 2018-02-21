@@ -304,6 +304,8 @@ module.exports = (io, extend_sensor_opt) => {
 
       sgv.noise = calcSensorNoise(glucoseHist);
 
+      console.log('Current sensor trend: ' + sgv.trend + ' Sensor Noise: ' + sgv.noise);
+
       sgv.nsNoise = calcNSNoise(sgv.noise);
 
       console.log('Current sensor noise: ' + sgv.noise + ' NS Noise: ' + sgv.nsNoise);

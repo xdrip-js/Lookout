@@ -113,9 +113,9 @@ module.exports = (io, extend_sensor_opt) => {
     const MAXRECORDS=8;
     const MINRECORDS=4;
 
-    var yarg = glucoseHist.slice(-MAXRECORDS);
+    var yarr = glucoseHist.slice(-MAXRECORDS);
 
-    n=yarg.length;
+    n=yarr.length;
 
     // sod = sum of distances
     var sod=0;

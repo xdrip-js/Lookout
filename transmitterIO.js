@@ -134,7 +134,7 @@ module.exports = (io, extend_sensor_opt) => {
       }
       else if ((lastDelta < 0) && (y2y1Delta > 0)) {
         // switched from negative delta to positive, increase noise impact 
-        y2y1Delta=y2y1Delta} * 1.2;
+        y2y1Delta=y2y1Delta * 1.2;
       }
 
       sod=sod + Math.sqrt(Math.pow(x2x1Delta, 2) + Math.pow(y2y1Delta, 2));

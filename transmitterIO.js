@@ -174,7 +174,7 @@ module.exports = (io, extend_sensor_opt) => {
       let timeSpan = 0;
 
       // delete any deltas > 15 minutes
-      for (var i=0; i < glucoseHist.length); ++i) {
+      for (var i=0; i < glucoseHist.length; ++i) {
         if (moment(glucoseHist[i].date).diff(minDate) < 0) {
           sliceStart = i+1;
         }

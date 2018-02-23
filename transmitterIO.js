@@ -109,13 +109,34 @@ module.exports = (io, extend_sensor_opt) => {
       return request(optionsNS);
   }
 
+  // Calculate the sum of the distance of all points (overallDistance)
+  // Calculate the overall distance between the first and the last point (overallDistance)
+  // Calculate the noise as the following formula: 1 - sod / overallDistance
+  // Noise will get closer to zero as the sum of the individual lines are mostly in a straight or straight moving curve
+  // Noise will get closer to one as the sum of the distance of the individual lines get large
+  // Also add multiplier to get more weight to the latest BG values
+  // Also added weight for points where the delta shifts from pos to neg or neg to pos (peaks/valleys)
+  // the more peaks and valleys, the more noise is amplified
   const calcSensorNoise = (glucoseHist) => {
-    const MAXRECORDS=8;
+    const MAXRECORDS=12;
     const MINRECORDS=4;
+    var noise = 0;
 
-    var yarr = glucoseHist.slice(-MAXRECORDS);
+    var sgvArr = glucoseHist.slice(-MAXRECORDS);
 
-    n=yarr.length;
+    n=sgvArr.length;
+
+    let firstSGV = sgvArr[0].glucose;
+    let firstTime = sgvArr[0].readDate / 1000.0 * 30.0;
+
+    let lastSGV = sgvArr[n-1].glucose;
+    let lastTime = sgvArr[n-1].readDate / 1000.0 * 30.0;
+
+    let xarr = [];
+
+    for (var i=0; i < n; i++) {
+      xarr.push(sgvArr[i].readDate / 1000.0 * 30.0 - firstTime);
+    }
 
     // sod = sum of distances
     var sod=0;
@@ -123,10 +144,10 @@ module.exports = (io, extend_sensor_opt) => {
 
     for (var i=1; i < n; i++) {
       // y2y1Delta adds a multiplier that gives 
-      let y2y1Delta=(yarr[i].glucose - yarr[i-1].glucose) * (1 + i / (n*3));
-
       // higher priority to the latest BG's
-      let x2x1Delta=moment(yarr[i].date).diff(moment(yarr[i-1].date), 'seconds')*30;
+      let y2y1Delta=(sgvArr[i].glucose - sgvArr[i-1].glucose) * (1 + i / (n*3));
+
+      let x2x1Delta=xarr[i] - xarr[i-1];
 
       if ((lastDelta > 0) && (y2y1Delta < 0)) {
         // switched from positive delta to negative, increase noise impact  
@@ -140,15 +161,9 @@ module.exports = (io, extend_sensor_opt) => {
       sod=sod + Math.sqrt(Math.pow(x2x1Delta, 2) + Math.pow(y2y1Delta, 2));
     }
 
-    let firstSGV = yarr[0].glucose;
-    let firstTime = moment(yarr[0].date);
+    var overallsod=Math.sqrt(Math.pow(lastSGV - firstSGV, 2) + Math.pow(lastTime - firstTime, 2));
 
-    let lastSGV = yarr[n-1].glucose;
-    let lastTime = moment(yarr[n-1].date);
-
-    var overallsod=Math.sqrt(Math.pow(lastSGV - firstSGV, 2) + Math.pow(lastTime.diff(firstTime,'seconds')*30, 2));
-
-    if (sod == 0) {
+    if ((n < MINRECORDS) || (sod == 0)) {
       // assume no noise if no records
       noise = 0;
     } else {
@@ -175,7 +190,7 @@ module.exports = (io, extend_sensor_opt) => {
 
       // delete any deltas > 15 minutes
       for (var i=0; i < glucoseHist.length; ++i) {
-        if (moment(glucoseHist[i].date).diff(minDate) < 0) {
+        if (moment(glucoseHist[i].readDate).diff(minDate) < 0) {
           sliceStart = i+1;
         }
       }
@@ -189,8 +204,8 @@ module.exports = (io, extend_sensor_opt) => {
       }
 
       if (sgvHist.length > 1) {
-        minDate = moment(glucoseHist[0].date);
-        maxDate = moment(glucoseHist[glucoseHist.length-1].date);
+        minDate = moment(glucoseHist[0].readDate);
+        maxDate = moment(glucoseHist[glucoseHist.length-1].readDate);
 
         timeSpan = maxDate.diff(minDate,'minutes');
 
@@ -298,6 +313,11 @@ module.exports = (io, extend_sensor_opt) => {
         return null;
       }
 
+      if (!sgv.glucose) {
+        console.log('No valid glucose to send. Doing nothing.');
+        return null;
+      }
+
       glucoseHist.push(sgv);
 
       sgv.trend = calcTrend(glucoseHist);
@@ -321,7 +341,7 @@ module.exports = (io, extend_sensor_opt) => {
   // Store the last hour of glucose readings
   const storeNewGlucose = (glucoseHist) => {
 
-      glucoseHist = _.sortBy(glucoseHist);
+      glucoseHist = _.sortBy(glucoseHist, ['readDate']);
 
       var minDate = moment().subtract(1, 'hours');
       var sliceStart = 0;
@@ -330,7 +350,7 @@ module.exports = (io, extend_sensor_opt) => {
       // the primary use is to determine the
       // trend and the noise values
       for (var i=0; i < glucoseHist.length; ++i) {
-        if (moment(glucoseHist[i].date).diff(minDate) < 0) {
+        if (moment(glucoseHist[i].readDate).diff(minDate) < 0) {
           sliceStart = i+1;
         }
       }

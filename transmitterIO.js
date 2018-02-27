@@ -126,10 +126,10 @@ module.exports = (io, extend_sensor_opt) => {
 
     n=sgvArr.length;
 
-    let firstSGV = sgvArr[0].glucose;
+    let firstSGV = sgvArr[0].glucose * 1000.0;
     let firstTime = sgvArr[0].readDate / 1000.0 * 30.0;
 
-    let lastSGV = sgvArr[n-1].glucose;
+    let lastSGV = sgvArr[n-1].glucose * 1000.0;
     let lastTime = sgvArr[n-1].readDate / 1000.0 * 30.0;
 
     let xarr = [];
@@ -145,7 +145,7 @@ module.exports = (io, extend_sensor_opt) => {
     for (var i=1; i < n; i++) {
       // y2y1Delta adds a multiplier that gives 
       // higher priority to the latest BG's
-      let y2y1Delta=(sgvArr[i].glucose - sgvArr[i-1].glucose) * (1 + i / (n*3));
+      let y2y1Delta=(sgvArr[i].glucose - sgvArr[i-1].glucose) * 1000.0 * (1 + i / (n*3));
 
       let x2x1Delta=xarr[i] - xarr[i-1];
 

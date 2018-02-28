@@ -16,7 +16,7 @@ module.exports = () => {
       if (glucose.trend <= -30) {
         direction = 'DoubleDown';
       } else if (glucose.trend <= -20) {
-        direction = 'SingeDown';
+        direction = 'SingleDown';
       } else if (glucose.trend <= -10) {
         direction = 'FortyFiveDown';
       } else if (glucose.trend < 10) {
@@ -39,7 +39,7 @@ module.exports = () => {
         'filtered': glucose.filtered,
         'unfiltered': glucose.unfiltered,
         'rssi': "100", // TODO: consider reading this on connection and reporting
-        'noise': "1",
+        'noise': glucose.nsNoise,
         'trend': glucose.trend,
         'glucose': glucose.glucose
       }];

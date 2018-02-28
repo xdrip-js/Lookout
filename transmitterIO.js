@@ -43,7 +43,7 @@ module.exports = (io, extend_sensor_opt) => {
       calValue = (currSGV.unfiltered-lastCal.intercept)/lastCal.slope;
       calErr = calValue - currSGV.glucose;
 
-      console.log('Current calibration error: ' + calErr + ' calibrated value: ' + calValue + ' slope: ' + lastCal.slope + ' intercept: ' + lastCal.intercept);
+      console.log('Current calibration error: ' + Math.round(calErr*10)/10 + ' calibrated value: ' + Math.round(calValue*10)/10 + ' slope: ' + Math.round(lastCal.slope*10)/10 + ' intercept: ' + Math.round(lastCal.intercept*10)/10);
     }
 
     // Check if we need a calibration and if so, make sure we have enough
@@ -68,6 +68,8 @@ module.exports = (io, extend_sensor_opt) => {
         };
       } else {
         console.log('Calibration needed, but not enough separation between last and current values.');
+        console.log('Last unfiltered: ' + lastSGV.unfiltered + ' Current unfiltered: ' + currSGV.unfiltered);
+        console.log('Last SGV: ' + lastSGV.glucose + ' Current SGV: ' + currSGV.glucose);
         return null;
       }
     } else {
@@ -183,12 +185,13 @@ module.exports = (io, extend_sensor_opt) => {
 
 
     if (glucoseHist.length > 1) {
-      let minDate = moment().subtract(15, 'minutes');
+      let minDate = moment().subtract(16, 'minutes');
       let maxDate = null;
       let sliceStart = 0;
       let timeSpan = 0;
+      let totalDelta = 0;
 
-      // delete any deltas > 15 minutes
+      // delete any deltas > 16 minutes
       for (var i=0; i < glucoseHist.length; ++i) {
         if (moment(glucoseHist[i].readDate).diff(minDate) < 0) {
           sliceStart = i+1;
@@ -197,20 +200,18 @@ module.exports = (io, extend_sensor_opt) => {
 
       sgvHist = glucoseHist.slice(sliceStart);
 
-      for (var i=1; i < sgvHist.length; ++i) {
-        currentDelta=sgvHist[i].glucose - sgvHist[i-1].glucose;
-
-        totalDelta=totalDelta + currentDelta;
-      }
-
       if (sgvHist.length > 1) {
-        minDate = moment(glucoseHist[0].readDate);
-        maxDate = moment(glucoseHist[glucoseHist.length-1].readDate);
+        minDate = sgvHist[0].readDate;
+        maxDate = sgvHist[sgvHist.length-1].readDate;
 
-        timeSpan = maxDate.diff(minDate,'minutes');
+        totalDelta = sgvHist[sgvHist.length-1].glucose - sgvHist[0].glucose;
+
+        timeSpan = (maxDate - minDate)/1000.0/60.0;
 
         trend=10 * totalDelta / timeSpan;
       }
+    } else {
+      console.log('Not enough history for trend calculation: ' + glucoseHist.length);
     }
 
     return trend;
@@ -324,11 +325,9 @@ module.exports = (io, extend_sensor_opt) => {
 
       sgv.noise = calcSensorNoise(glucoseHist);
 
-      console.log('Current sensor trend: ' + sgv.trend + ' Sensor Noise: ' + sgv.noise);
-
       sgv.nsNoise = calcNSNoise(sgv.noise);
 
-      console.log('Current sensor noise: ' + sgv.noise + ' NS Noise: ' + sgv.nsNoise);
+      console.log('Current sensor trend: ' + Math.round(sgv.trend*10)/10 + ' Sensor Noise: ' + Math.round(sgv.noise*1000)/1000 + ' NS Noise: ' + sgv.nsNoise);
 
       storeNewGlucose(glucoseHist);
       sendNewGlucose(sgv);

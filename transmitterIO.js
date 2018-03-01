@@ -266,7 +266,7 @@ module.exports = (io, extend_sensor_opt) => {
       }
 
       if (glucoseHist.length > 0) {
-        newCal = calculateNewNSCalibration(lastCal, glucoseHist[glucoseHist.length - 1], sgv);
+        newCal = calculateNewNSCalibration(lastCal, glucoseHist[0], sgv);
       }
 
       if (newCal) {

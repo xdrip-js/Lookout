@@ -218,16 +218,30 @@ module.exports = (io, extend_sensor_opt) => {
   }
 
   // Return sensor noise
-  const calcNSNoise = (noise) => {
+  const calcNSNoise = (noise, glucoseHist) => {
     let nsNoise = 0; // Unknown
+    let currSGV = glucoseHist[glucoseHist.length-1];
+    let deltaSGV = 0;
 
-    if (noise < 0.5) {
+    if (glucoseHist.length > 1) {
+      deltaSGV = currSGV.glucose - glucoseHist[glucoseHist.length-2];
+    }
+
+    if (currSGV.glucose > 400) {
+      console.log('Glucose ' + currSGV.glucose + ' > 400 - setting noise level Heavy');
+      nsNoise = 4;
+    } else if (currSGV.glucose < 40) {
+      console.log('Glucose ' + currSGV.glucose + ' < 40 - setting noise level Light');
+      nsNoise = 2;
+    } else if (Math.abs(deltaSGV) > 30) {
+      console.log('Glucose change ' + deltaSGV + ' out of range [-30, 30] - setting noise level Heavy');
+    } else if (noise < 0.2) {
       nsNoise = 1; // Clean
-    } else if (noise < 0.6) {
+    } else if (noise < 0.4) {
       nsNoise = 2; // Light
-    } else if (noise < 0.75) {
+    } else if (noise < 0.6) {
       nsNoise = 3; // Medium
-    } else if (noise >= 0.75) {
+    } else if (noise >= 0.6) {
       nsNoise = 4; // Heavy
     }
 
@@ -325,7 +339,7 @@ module.exports = (io, extend_sensor_opt) => {
 
       sgv.noise = calcSensorNoise(glucoseHist);
 
-      sgv.nsNoise = calcNSNoise(sgv.noise);
+      sgv.nsNoise = calcNSNoise(sgv.noise, glucoseHist);
 
       console.log('Current sensor trend: ' + Math.round(sgv.trend*10)/10 + ' Sensor Noise: ' + Math.round(sgv.noise*1000)/1000 + ' NS Noise: ' + sgv.nsNoise);
 

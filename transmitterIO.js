@@ -235,9 +235,9 @@ module.exports = (io, extend_sensor_opt) => {
       nsNoise = 2;
     } else if (Math.abs(deltaSGV) > 30) {
       console.log('Glucose change ' + deltaSGV + ' out of range [-30, 30] - setting noise level Heavy');
-    } else if (noise < 0.2) {
+    } else if (noise < 0.3) {
       nsNoise = 1; // Clean
-    } else if (noise < 0.4) {
+    } else if (noise < 0.45) {
       nsNoise = 2; // Light
     } else if (noise < 0.6) {
       nsNoise = 3; // Medium

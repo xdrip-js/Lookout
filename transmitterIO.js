@@ -54,7 +54,7 @@ module.exports = (io, extend_sensor_opt) => {
         var slope =  (lastSGV.unfiltered - currSGV.unfiltered) / (lastSGV.glucose - currSGV.glucose);
         var intercept = currSGV.unfiltered - currSGV.glucose*slope;
 
-        if ((slope > 12.5) || (slope < 0.75)) {
+        if ((slope > 12.5) || (slope < 0.45)) {
           // wait until the next opportunity
           console.log('Slope out of range to calibrate: ' + slope);
           return null;

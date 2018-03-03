@@ -29,6 +29,8 @@ module.exports = () => {
         direction = 'DoubleUp';
       }
 
+      console.log('Trend: ' + glucose.trend + ' direction: ' + direction);
+
       const entry = [{
         'device': 'openaps://' + os.hostname(),
         'date': glucose.readDate,

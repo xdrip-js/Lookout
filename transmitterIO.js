@@ -224,7 +224,7 @@ module.exports = (io, extend_sensor_opt) => {
     let deltaSGV = 0;
 
     if (glucoseHist.length > 1) {
-      deltaSGV = currSGV.glucose - glucoseHist[glucoseHist.length-2];
+      deltaSGV = currSGV.glucose - glucoseHist[glucoseHist.length-2].glucose;
     }
 
     if (currSGV.glucose > 400) {
@@ -407,6 +407,7 @@ module.exports = (io, extend_sensor_opt) => {
         io.emit('pending', pending);
       } else if (m.msg == "calibrationData") {
         // TODO: save to node-persist?
+        console.log('Last calibration: ' + (Date.now() - m.data.date)/1000/60 + ' minutes ago');
         storage.setItem('calibration', m.data)
         .then(() => {
           io.emit('calibrationData', m.data);

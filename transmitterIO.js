@@ -307,6 +307,7 @@ module.exports = (io, extend_sensor_opt) => {
     })
     .then(() => {
         return storage.getItem('calibration');
+    })
     .catch((err) => {
       console.log('Error getting lastG5CalData: ' + err);
     })

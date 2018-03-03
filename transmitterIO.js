@@ -44,7 +44,7 @@ module.exports = (io, extend_sensor_opt) => {
 
 
     // Remove glucose readings prior to the last G5 calibration event
-    for (i=0; glucoseHist[i].readDate; ++i) {
+    for (i=0; i < glucoseHist.length; ++i) {
         if (glucoseHist[i].readDate < lastG5CalTime) {
           sliceStart = i+1;
         }
@@ -100,9 +100,9 @@ module.exports = (io, extend_sensor_opt) => {
           slope: slope
         };
       } else {
-        console.log('Calibration needed, but not enough separation between last and current values.');
-        console.log('Last unfiltered: ' + priorSGV.unfiltered + ' Current unfiltered: ' + currSGV.unfiltered);
-        console.log('Last SGV: ' + priorSGV.glucose + ' Current SGV: ' + currSGV.glucose);
+        console.log('Calibration needed, but not enough separation between relavent historical values and current value.');
+        console.log('Unfiltered with greatest distance: ' + priorSGV.unfiltered + ' Current unfiltered: ' + currSGV.unfiltered);
+        console.log('SGV with greatest distance: ' + priorSGV.glucose + ' Current SGV: ' + currSGV.glucose);
         return null;
       }
     } else {

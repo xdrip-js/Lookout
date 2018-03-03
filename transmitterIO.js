@@ -67,7 +67,7 @@ module.exports = (io, extend_sensor_opt) => {
       }
     }
 
-    priorSGV = sgvHist[maxDeltaIndex].glucose;
+    priorSGV = sgvHist[maxDeltaIndex];
 
     if (lastCal) {
       calValue = (currSGV.unfiltered-lastCal.intercept)/lastCal.slope;

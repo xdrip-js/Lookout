@@ -25,19 +25,49 @@ module.exports = (io, extend_sensor_opt) => {
     });
   }
 
-  const calculateNewNSCalibration = (lastCal, lastSGV, currSGV) => {
+  const calculateNewNSCalibration = (lastCal, lastG5CalTime, glucoseHist, currSGV) => {
     // set it to a high number so we upload a new cal
     // if we don't have a previous calibration
 
     // Do not calculate a new calibration value
     // if we don't have a valid calibrated glucose reading
-    if (currSGV.glucose > 800 || currSGV.glucose < 20) {
+    if (currSGV.glucose > 300 || currSGV.glucose < 80) {
       console.log('Current glucose out of range to calibrate: ' + currSGV.glucose);
       return null;
     }
 
     var calErr = 100;
     var calValue;
+    var sliceStart = 0;
+    var i;
+    var priotSGV = null;
+
+
+    // Remove glucose readings prior to the last G5 calibration event
+    for (i=0; glucoseHist[i].readDate; ++i) {
+        if (glucoseHist[i].readDate < lastG5CalTime) {
+          sliceStart = i+1;
+        }
+    }
+
+    var sgvHist = glucoseHist.slice(sliceStart);
+
+    var maxDeltaIndex = 0;
+    var maxDeltaSGV = Math.abs(sgvHist[0].glucose - currSGV.glucose);
+    var tempDelta;
+
+    // Search for the largest delta reading to mititage the rounding
+    // error in the calibrated SGV.
+    for (i=1; i < sgvHist.length; ++i) {
+      tempDelta = Math.abs(sgvHist[i].glucose - currSGV.glucose);
+
+      if ((maxDeltaSGV < tempDelta) && (tempDelta < 30)) {
+        maxDeltaIndex = i;
+        maxDeltaSGV = tempDelta;
+      }
+    }
+
+    priorSGV = sgvHist[maxDeltaIndex].glucose;
 
     if (lastCal) {
       calValue = (currSGV.unfiltered-lastCal.intercept)/lastCal.slope;
@@ -49,9 +79,12 @@ module.exports = (io, extend_sensor_opt) => {
     // Check if we need a calibration and if so, make sure we have enough
     // separation between the numbers to get a meaningful calibration.
     if (!lastCal || (Math.abs(calErr) > 5)) {
-      if ((Math.abs(lastSGV.unfiltered - currSGV.unfiltered) > 2) && (Math.abs(lastSGV.glucose - currSGV.glucose) > 2)) {
+      var unfilteredDelta = priorSGV.unfiltered - currSGV.unfiltered;
+      var glucoseDelta = priorSGV.glucose - currSGV.glucose;
+
+      if ((Math.abs(unfilteredDelta) > 2) && (Math.abs(glucoseDelta) > 2) && (Math.abs(glucoseDelta) < 30)) {
         var scale = 1.0;
-        var slope =  (lastSGV.unfiltered - currSGV.unfiltered) / (lastSGV.glucose - currSGV.glucose);
+        var slope =  unfilteredDelta / glucoseDelta;
         var intercept = currSGV.unfiltered - currSGV.glucose*slope;
 
         if ((slope > 12.5) || (slope < 0.45)) {
@@ -68,8 +101,8 @@ module.exports = (io, extend_sensor_opt) => {
         };
       } else {
         console.log('Calibration needed, but not enough separation between last and current values.');
-        console.log('Last unfiltered: ' + lastSGV.unfiltered + ' Current unfiltered: ' + currSGV.unfiltered);
-        console.log('Last SGV: ' + lastSGV.glucose + ' Current SGV: ' + currSGV.glucose);
+        console.log('Last unfiltered: ' + priorSGV.unfiltered + ' Current unfiltered: ' + currSGV.unfiltered);
+        console.log('Last SGV: ' + priorSGV.glucose + ' Current SGV: ' + currSGV.glucose);
         return null;
       }
     } else {
@@ -273,14 +306,24 @@ module.exports = (io, extend_sensor_opt) => {
       console.log('Error getting glucoseHist: ' + err);
     })
     .then(() => {
+        return storage.getItem('calibration');
+    .catch((err) => {
+      console.log('Error getting lastG5CalData: ' + err);
+    })
+    .then((storedLastG5CalData) => {
+      var lastG5CalTime = 0;
       let newCal = null;
+
+      if (storedLastG5CalData) {
+        lastG5CalTime = storedLastG5CalData.date;
+      }
 
       if (!glucoseHist) {
         glucoseHist = [];
       }
 
       if (glucoseHist.length > 0) {
-        newCal = calculateNewNSCalibration(lastCal, glucoseHist[0], sgv);
+        newCal = calculateNewNSCalibration(lastCal, lastG5CalTime, glucoseHist, sgv);
       }
 
       if (newCal) {

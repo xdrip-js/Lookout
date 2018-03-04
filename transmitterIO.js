@@ -40,7 +40,7 @@ module.exports = (io, extend_sensor_opt) => {
     var calValue;
     var sliceStart = 0;
     var i;
-    var priotSGV = null;
+    var priorSGV = null;
 
 
     // Remove glucose readings prior to the last G5 calibration event
@@ -52,13 +52,13 @@ module.exports = (io, extend_sensor_opt) => {
 
     var sgvHist = glucoseHist.slice(sliceStart);
 
-    var maxDeltaIndex = 0;
-    var maxDeltaSGV = Math.abs(sgvHist[0].glucose - currSGV.glucose);
+    var maxDeltaIndex = -1;
+    var maxDeltaSGV = 0;
     var tempDelta;
 
     // Search for the largest delta reading to mititage the rounding
     // error in the calibrated SGV.
-    for (i=1; i < sgvHist.length; ++i) {
+    for (i=0; i < sgvHist.length; ++i) {
       tempDelta = Math.abs(sgvHist[i].glucose - currSGV.glucose);
 
       if ((maxDeltaSGV < tempDelta) && (tempDelta < 30)) {
@@ -67,7 +67,9 @@ module.exports = (io, extend_sensor_opt) => {
       }
     }
 
-    priorSGV = sgvHist[maxDeltaIndex];
+    if (maxDeltaIndex >= 0) {
+      priorSGV = sgvHist[maxDeltaIndex];
+    }
 
     if (lastCal) {
       calValue = (currSGV.unfiltered-lastCal.intercept)/lastCal.slope;
@@ -79,31 +81,35 @@ module.exports = (io, extend_sensor_opt) => {
     // Check if we need a calibration and if so, make sure we have enough
     // separation between the numbers to get a meaningful calibration.
     if (!lastCal || (Math.abs(calErr) > 5)) {
-      var unfilteredDelta = priorSGV.unfiltered - currSGV.unfiltered;
-      var glucoseDelta = priorSGV.glucose - currSGV.glucose;
+      if (priorSGV) {
+        var unfilteredDelta = priorSGV.unfiltered - currSGV.unfiltered;
+        var glucoseDelta = priorSGV.glucose - currSGV.glucose;
 
-      if ((Math.abs(unfilteredDelta) > 2) && (Math.abs(glucoseDelta) > 2) && (Math.abs(glucoseDelta) < 30)) {
-        var scale = 1.0;
-        var slope =  unfilteredDelta / glucoseDelta;
-        var intercept = currSGV.unfiltered - currSGV.glucose*slope;
+        if ((Math.abs(unfilteredDelta) > 2) && (Math.abs(glucoseDelta) > 2) && (Math.abs(glucoseDelta) < 30)) {
+          var scale = 1.0;
+          var slope =  unfilteredDelta / glucoseDelta;
+          var intercept = currSGV.unfiltered - currSGV.glucose*slope;
 
-        if ((slope > 12.5) || (slope < 0.45)) {
-          // wait until the next opportunity
-          console.log('Slope out of range to calibrate: ' + slope);
+          if ((slope > 12.5) || (slope < 0.45)) {
+            // wait until the next opportunity
+            console.log('Slope out of range to calibrate: ' + slope);
+            return null;
+          }
+
+          return {
+            date: Date.now(),
+            scale: scale,
+            intercept: intercept,
+            slope: slope
+          };
+        } else {
+          console.log('Calibration needed, but not enough separation between relavent historical values and current value.');
+          console.log('Unfiltered with greatest distance: ' + priorSGV.unfiltered + ' Current unfiltered: ' + currSGV.unfiltered);
+          console.log('SGV with greatest distance: ' + priorSGV.glucose + ' Current SGV: ' + currSGV.glucose);
           return null;
         }
-
-        return {
-          date: Date.now(),
-          scale: scale,
-          intercept: intercept,
-          slope: slope
-        };
       } else {
-        console.log('Calibration needed, but not enough separation between relavent historical values and current value.');
-        console.log('Unfiltered with greatest distance: ' + priorSGV.unfiltered + ' Current unfiltered: ' + currSGV.unfiltered);
-        console.log('SGV with greatest distance: ' + priorSGV.glucose + ' Current SGV: ' + currSGV.glucose);
-        return null;
+          console.log('Calibration needed, but unable to find suitable historical value to use for calibration calculation.');
       }
     } else {
       console.log('No calibration update needed.');

@@ -29,7 +29,7 @@ module.exports = () => {
         direction = 'DoubleUp';
       }
 
-      console.log('Trend: ' + glucose.trend + ' direction: ' + direction);
+      console.log('Trend: ' + Math.round(glucose.trend*10)/10 + ' direction: ' + direction);
 
       const entry = [{
         'device': 'openaps://' + os.hostname(),

@@ -44,8 +44,11 @@ module.exports = (io, extend_sensor_opt) => {
 
 
     // Remove glucose readings prior to the last G5 calibration event
+    // add 12 minutes to the calibration event because it sometimes
+    // takes up to 2 readings after the calibration for the
+    // calibration to be reflected in the transmitter's calibrated SGV
     for (i=0; i < glucoseHist.length; ++i) {
-        if (glucoseHist[i].readDate < lastG5CalTime) {
+        if (glucoseHist[i].readDate < (lastG5CalTime + 12*60*1000)) {
           sliceStart = i+1;
         }
     }
@@ -457,7 +460,7 @@ module.exports = (io, extend_sensor_opt) => {
         io.emit('pending', pending);
       } else if (m.msg == "calibrationData") {
         // TODO: save to node-persist?
-        console.log('Last calibration: ' + (Date.now() - m.data.date)/1000/60 + ' minutes ago');
+        console.log('Last calibration: ' + Math.round((Date.now() - m.data.date)/1000/60/60*10)/10 + ' hours ago');
         storage.setItem('calibration', m.data)
         .then(() => {
           io.emit('calibrationData', m.data);

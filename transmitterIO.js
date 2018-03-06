@@ -162,7 +162,7 @@ module.exports = (io, extend_sensor_opt) => {
   // Also added weight for points where the delta shifts from pos to neg or neg to pos (peaks/valleys)
   // the more peaks and valleys, the more noise is amplified
   const calcSensorNoise = (glucoseHist) => {
-    const MAXRECORDS=12;
+    const MAXRECORDS=8;
     const MINRECORDS=4;
     var noise = 0;
 
@@ -277,13 +277,13 @@ module.exports = (io, extend_sensor_opt) => {
       nsNoise = 2;
     } else if (Math.abs(deltaSGV) > 30) {
       console.log('Glucose change ' + deltaSGV + ' out of range [-30, 30] - setting noise level Heavy');
-    } else if (noise < 0.3) {
+    } else if (noise < 0.35) {
       nsNoise = 1; // Clean
-    } else if (noise < 0.45) {
+    } else if (noise < 0.5) {
       nsNoise = 2; // Light
-    } else if (noise < 0.6) {
+    } else if (noise < 0.7) {
       nsNoise = 3; // Medium
-    } else if (noise >= 0.6) {
+    } else if (noise >= 0.7) {
       nsNoise = 4; // Heavy
     }
 

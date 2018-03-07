@@ -59,12 +59,18 @@ module.exports = (io, extend_sensor_opt) => {
     var maxDeltaSGV = 0;
     var tempDelta;
 
-    // Search for the largest delta reading to mititage the rounding
+    // Search for the largest delta reading to mitigate rounding
     // error in the calibrated SGV.
+    // Suitable values need to be:
+    //   less than 30 points away
+    //   less than 300 mg/dl
+    //   greater than 80 mg/dl
+    //   calibrated via G5, not Lookout
     for (i=0; i < sgvHist.length; ++i) {
-      tempDelta = Math.abs(sgvHist[i].glucose - currSGV.glucose);
+      let sgv = sgvHist[i];
+      tempDelta = Math.abs(sgv.glucose - currSGV.glucose);
 
-      if ((maxDeltaSGV < tempDelta) && (tempDelta < 30)) {
+      if ((maxDeltaSGV < tempDelta) && (tempDelta < 30) && (sgv.glucose < 300) && (sgv.glucose > 80) && sgv.g5calibrated) {
         maxDeltaIndex = i;
         maxDeltaSGV = tempDelta;
       }
@@ -277,6 +283,7 @@ module.exports = (io, extend_sensor_opt) => {
       nsNoise = 2;
     } else if (Math.abs(deltaSGV) > 30) {
       console.log('Glucose change ' + deltaSGV + ' out of range [-30, 30] - setting noise level Heavy');
+      nsNoise = 4;
     } else if (noise < 0.35) {
       nsNoise = 1; // Clean
     } else if (noise < 0.5) {
@@ -290,11 +297,38 @@ module.exports = (io, extend_sensor_opt) => {
     return nsNoise;
   }
 
+  const stateString = (state) => {
+    switch (state) {
+      case 0x01:
+        return "Stopped";
+      case 0x02:
+        return "Warmup";
+      case 0x04:
+        return "First calibration";
+      case 0x05:
+        return "Second calibration";
+      case 0x06:
+        return "OK";
+      case 0x07:
+        return "Need calibration";
+      case 0x0a:
+        return "Enter new BG meter value";
+      case 0x0b:
+        return "Failed sensor";
+      case 0x12:
+        return "???";
+      default:
+        return state ? "Unknown: 0x" + state.toString(16) : '--';
+    }
+  }
+
   const processNewGlucose = (sgv) => {
     let lastCal = null;
     let glucoseHist = [];
     let checkingSensorInsert = false;
     let sendSGV = true;
+
+    sgv.g5calibrated = true;
 
     storage.getItem('nsCalibration')
     .then(calibration => {
@@ -355,6 +389,8 @@ module.exports = (io, extend_sensor_opt) => {
 
         console.log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value');
         console.log('Calibrated SGV: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered + ' slope: ' + lastCal.slope + ' intercept: ' + lastCal.intercept);
+
+        sgv.g5calibrated = false;
 
         // Check if a new sensor has been inserted.
         // If it has been, it will clear the calibration value
@@ -430,6 +466,7 @@ module.exports = (io, extend_sensor_opt) => {
   }
 
   const sendNewGlucose = (sgv) => {
+    console.log('Sensor State: ' + stateString(sgv.state));
     io.emit('glucose', sgv);
     xDripAPS.post(sgv);
   }

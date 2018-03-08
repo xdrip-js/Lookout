@@ -78,8 +78,7 @@ exports.lsrCalibration = (calibrationPairs) => {
 
   var denominator=Math.sqrt(((n * sumXSq - sumX*sumX) * (n * sumYSq - sumY*sumY)));
   if ((denominator == 0) || (stddevX == 0)) {
-    returnVal.slope=1000;
-    returnVal.yIntercept=0;
+    return null;
   } else {
     let r=(n * sumXY - sumX * sumY) / denominator;
 
@@ -99,6 +98,8 @@ exports.lsrCalibration = (calibrationPairs) => {
     yError=Math.sqrt(vari / delta * sumXSq);
     slopeError=Math.sqrt(n / delta * vari);
   }
+
+  console.log('lsrCalibration: numPoints=' + n + ', slope=' + returnVal.slope + ', yIntercept=0'); 
 
   return returnVal;
 };

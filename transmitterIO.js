@@ -39,9 +39,7 @@ module.exports = (io, extend_sensor_opt) => {
 
     var calErr = 100;
     var calValue;
-    var sliceStart = 0;
     var i;
-    var priorSGV = null;
 
     var calPairs = [];
     // Suitable values need to be:

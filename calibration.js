@@ -1,5 +1,21 @@
 var _ = require('lodash');
 
+//Rule 1 - Clear calibration records upon CGM Sensor Change/Insert
+//Rule 2 - Don't allow any BG calibrations or take in any new calibrations 
+//         within 15 minutes of last sensor insert
+//Rule 3 - Only use Single Point Calibration for 1st 12 hours since Sensor insert
+//Rule 4 - Do not store calibration records within 12 hours since Sensor insert. 
+//         Use for SinglePoint calibration, but then discard them
+//Rule 5 - Do not use LSR until we have 4 or more calibration points. 
+//         Use SinglePoint calibration only for less than 4 calibration points. 
+//         SinglePoint simply uses the latest calibration record and assumes 
+//         the yIntercept is 0.
+//Rule 6 - Drop back to SinglePoint calibration if slope is out of bounds 
+//         (>MAXSLOPE or <MINSLOPE)
+//Rule 7 - Drop back to SinglePoint calibration if yIntercept is out of bounds 
+//        (> minimum unfiltered value in calibration record set or 
+//         < - minimum unfiltered value in calibration record set)
+
 var exports = module.exports = {};
 
 // calibrationPairs has three values for each array element:

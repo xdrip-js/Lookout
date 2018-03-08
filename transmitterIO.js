@@ -1,4 +1,5 @@
 const xDripAPS = require("./xDripAPS")();
+const calibration = require("./calibration")();
 const storage = require('node-persist');
 const cp = require('child_process');
 const request = require('request-promise-native');
@@ -42,42 +43,18 @@ module.exports = (io, extend_sensor_opt) => {
     var i;
     var priorSGV = null;
 
-
-    // Remove glucose readings prior to the last G5 calibration event
-    // add 12 minutes to the calibration event because it sometimes
-    // takes up to 2 readings after the calibration for the
-    // calibration to be reflected in the transmitter's calibrated SGV
-    for (i=0; i < glucoseHist.length; ++i) {
-        if (glucoseHist[i].readDate < (lastG5CalTime + 12*60*1000)) {
-          sliceStart = i+1;
-        }
-    }
-
-    var sgvHist = glucoseHist.slice(sliceStart);
-
-    var maxDeltaIndex = -1;
-    var maxDeltaSGV = 0;
-    var tempDelta;
-
-    // Search for the largest delta reading to mitigate rounding
-    // error in the calibrated SGV.
+    var calPairs = [];
     // Suitable values need to be:
-    //   less than 30 points away
     //   less than 300 mg/dl
     //   greater than 80 mg/dl
     //   calibrated via G5, not Lookout
-    for (i=0; i < sgvHist.length; ++i) {
-      let sgv = sgvHist[i];
-      tempDelta = Math.abs(sgv.glucose - currSGV.glucose);
+    //   12 minutes after the last G5 calibration time (it takes up to 2 readings to reflect calibration updates)
+    for (i=0; i < glucoseHist.length; ++i) {
+      let sgv = glucoseHist[i];
 
-      if ((maxDeltaSGV < tempDelta) && (tempDelta < 30) && (sgv.glucose < 300) && (sgv.glucose > 80) && sgv.g5calibrated) {
-        maxDeltaIndex = i;
-        maxDeltaSGV = tempDelta;
+      if ((sgv.readDate > (lastG5CalTime + 12*60*1000)) && (sgv.glucose < 300) && (sgv.glucose > 80) && sgv.g5calibrated) {
+        calPairs.push(sgv);
       }
-    }
-
-    if (maxDeltaIndex >= 0) {
-      priorSGV = sgvHist[maxDeltaIndex];
     }
 
     if (lastCal) {
@@ -87,38 +64,42 @@ module.exports = (io, extend_sensor_opt) => {
       console.log('Current calibration error: ' + Math.round(calErr*10)/10 + ' calibrated value: ' + Math.round(calValue*10)/10 + ' slope: ' + Math.round(lastCal.slope*10)/10 + ' intercept: ' + Math.round(lastCal.intercept*10)/10);
     }
 
-    // Check if we need a calibration and if so, make sure we have enough
-    // separation between the numbers to get a meaningful calibration.
+    // Check if we need a calibration
     if (!lastCal || (Math.abs(calErr) > 5)) {
-      if (priorSGV) {
-        var unfilteredDelta = priorSGV.unfiltered - currSGV.unfiltered;
-        var glucoseDelta = priorSGV.glucose - currSGV.glucose;
+      // If we have at least 3 good pairs, use LSR
+      if (calPairs.length > 3) {
+        calResult = calibration.lsrCalibration(calPairs);
 
-        if ((Math.abs(unfilteredDelta) > 2) && (Math.abs(glucoseDelta) > 2) && (Math.abs(glucoseDelta) < 30)) {
-          var scale = 1.0;
-          var slope =  unfilteredDelta / glucoseDelta;
-          var intercept = currSGV.unfiltered - currSGV.glucose*slope;
-
-          if ((slope > 12.5) || (slope < 0.45)) {
+        if ((calResult.slope > 12.5) || (calResult.slope < 0.45)) {
             // wait until the next opportunity
-            console.log('Slope out of range to calibrate: ' + slope);
+            console.log('Slope out of range to calibrate: ' + calResult.slope);
             return null;
-          }
-
-          return {
-            date: Date.now(),
-            scale: scale,
-            intercept: intercept,
-            slope: slope
-          };
-        } else {
-          console.log('Calibration needed, but not enough separation between relavent historical values and current value.');
-          console.log('Unfiltered with greatest distance: ' + priorSGV.unfiltered + ' Current unfiltered: ' + currSGV.unfiltered);
-          console.log('SGV with greatest distance: ' + priorSGV.glucose + ' Current SGV: ' + currSGV.glucose);
-          return null;
         }
+
+        console.log('Calibrated with LSR');
+
+        return {
+          date: Date.now(),
+          scale: 1,
+          intercept: calResult.yIntercept,
+          slope: calResult.slope,
+          type: calResult.calibrationType
+        };
+      } else if (calPairs.length > 0) {
+        calResult = calibration.singlePointCalibration(calPairs);
+
+        console.log('Calibrated with Single Point');
+
+        return {
+          date: Date.now(),
+          scale: 1,
+          intercept: calResult.yIntercept,
+          slope: calResult.slope
+          type: calResult.calibrationType
+        };
       } else {
-          console.log('Calibration needed, but unable to find suitable historical value to use for calibration calculation.');
+        console.log('Calibration needed, but no suitable glucose pairs found.');
+        return null;
       }
     } else {
       console.log('No calibration update needed.');

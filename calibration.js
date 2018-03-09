@@ -115,7 +115,7 @@ exports.lsrCalibration = (calibrationPairs) => {
     slopeError=Math.sqrt(n / delta * vari);
   }
 
-  console.log('lsrCalibration: numPoints=' + n + ', slope=' + returnVal.slope + ', yIntercept=0'); 
+  console.log('lsrCalibration: numPoints=' + n + ', slope=' + returnVal.slope + ', yIntercept=' + returnVal.yIntercept); 
 
   return returnVal;
 };

@@ -41,20 +41,6 @@ module.exports = (io, extend_sensor_opt) => {
     var calValue;
     var i;
 
-    var calPairs = [];
-    // Suitable values need to be:
-    //   less than 300 mg/dl
-    //   greater than 80 mg/dl
-    //   calibrated via G5, not Lookout
-    //   12 minutes after the last G5 calibration time (it takes up to 2 readings to reflect calibration updates)
-    for (i=0; i < glucoseHist.length; ++i) {
-      let sgv = glucoseHist[i];
-
-      if ((sgv.readDate > (lastG5CalTime + 12*60*1000)) && (sgv.glucose < 300) && (sgv.glucose > 80) && sgv.g5calibrated) {
-        calPairs.push(sgv);
-      }
-    }
-
     if (lastCal) {
       calValue = (currSGV.unfiltered-lastCal.intercept)/lastCal.slope;
       calErr = calValue - currSGV.glucose;
@@ -64,6 +50,20 @@ module.exports = (io, extend_sensor_opt) => {
 
     // Check if we need a calibration
     if (!lastCal || (Math.abs(calErr) > 5)) {
+      var calPairs = [];
+      // Suitable values need to be:
+      //   less than 300 mg/dl
+      //   greater than 80 mg/dl
+      //   calibrated via G5, not Lookout
+      //   12 minutes after the last G5 calibration time (it takes up to 2 readings to reflect calibration updates)
+      for (i=0; i < glucoseHist.length; ++i) {
+        let sgv = glucoseHist[i];
+  
+        if ((sgv.readDate > (lastG5CalTime + 12*60*1000)) && (sgv.glucose < 300) && (sgv.glucose > 80) && sgv.g5calibrated) {
+          calPairs.push(sgv);
+        }
+      }
+
       // If we have at least 3 good pairs, use LSR
       if (calPairs.length > 3) {
         calResult = calibration.lsrCalibration(calPairs);
@@ -373,8 +373,7 @@ module.exports = (io, extend_sensor_opt) => {
 
         // Check if a new sensor has been inserted.
         // If it has been, it will clear the calibration value
-        // limiting an incorrect SGV to just one.
-
+        // and abort sending the SGV
         checkingSensorInsert = true;
         return sensorInsertedCheck(lastCal);
       } else {

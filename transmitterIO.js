@@ -92,7 +92,7 @@ module.exports = (io, extend_sensor_opt) => {
           date: Date.now(),
           scale: 1,
           intercept: calResult.yIntercept,
-          slope: calResult.slope
+          slope: calResult.slope,
           type: calResult.calibrationType
         };
       } else {

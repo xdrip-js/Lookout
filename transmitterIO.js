@@ -1,5 +1,5 @@
 const xDripAPS = require("./xDripAPS")();
-const calibration = require("./calibration")();
+const calibration = require('./calibration');
 const storage = require('node-persist');
 const cp = require('child_process');
 const request = require('request-promise-native');

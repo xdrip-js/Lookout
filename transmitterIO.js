@@ -276,31 +276,6 @@ module.exports = (io, extend_sensor_opt) => {
     return nsNoise;
   }
 
-  const stateString = (state) => {
-    switch (state) {
-      case 0x01:
-        return "Stopped";
-      case 0x02:
-        return "Warmup";
-      case 0x04:
-        return "First calibration";
-      case 0x05:
-        return "Second calibration";
-      case 0x06:
-        return "OK";
-      case 0x07:
-        return "Need calibration";
-      case 0x0a:
-        return "Enter new BG meter value";
-      case 0x0b:
-        return "Failed sensor";
-      case 0x12:
-        return "???";
-      default:
-        return state ? "Unknown: 0x" + state.toString(16) : '--';
-    }
-  }
-
   const processNewGlucose = (sgv) => {
     let lastCal = null;
     let glucoseHist = [];
@@ -444,7 +419,6 @@ module.exports = (io, extend_sensor_opt) => {
   }
 
   const sendNewGlucose = (sgv) => {
-    console.log('Sensor State: ' + stateString(sgv.state));
     io.emit('glucose', sgv);
     xDripAPS.post(sgv);
   }

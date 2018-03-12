@@ -127,6 +127,7 @@ module.exports = () => {
         'device': 'openaps://' + os.hostname(),
         'type': 'cal',
         'date': calData.date,
+        'dateString': new Date(calData.date).toISOString(),
         'scale': calData.scale,
         'intercept': calData.intercept,
         'slope': calData.slope,

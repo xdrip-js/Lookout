@@ -54,13 +54,19 @@ Once the browser is open to your Lookout page (see above steps), you can start t
 So far in the above you've only run Lookout from the command line - the next time you close your terminal, or reboot your rig, it will only run if you add it to your crontab:
 ```
 <type the command "crontab -e" (without quotes) and add this line:>
-@reboot Lookout >> /var/log/openaps/xdrip-js.log
+@reboot Lookout | tee -a /var/log/openaps/lookout-loop.log
 <save and exit your editor>
 <reboot your rig with the command "reboot" (without quotes)>
 ```
 
 ## Debugging
-To look at the Lookout log, for debug purposes, type "cat /var/log/openaps/xdrip-js.log" or "tail -n 100 -F /var/log/openaps/xdrip-js.log" (without the quotes).
+To look at the Lookout log, for debug purposes, type "cat /var/log/openaps/lookout-loop.log" or "tail -n 100 -F /var/log/openaps/lookout-loop.log" (without the quotes).
+
+## Command Line Options 
+Lookout --extend_sensor 
+	allows a non-expired transmitter sensor to continue working over 7 days without requiring a restart
+Lookout --expired_tx 
+	allows an expired transmitter to work. Lookout will leverage a form of the Logger bash scripts
 
 ## Reverting NodeJS
 

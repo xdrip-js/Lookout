@@ -147,7 +147,7 @@ echo "raw glucose to be used for calibration = $raw"
 ns_url="${NIGHTSCOUT_HOST}"
 METERBG_NS_RAW="meterbg_ns_raw.json"
 
-rm $METERBG_NS_RAW # clear any old meterbg curl responses
+rm -f $METERBG_NS_RAW # clear any old meterbg curl responses
 
 # look for a bg check from pumphistory (direct from meter->openaps):
 # note: pumphistory may not be loaded by openaps very timely...

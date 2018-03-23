@@ -12,6 +12,13 @@ module.exports = (io, extend_sensor_opt, expired_tx_opt) => {
   let extend_sensor = extend_sensor_opt;
   let expired_tx = expired_tx_opt;
 
+  if (expired_tx) {
+    console.log('-expired_tx option true');
+    }
+  else {
+    console.log('-expired_tx option false');
+    }
+  
   const removeBTDevice = (id) => {
     var btName = "Dexcom"+id.slice(-2);
 
@@ -284,8 +291,7 @@ module.exports = (io, extend_sensor_opt, expired_tx_opt) => {
     let sendSGV = true;
 
   var d= new Date(sgv.readDate);
-//  var fs = require('fs');
-//
+
   if (expired_tx) {
     const entry = [{
         'device': id,
@@ -313,8 +319,8 @@ module.exports = (io, extend_sensor_opt, expired_tx_opt) => {
     
     var fs1 = require('fs'),
        spawn = require('child_process').spawn,
-       out = fs1.openSync('/var/log/openaps/lookout-process-entry.log', 'a'),
-       err = fs1.openSync('/var/log/openaps/lookout-process-entry.log', 'a');
+       out = fs1.openSync('/var/log/openaps/lookout-loop.log', 'a'),
+       err = fs1.openSync('/var/log/openaps/lookout-loop.log', 'a');
 
     var cmd =  'echo \''+data+'\' > /root/src/Lookout/g5entry.json && /root/src/Lookout/process-entry.sh ';
     console.log('cmd = '+cmd);

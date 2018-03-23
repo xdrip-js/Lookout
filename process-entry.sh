@@ -6,7 +6,7 @@ glucoseType="unfiltered"
 cd /root/src/Lookout
 mkdir -p old-calibrations
 
-echo "Starting Lookout based xdrip-get-entries.sh"
+echo "Starting Lookout expired transmitter bash script process-entry.sh"
 date
 
 # Check required environment variables
@@ -100,36 +100,25 @@ else
   lastGlucose=0
 fi
 
-transmitter=${1:-"40SNU6"}
+# need to send these through from Lookout somehow
 meterid=${2:-"000000"}
 pumpUnits=${3:-"mg/dl"}
 
-
-
-
-id2=$(echo "${transmitter: -2}")
-id="Dexcom${id2}"
-#echo "Removing existing Dexcom bluetooth connection = ${id}"
-#bt-device -r $id
-
-#echo "Calling xdrip-js ... node logger $transmitter"
-#DEBUG=smp,transmitter,bluetooth-manager timeout 360s node logger $transmitter
-#echo
-echo "after xdrip-js bg record below ..."
+echo "processing Lookout glucose entry record below ..."
 cat ./g5entry.json
 glucose=$(cat ./g5entry.json | jq -M '.[0].glucose')
 
 if [ -z "${glucose}" ] ; then
-  echo "Invalid response from g5 transmitter"
+  echo "Invalid glucose record from Lookout"
   ls -al ./g5entry.json
   rm ./g5entry.json
-  #bt-device -r $id
   exit
 fi
 
 # capture raw values for use and for log to csv file 
 unfiltered=$(cat ./g5entry.json | jq -M '.[0].unfiltered')
 filtered=$(cat ./g5entry.json | jq -M '.[0].filtered')
+transmitter=$(cat ./g5entry.json | jq -M '.[0].device')
 
 # get dates for use in filenames and json entries
 datetime=$(date +"%Y-%m-%d %H:%M")
@@ -297,7 +286,6 @@ if [ -e ./calibration-linear.json ]; then
 else
   # exit until we have a valid calibration record
   echo "no valid calibration record yet, exiting ..."
-  #bt-device -r $id
   exit
 fi
 
@@ -333,7 +321,6 @@ if [ -z $calibratedBG ]; then
   # Outer calibrated BG boundary checks - exit and don't send these on to Nightscout / openaps
   if [ $(bc <<< "$calibratedBG > 600") -eq 1 -o $(bc <<< "$calibratedBG < 0") -eq 1 ]; then
     echo "Glucose $calibratedBG out of range [0,600] - exiting"
-    #bt-device -r $id
     exit
   fi
 
@@ -385,9 +372,6 @@ jq ".[0].glucose = $calibratedBG" g5entry.json > "$tmp" && mv "$tmp" g5entry.jso
 
 tmp=$(mktemp)
 jq ".[0].sgv = $calibratedBG" g5entry.json > "$tmp" && mv "$tmp" g5entry.json
-
-tmp=$(mktemp)
-jq ".[0].device = \"${transmitter}\"" g5entry.json > "$tmp" && mv "$tmp" g5entry.json
 
 
 direction='NONE'
@@ -563,7 +547,6 @@ if [ -e "./treatments-backfill.json" ]; then
   echo
 fi
 
-#bt-device -r $id
-echo "Finished xdrip-get-entries.sh"
+echo "Finished Lookout expired transmitter bash script process-entry.sh"
 date
 echo

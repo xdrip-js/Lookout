@@ -63,10 +63,8 @@ So far in the above you've only run Lookout from the command line - the next tim
 To look at the Lookout log, for debug purposes, type "cat /var/log/openaps/lookout-loop.log" or "tail -n 100 -F /var/log/openaps/lookout-loop.log" (without the quotes).
 
 ## Command Line Options 
-Lookout --extend_sensor 
-	allows a non-expired transmitter sensor to continue working over 7 days without requiring a restart
-Lookout --expired_tx 
-	allows an expired transmitter to work. Lookout will leverage a form of the Logger bash scripts
+--extend_sensor (allows a non-expired transmitter sensor to continue working over 7 days without requiring a restart)
+--expired_tx (allows an expired transmitter to work. Lookout will leverage a form of the Logger bash scripts)
 
 ## Reverting NodeJS
 

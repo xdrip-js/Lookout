@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "pretest": "jshint public test index.js transmitterIO.js",
-    "test": "mocha"
+    "test": "mocha",
     "setup": "./bin/logger-setup.sh",
     "global-install": "npm install && sudo npm install -g && sudo npm link && sudo ./bin/lookout-setup.sh "
   },

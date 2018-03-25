@@ -1,0 +1,19 @@
+<div ui-content-for="title">
+  <span>Preferences</span>
+</div>
+
+<div ui-content-for="navbar-left">
+  <a ui-toggle="uiSidebarLeft" class="btn btn-navbar btn-icon-only"><i class="fa fa-chevron-left fa-navbar"></i></a>
+</div>
+
+<div class="scrollable">
+  <div class="scrollable-content">
+    <div class="container-fluid section section-break">
+      <h5>Glucose units</h5>
+      <div class="btn-group">
+        <a href class="btn btn-default" ui-set="{glucoseUnits: 'mg/dL'}" ui-class="{'active': glucoseUnits == 'mg/dL'}">mg/dL</a>
+        <a href class="btn btn-default" ui-set="{glucoseUnits: 'mmol/L'}" ui-class="{'active': glucoseUnits == 'mmol/L'}">mmol/L</a>
+      </div>
+    </div>
+  </div>
+</div>

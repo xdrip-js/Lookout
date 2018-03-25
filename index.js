@@ -2,6 +2,8 @@
 
 const express = require('express');
 const socketIO = require('socket.io');
+const LoopIO = require('./loopIO');
+const PumpIO = require('./pumpIO');
 
 const PORT = process.env.PORT || 3000;
 
@@ -24,4 +26,6 @@ io.on('connection', (socket) => {
 const argv = require('yargs').argv;
 const TransmitterIO = argv.sim ? require('./transmitterIO-simulated') : require('./transmitterIO')
 
-TransmitterIO(io);
+TransmitterIO(io.of('/cgm'));
+LoopIO(io.of('/loop'));
+PumpIO(io.of('/pump'));

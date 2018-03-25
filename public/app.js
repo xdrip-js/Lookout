@@ -1,12 +1,14 @@
 angular.module('AngularOpenAPS', [
   'AngularOpenAPS.home',
+  'AngularOpenAPS.preferences',
   'AngularOpenAPS.cgm',
   'AngularOpenAPS.loop',
   'AngularOpenAPS.pump',
   'ngRoute',
-  'ngCookies',
+  'ngStorage',
   // 'ngTouch',
   'mobile-angular-ui',
+  'mobile-angular-ui.core.sharedState',
   'btford.socket-io',
   'chart.js'
 ])
@@ -15,97 +17,12 @@ angular.module('AngularOpenAPS', [
   $locationProvider.html5Mode(true);
 })
 
-// TODO: consider if this is best placed within the cgm module
-.service('G5', ['socketFactory', function (socketFactory) {
-  const socket = socketFactory();
-
-  let id;
-  let glucose;
-  // TODO: replace these with the real thing (faked for now)
-  let version = "1.2.3.4";
-  let lastCalibration = {
-    date: Date.now() - 12*60*60*1000,
-    glucose: 100
-  };
-
-
-  this.transmitter = {
-    // properties
-    get id() {
-      return id;
-    },
-    set id(value) {
-      socket.emit('id', value)
-    },
-    get version() {
-      return version;
-    },
-    get activationDate() {
-      return glucose ? glucose.activationDate : null;
-    },
-    get status() {
-      return glucose ? glucose.status : null;
-    }
-  };
-
-  this.sensor = {
-    // properties
-    get sessionStartDate() {
-      return glucose ? glucose.sessionStartDate : null;
-    },
-    get glucose() {
-      // only return the properties glucose, readDate and trend
-      // - we don't need the rest
-      return glucose ?
-        (({ glucose, filtered, readDate, trend }) => ({ glucose, filtered, readDate, trend }))(glucose) :
-        null;
-    },
-    get state() {
-      return glucose ? glucose.state : null;
-    },
-    get lastCalibration() {
-      return lastCalibration;
-    },
-    get inSession() {
-      return glucose ? glucose.inSession : null;
-    },
-
-    // methods
-    calibrate: function(value) {
-      console.log('emitting a cal value of ' + value);
-      socket.emit('calibrate', value);
-    },
-    start: function() {
-      socket.emit('startSensor');
-    },
-    stop: function() {
-      socket.emit('stopSensor');
-    }
-  };
-
-  socket.on('version', version => {
-    console.log('got version');
-    this.transmitter.version = version;
-  });
-
-  socket.on('id', value => {
-    console.log('got id of ' + value);
-    id = value;
-  });
-
-  socket.on('glucose', value => {
-    glucose = value;
-  });
-
-  socket.on('calibration', calibration => {
-    console.log('got calibration');
-    this.sensor.calibration = calibration;
-  });
-
-}])
-
-
-.controller('MyCtrl', ['$rootScope', '$scope', '$cookies', function ($rootScope, $scope, $cookies) {
+.controller('MyCtrl', ['$rootScope', '$scope', '$localStorage', 'SharedState', function (
+  $rootScope,
+  $scope,
+  $localStorage,
+  SharedState
+) {
   $rootScope.$on('$routeChangeStart', function() {
     $rootScope.loading = true;
   });
@@ -114,10 +31,17 @@ angular.module('AngularOpenAPS', [
     $rootScope.loading = false;
   });
 
-  $scope.units = $cookies.get('units') || 'mg/dl';
+  SharedState.initialize($scope, 'glucoseUnits', {defaultValue: $localStorage.glucoseUnits || 'mg/dL'});
+  $scope.$on('mobile-angular-ui.state.changed.glucoseUnits', function(e, newVal, oldVal) {
+    $localStorage.glucoseUnits = newVal;
+  });
+
+  // app.controller('controller1', function($scope, SharedState){
+  // SharedState.initialize($scope, 'myId');
+// });
+
 
   // $cookies.put('myFavorite', 'oatmeal');
-  console.log('units = ' + $scope.units);
 
   //   // for demo chart
   //   $scope.labels = ["January", "February", "March", "April", "May", "June", "July"];
@@ -174,11 +98,58 @@ angular.module('AngularOpenAPS', [
   };
 })
 
-.filter('glucose', function() {
-  return function(glucose) {
-    return glucose ? (glucose/18).toFixed(1) : '--';
+.filter('glucose', ['SharedState', function(SharedState) {
+  return function(glucose, hideUnits) {
+    const units = SharedState.get('glucoseUnits');
+    if (!glucose) return '--';
+    const unitsString = hideUnits ? '' : ' ' + units;
+    switch (units) {
+      case 'mg/dL':
+        return glucose.toFixed(0) + unitsString;
+      case 'mmol/L':
+        return (glucose/18).toFixed(1) + ' ' + unitsString;
+      default:
+        return 'ERR';
+    }
   };
-});
+}])
+
+.directive('glucose', ['SharedState', function (SharedState) {
+  return {
+    restrict: 'A',
+    require: 'ngModel',
+    link: function (scope, element, attrs, ngModel) {
+
+      // convert value going to user (model to view)
+      ngModel.$formatters.push(function(value) {
+        const units = SharedState.get('glucoseUnits');
+        switch (units) {
+          case 'mmol/L':
+            factor = 18;
+            break;
+          case 'mg/dL':
+          default:
+            factor = 1;
+        }
+        return value / factor;
+      });
+
+      // value from the user (view to model)
+      ngModel.$parsers.push(function(value) {
+        const units = SharedState.get('glucoseUnits');
+        switch (units) {
+          case 'mmol/L':
+            factor = 18;
+            break;
+          case 'mg/dL':
+          default:
+            factor = 1;
+        }
+        return Math.round(value * factor);
+      });
+    }
+  }
+}]);
 
 //
 // app.filter('mg_per_dl', function() {

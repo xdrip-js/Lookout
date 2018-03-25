@@ -15,9 +15,13 @@ angular.module('AngularOpenAPS.cgm.sensor', [
     templateUrl: 'cgm/sensor/calibration.html',
     controller: 'SensorController'
   });
+  $routeProvider.when('/cgm/sensor/pending', {
+    templateUrl: 'cgm/sensor/pending.html',
+    controller: 'SensorController'
+  });
 })
 
-.controller('SensorController', ['$scope', '$interval', 'G5', function ($scope, $interval, G5) {
+.controller('SensorController', ['$scope', '$interval', '$location', 'G5', function ($scope, $interval, $location, G5) {
   $scope.sensor = G5.sensor;
 
   const tick = function() {
@@ -26,6 +30,11 @@ angular.module('AngularOpenAPS.cgm.sensor', [
   };
   tick()
   $interval(tick, 1000);
+
+  $scope.calibrate = function(value) {
+    G5.sensor.calibrate(value);
+    $location.path('/cgm/sensor/pending');
+  };
 }])
 
 .filter('state', function() {
@@ -47,7 +56,7 @@ angular.module('AngularOpenAPS.cgm.sensor', [
        return "Enter new BG meter value";
      case 0x0b:
        return "Failed sensor";
-     case 0x0c:
+     case 0x12:
        return "???";
      default:
        return state ? "Unknown: 0x" + state.toString(16) : '--';

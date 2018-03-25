@@ -13,7 +13,7 @@ angular.module('AngularOpenAPS.cgm.transmitter', [
   });
 })
 
-.controller('TransmitterController', ['$scope', '$interval', 'G5', function ($scope, $interval, G5) {
+.controller('TransmitterController', ['$scope', '$interval', '$location', 'G5', function ($scope, $interval, $location, G5) {
   $scope.transmitter = G5.transmitter;
 
   // // and then accessing transmitter functions using dot notation
@@ -32,9 +32,10 @@ angular.module('AngularOpenAPS.cgm.transmitter', [
   //   return G5.transmitter.status;
   // }
 
-  // $scope.setID = function(id) {
-  //   G5.transmitter.id = id;
-  // };
+  $scope.setID = function(id) {
+    G5.transmitter.id = id;
+    $location.path('/cgm/transmitter');
+  };
 }])
 
 .filter('status', function() {

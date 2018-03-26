@@ -1,30 +1,34 @@
 #!/bin/bash
 
+# date +'%Y-%m-%d %H:%M:%S'
 glucoseType="unfiltered"
 
+function log 
+{
+  echo "$(date +'%Y-%m-%d %H:%M:%S') $*"
+}
 
 cd /root/src/Lookout
 mkdir -p old-calibrations
 
-echo "Starting Lookout expired transmitter bash script process-entry.sh"
-date
+log "Starting Lookout expired transmitter bash script process-entry.sh"
 
 # Check required environment variables
 source ~/.bash_profile
 export API_SECRET
 export NIGHTSCOUT_HOST
 if [ "$API_SECRET" = "" ]; then
-   echo "API_SECRET environment variable is not set"
-   echo -e "Make sure the two lines below are in your ~/.bash_profile as follows:\n"
-   echo "API_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxx # where xxxx is your hashed NS API_SECRET"
-   echo -e "export API_SECRET\n\nexiting\n"
+   log "API_SECRET environment variable is not set"
+   log "Make sure the two lines below are in your ~/.bash_profile as follows:\n"
+   log "API_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxx # where xxxx is your hashed NS API_SECRET"
+   log "export API_SECRET\n\nexiting\n"
    exit
 fi
 if [ "$NIGHTSCOUT_HOST" = "" ]; then
-   echo "NIGHTSCOUT_HOST environment variable is not set"
-   echo -e "Make sure the two lines below are in your ~/.bash_profile as follows:\n"
-   echo "NIGHTSCOUT_HOST=https://xxxx # where xxxx is your hashed Nightscout url"
-   echo -e "export NIGHTSCOUT_HOST\n\nexiting\n"
+   log "NIGHTSCOUT_HOST environment variable is not set"
+   log "Make sure the two lines below are in your ~/.bash_profile as follows:\n"
+   log "NIGHTSCOUT_HOST=https://xxxx # where xxxx is your hashed Nightscout url"
+   log "export NIGHTSCOUT_HOST\n\nexiting\n"
    exit
 fi
 
@@ -66,15 +70,15 @@ curl --compressed -m 30 "${NIGHTSCOUT_HOST}/api/v1/treatments.json?count=1&find\
 if [ $? == 0 ]; then
   createdAt=$(jq ".[0].created_at" ./testUTC.json)
   if [ $"$createdAt" == "" ]; then
-    echo "You must record a \"Sensor Insert\" in Nightscout before Logger will run" 
-    echo -e "exiting\n"
+    log "You must record a \"Sensor Insert\" in Nightscout before Logger will run" 
+    log "exiting\n"
     exit
   elif [[ $createdAt == *"Z"* ]]; then
     UTC=" -u "
-    echo "NS is using UTC $UTC"      
+    log "NS is using UTC $UTC"      
   else
     UTC=""
-    echo "NS is not using UTC $UTC"      
+    log "NS is not using UTC $UTC"      
   fi
 fi
 
@@ -83,20 +87,20 @@ fi
 #
 curl --compressed -m 30 "${NIGHTSCOUT_HOST}/api/v1/treatments.json?find\[created_at\]\[\$gte\]=$(date -d "15 minutes ago" -Iminutes $UTC)&find\[eventType\]\[\$regex\]=Sensor.Change" 2>/dev/null | grep "Sensor Change"
 if [ $? == 0 ]; then
-  echo "sensor change within last 15 minutes - clearing calibration files"
+  log "sensor change within last 15 minutes - clearing calibration files"
   ClearCalibrationInput
   ClearCalibrationCache
   touch ./last_sensor_change
-  echo "exiting"
+  log "exiting"
   exit
 fi
 
 if [ -e "./last-entry.json" ] ; then
   lastGlucose=$(cat ./last-entry.json | jq -M '.[0].glucose')
-  echo "lastGlucose=$lastGlucose"
+  log "lastGlucose=$lastGlucose"
   cp ./g5entry.json ./last-entry.json
 else
-  echo "last-entry.json not available, setting lastGlucose=0"
+  log "last-entry.json not available, setting lastGlucose=0"
   lastGlucose=0
 fi
 
@@ -104,12 +108,12 @@ fi
 meterid=${2:-"000000"}
 pumpUnits=${3:-"mg/dl"}
 
-echo "processing Lookout glucose entry record below ..."
+log "processing Lookout glucose entry record below ..."
 cat ./g5entry.json
 glucose=$(cat ./g5entry.json | jq -M '.[0].glucose')
 
 if [ -z "${glucose}" ] ; then
-  echo "Invalid glucose record from Lookout"
+  log "Invalid glucose record from Lookout"
   ls -al ./g5entry.json
   rm ./g5entry.json
   exit
@@ -124,13 +128,13 @@ transmitter=$(cat ./g5entry.json | jq -M '.[0].device')
 datetime=$(date +"%Y-%m-%d %H:%M")
 epochdate=$(date +'%s')
 
-echo "Using glucoseType of $glucoseType"
+log "Using glucoseType of $glucoseType"
 if [ "glucoseType" == "filtered" ]; then
   raw=$filtered
 else
   raw=$unfiltered
 fi
-echo "raw glucose to be used for calibration = $raw"
+log "raw glucose to be used for calibration = $raw"
 
 # begin calibration logic - look for calibration from NS, use existing calibration or none
 ns_url="${NIGHTSCOUT_HOST}"
@@ -149,10 +153,10 @@ meterbgid=$(bash -c "jq .timestamp $METERBG_NS_RAW")
 # using arg3 if mmol then convert it
 if [[ "$pumpUnits" == *"mmol"* ]]; then
   meterbg=$(bc <<< "($meterbg *18)/1")
-  echo "converted pump history meterbg from mmol value to $meterbg"
+  log "converted pump history meterbg from mmol value to $meterbg"
 fi
 echo
-echo "meterbg from pumphistory: $meterbg"
+log "meterbg from pumphistory: $meterbg"
 
 # look for a bg check from monitor/calibration.json
 if [ -z $meterbg ]; then
@@ -160,7 +164,7 @@ if [ -z $meterbg ]; then
   if [ -e $CALFILE ]; then
     if test  `find $CALFILE -mmin -7`
     then
-      echo "calibration file $CALFILE contents below"
+      log "calibration file $CALFILE contents below"
       cat $CALFILE
       echo
       calDate=$(jq ".[0].date" $CALFILE)
@@ -174,24 +178,24 @@ if [ -z $meterbg ]; then
          units=$(jq ".[0].units" $CALFILE)
          if [[ "$units" == *"mmol"* ]]; then
            meterbg=$(bc <<< "($meterbg *18)/1")
-           echo "converted OpenAPS meterbg from mmol value to $meterbg"
+           log "converted OpenAPS meterbg from mmol value to $meterbg"
          fi
-         echo "Calibration of $meterbg from $CALFILE being processed - id = $meterbgid"
+         log "Calibration of $meterbg from $CALFILE being processed - id = $meterbgid"
          # put in backfill so that the command line calibration will be sent up to NS 
          # now (or later if offline)
-        echo "Setting up to send calibration to NS now if online (or later with backfill)"
+        log "Setting up to send calibration to NS now if online (or later with backfill)"
         echo "[{\"created_at\":\"$meterbgid\",\"enteredBy\":\"OpenAPS\",\"reason\":\"sensor calibration\",\"eventType\":\"BG Check\",\"glucose\":$meterbg,\"glucoseType\":\"Finger\",\"units\":\"mg/dl\"}]" > ./calibration-backfill.json
         cat ./calibration-backfill.json
         jq -s add ./calibration-backfill.json ./treatments-backfill.json > ./treatments-backfill.json
       else
-        echo "Calibration bg over 7 minutes - not used"
+        log "Calibration bg over 7 minutes - not used"
       fi
     fi
     
     rm $CALFILE
   fi
 fi
-echo "meterbg from monitor/calibration.json: $meterbg"
+log "meterbg from monitor/calibration.json: $meterbg"
 
 maxDelta=30
 if [ -z $meterbg ]; then
@@ -202,7 +206,7 @@ if [ -z $meterbg ]; then
   secNow=`date +%s`
   secThen=`date +%s --date=$createdAt`
   elapsed=$(bc <<< "($secNow - $secThen)")
-  echo "meterbg date=$createdAt, secNow=$secNow, secThen=$secThen, elapsed=$elapsed"
+  log "meterbg date=$createdAt, secNow=$secNow, secThen=$secThen, elapsed=$elapsed"
   if [ $(bc <<< "$elapsed < 540") -eq 1 ]; then
     # note: pumphistory bg has no _id field, but .timestamp matches .created_at
     meterbgid=$(jq ".[0].created_at" $METERBG_NS_RAW)
@@ -219,7 +223,7 @@ if [ -z $meterbg ]; then
     # clear old meterbg curl responses
     rm $METERBG_NS_RAW
   fi
-  echo "meterbg from nightscout: $meterbg"
+  log "meterbg from nightscout: $meterbg"
 fi
 
 
@@ -237,7 +241,7 @@ if [ -n $meterbg ]; then
 	  meterbg_raw_delta=$(bc -l <<< "0 - $meterbg_raw_delta")
         fi
         if [ $(bc -l <<< "$meterbg_raw_delta > 70") -eq 1 ]; then
-	  echo "Raw/unfiltered compared to meterbg is $meterbg_raw_delta > 70, ignoring calibration"
+	  log "Raw/unfiltered compared to meterbg is $meterbg_raw_delta > 70, ignoring calibration"
         else
           echo "$raw,$meterbg,$datetime,$epochdate,$meterbgid,$filtered,$unfiltered" >> ./calibrations.csv
           ./calc-calibration.sh ./calibrations.csv ./calibration-linear.json
@@ -247,10 +251,10 @@ if [ -n $meterbg ]; then
           cat ./calibration-linear.json
         fi
       else 
-        echo "this calibration was previously recorded - ignoring"
+        log "this calibration was previously recorded - ignoring"
       fi
     else
-      echo "Invalid calibration, meterbg="${meterbg}" outside of range [40,400]"
+      log "Invalid calibration, meterbg="${meterbg}" outside of range [40,400]"
     fi
   fi
 fi
@@ -261,7 +265,7 @@ fi
 if [ -e ./last_sensor_change ]; then
   if test  `find ./last_sensor_change -mmin -720`
   then
-    echo "sensor change within last 12 hours - will use single pt calibration"
+    log "sensor change within last 12 hours - will use single pt calibration"
     ClearCalibrationInputOne
   fi
 fi
@@ -280,12 +284,12 @@ if [ -e ./calibration-linear.json ]; then
   if [ "$calibrationDone" == "1" ];then
     # new calibration record log it to NS
     echo "[{\"device\":\"$transmitter\",\"type\":\"cal\",\"date\":$epochdate,\"scale\":1,\"intercept\":$yIntercept,\"slope\":$slope}]" > cal.json 
-    echo "Posting cal record to NightScout"
-./post-ns.sh ./cal.json && (echo; echo "Upload to NightScout of cal record entry worked";) || (echo; echo "Upload to NS of cal record did not work")
+    log "Posting cal record to NightScout"
+./post-ns.sh ./cal.json && (echo; log "Upload to NightScout of cal record entry worked";) || (echo; log "Upload to NS of cal record did not work")
   fi
 else
   # exit until we have a valid calibration record
-  echo "no valid calibration record yet, exiting ..."
+  log "no valid calibration record yet, exiting ..."
   exit
 fi
 
@@ -294,7 +298,7 @@ fi
 # based upon glucoseType variable at top of script
 calibratedBG=$(bc -l <<< "($raw - $yIntercept)/$slope")
 calibratedBG=$(bc <<< "($calibratedBG / 1)") # truncate
-echo "After calibration calibratedBG =$calibratedBG, slope=$slope, yIntercept=$yIntercept, filtered=$filtered, unfiltered=$unfiltered, raw=$raw"
+log "After calibration calibratedBG =$calibratedBG, slope=$slope, yIntercept=$yIntercept, filtered=$filtered, unfiltered=$unfiltered, raw=$raw"
 
 # For Single Point calibration, use a calculated corrective intercept
 # for glucose in the range of 70 <= BG < 85
@@ -303,38 +307,38 @@ echo "After calibration calibratedBG =$calibratedBG, slope=$slope, yIntercept=$y
 # CI = a1 * BG^2 + a2 * BG + a3
 # a1=-0.1667, a2=25.66667, a3=-977.5
 c=$calibratedBG
-echo "numCalibrations=$numCalibrations, calibrationType=$calibrationType, c=$c"
+log "numCalibrations=$numCalibrations, calibrationType=$calibrationType, c=$c"
 if [ "$calibrationType" = "SinglePoint" ]; then
-  echo "inside CalibrationType=$calibrationType, c=$c"
+  log "inside CalibrationType=$calibrationType, c=$c"
   if [ $(bc <<< "$c > 69") -eq 1 -a $(bc <<< "$c < 85") -eq 1 ]; then
-    echo "SinglePoint calibration calculating corrective intercept"
-    echo "Before CI, BG=$c"
+    log "SinglePoint calibration calculating corrective intercept"
+    log "Before CI, BG=$c"
     calibratedBG=$(bc -l <<< "$c - (-0.16667 * ${c}^2 + 25.6667 * ${c} - 977.5)")
     calibratedBG=$(bc <<< "($calibratedBG / 1)") # truncate
-    echo "After CI, BG=$calibratedBG"
+    log "After CI, BG=$calibratedBG"
   else
-    echo "Not using CI because bg not in [70-84]"
+    log "Not using CI because bg not in [70-84]"
   fi
 fi
 
 if [ -z $calibratedBG ]; then
   # Outer calibrated BG boundary checks - exit and don't send these on to Nightscout / openaps
   if [ $(bc <<< "$calibratedBG > 600") -eq 1 -o $(bc <<< "$calibratedBG < 0") -eq 1 ]; then
-    echo "Glucose $calibratedBG out of range [0,600] - exiting"
+    log "Glucose $calibratedBG out of range [0,600] - exiting"
     exit
   fi
 
   # Inner Calibrated BG boundary checks for case > 400
   if [ $(bc <<< "$calibratedBG > 400") -eq 1 ]; then
-    echo "Glucose $calibratedBG over 400 - setting noise level Heavy"
-    echo "BG value will show in Nightscout but Openaps will not use it for looping"
+    log "Glucose $calibratedBG over 400 - setting noise level Heavy"
+    log "BG value will show in Nightscout but Openaps will not use it for looping"
     noiseSend=4
   fi
 
   # Inner Calibrated BG boundary checks for case < 40
   if [ $(bc <<< "$calibratedBG < 40") -eq 1 ]; then
-    echo "Glucose $calibratedBG < 40 - setting noise level Light"
-    echo "BG value will show in Nightscout and Openaps will conservatively use it for looping"
+    log "Glucose $calibratedBG < 40 - setting noise level Light"
+    log "BG value will show in Nightscout and Openaps will conservatively use it for looping"
     noiseSend=2
   fi
 fi
@@ -344,7 +348,7 @@ if [ -z $lastGlucose -o $(bc <<< "$lastGlucose < 40") -eq 1 ] ; then
 else
   dg=$(bc <<< "$calibratedBG - $lastGlucose")
 fi
-echo "lastGlucose=$lastGlucose, dg=$dg"
+log "lastGlucose=$lastGlucose, dg=$dg"
 
 # begin try out averaging last two entries ...
 da=$dg
@@ -352,16 +356,16 @@ if [ -n $da -a $(bc <<< "$da < 0") -eq 1 ]; then
   da=$(bc <<< "0 - $da")
 fi
 if [ "$da" -lt "45" -a "$da" -gt "15" ]; then
- echo "Before Average last 2 entries - lastGlucose=$lastGlucose, dg=$dg, calibratedBG=$calibratedBG"
+ log "Before Average last 2 entries - lastGlucose=$lastGlucose, dg=$dg, calibratedBG=$calibratedBG"
  calibratedBG=$(bc <<< "($calibratedBG + $lastGlucose)/2")
  dg=$(bc <<< "$calibratedBG - $lastGlucose")
- echo "After average last 2 entries - lastGlucose=$lastGlucose, dg=$dg, calibratedBG=${calibratedBG}"
+ log "After average last 2 entries - lastGlucose=$lastGlucose, dg=$dg, calibratedBG=${calibratedBG}"
 fi
 # end average last two entries if noise
 
 
 if [ $(bc <<< "$dg > $maxDelta") -eq 1 -o $(bc <<< "$dg < (0 - $maxDelta)") -eq 1 ]; then
-  echo "Change $dg out of range [$maxDelta,-${maxDelta}] - setting noise=Heavy"
+  log "Change $dg out of range [$maxDelta,-${maxDelta}] - setting noise=Heavy"
   noiseSend=4
 fi
 
@@ -380,7 +384,7 @@ trend=0
 # Begin trend calculation logic based on last 15 minutes glucose delta average
 if [ -z "$dg" ]; then
   direction="NONE"
-  echo "setting direction=NONE because dg is null, dg=$dg"
+  log "setting direction=NONE because dg is null, dg=$dg"
 else
   usedRecords=0
   totalDelta=0
@@ -409,8 +413,8 @@ else
   if [ $(bc <<< "$usedRecords > 0") -eq 1 ]; then
     numMinutes=$(bc -l <<< "($epochdate-(${date3[$usedRecords-1]}/1000))/60")
     perMinuteAverageDelta=$(bc -l <<< "$totalDelta / $numMinutes")
-    echo "direction calculation based on $numMinutes minutes"
-    echo "perMinuteAverageDelta=$perMinuteAverageDelta"
+    log "direction calculation based on $numMinutes minutes"
+    log "perMinuteAverageDelta=$perMinuteAverageDelta"
 
     if (( $(bc <<< "$perMinuteAverageDelta > 3") )); then
       direction='DoubleUp'
@@ -437,8 +441,8 @@ else
   fi
 fi
 
-echo "perMinuteAverageDelta=$perMinuteAverageDelta, totalDelta=$totalDelta, usedRecords=$usedRecords"
-echo "Gluc=${calibratedBG}, last=${lastGlucose}, diff=${dg}, dir=${direction}"
+log "perMinuteAverageDelta=$perMinuteAverageDelta, totalDelta=$totalDelta, usedRecords=$usedRecords"
+log "Gluc=${calibratedBG}, last=${lastGlucose}, diff=${dg}, dir=${direction}"
 
 cat g5entry.json | jq ".[0].direction = \"$direction\"" > entry-xdrip.json
 
@@ -472,7 +476,7 @@ if [ $(bc -l <<< "$noiseSend == 0") -eq 1 ]; then
   fil41=( $(jq -r ".[].filtered" last41minutes.json) )
 
   usedRecords=${#gluc41[@]}
-  echo usedRecords=$usedRecords last 41 minutes = ${gluc41[@]}
+  log usedRecords=$usedRecords last 41 minutes = ${gluc41[@]}
 
   truncate -s 0 ./noise-input41.csv
   for (( i=$usedRecords-1; i>=0; i-- ))
@@ -484,16 +488,16 @@ if [ $(bc -l <<< "$noiseSend == 0") -eq 1 ]; then
 
   if [ -e "./calc-noise" ]; then
     # use the go-based version
-    echo "calculating noise using go-based version"
+    log "calculating noise using go-based version"
     ./calc-noise ./noise-input41.csv ./noise.json
   else 
-    echo "calculating noise using bash-based version"
+    log "calculating noise using bash-based version"
     ./calc-noise.sh ./noise-input41.csv ./noise.json
   fi
 
   if [ -e ./noise.json ]; then
     noise=`jq -M '.[0] .noise' ./noise.json` 
-    echo "Raw noise of $noise will be used to determine noiseSend value."
+    log "Raw noise of $noise will be used to determine noiseSend value."
   fi
 
   if [ $(bc -l <<< "$noise < 0.35") -eq 1 ]; then
@@ -516,37 +520,36 @@ if [ -e "/usr/local/bin/fakemeter" ]; then
   export MEDTRONIC_PUMP_ID=`grep serial ~/myopenaps/pump.ini | tr -cd 0-9`
   export MEDTRONIC_FREQUENCY=`cat ~/myopenaps/monitor/medtronic_frequency.ini`
   if ! listen -t 4s >& /dev/null ; then 
-    echo "Sending BG of $calibratedBG to pump via meterid $meterid"
+    log "Sending BG of $calibratedBG to pump via meterid $meterid"
     fakemeter -m $meterid  $calibratedBG 
   else
-    echo "Timed out trying to send BG of $calibratedBG to pump via meterid $meterid"
+    log "Timed out trying to send BG of $calibratedBG to pump via meterid $meterid"
   fi
 fi
 
-echo "Posting glucose record to xdripAPS"
+log "Posting glucose record to xdripAPS"
 ./post-xdripAPS.sh ./entry-xdrip.json
 
 if [ -e "./entry-backfill.json" ] ; then
   # In this case backfill records not yet sent to Nightscout
   jq -s add ./entry-xdrip.json ./entry-backfill.json > ./entry-ns.json
   cp ./entry-ns.json ./entry-backfill.json
-  echo "entry-backfill.json exists, so setting up for backfill"
+  log "entry-backfill.json exists, so setting up for backfill"
 else
-  echo "entry-backfill.json does not exist so no backfill"
+  log "entry-backfill.json does not exist so no backfill"
   cp ./entry-xdrip.json ./entry-ns.json
 fi
 
 
-echo "Posting blood glucose to NightScout"
-./post-ns.sh ./entry-ns.json && (echo; echo "Upload to NightScout of xdrip entry worked ... removing ./entry-backfill.json"; rm -f ./entry-backfill.json) || (echo; echo "Upload to NS of xdrip entry did not work ... saving for upload when network is restored ... Auth to NS may have failed; ensure you are using hashed API_SECRET in ~/.bash_profile"; cp ./entry-ns.json ./entry-backfill.json)
+log "Posting blood glucose to NightScout"
+./post-ns.sh ./entry-ns.json && (echo; log "Upload to NightScout of xdrip entry worked ... removing ./entry-backfill.json"; rm -f ./entry-backfill.json) || (echo; log "Upload to NS of xdrip entry did not work ... saving for upload when network is restored ... Auth to NS may have failed; ensure you are using hashed API_SECRET in ~/.bash_profile"; cp ./entry-ns.json ./entry-backfill.json)
 echo
 
 if [ -e "./treatments-backfill.json" ]; then
-  echo "Posting treatments to NightScout"
-  ./post-ns.sh ./treatments-backfill.json treatments && (echo; echo "Upload to NightScout of xdrip treatments worked ... removing ./treatments-backfill.json"; rm -f ./treatments-backfill.json) || (echo; echo "Upload to NS of xdrip entry did not work ... saving treatments for upload when network is restored ... Auth to NS may have failed; ensure you are using hashed API_SECRET in ~/.bash_profile")
+  log "Posting treatments to NightScout"
+  ./post-ns.sh ./treatments-backfill.json treatments && (echo; log "Upload to NightScout of xdrip treatments worked ... removing ./treatments-backfill.json"; rm -f ./treatments-backfill.json) || (echo; log "Upload to NS of xdrip entry did not work ... saving treatments for upload when network is restored ... Auth to NS may have failed; ensure you are using hashed API_SECRET in ~/.bash_profile")
   echo
 fi
 
-echo "Finished Lookout expired transmitter bash script process-entry.sh"
-date
+log "Finished Lookout expired transmitter bash script process-entry.sh"
 echo

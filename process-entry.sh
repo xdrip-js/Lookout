@@ -231,7 +231,7 @@ if [ -n $meterbg ]; then
       if ! cat ./calibrations.csv | egrep "$meterbgid"; then 
         # safety check to make sure we don't have wide variance between the meterbg and the unfiltered/raw value
         # Use 1000 as slope for safety in this check
-        meterbg_raw_delta=$(bc -l <<< "$meterbgid - $raw/1000")
+        meterbg_raw_delta=$(bc -l <<< "$meterbg - $raw/1000")
         # calculate absolute value
         if [ $(bc -l <<< "$meterbg_raw_delta < 0") ]; then
 	  meterbg_raw_delta=$(bc -l <<< "0 - $meterbg_raw_delta")

@@ -292,6 +292,12 @@ module.exports = (io, extend_sensor_opt, expired_tx_opt) => {
 
   var d= new Date(sgv.readDate);
 
+//  console.log('glucose.status= '+glucose.status);
+
+//  const glucJ = JSON.stringify(glucose);
+//  console.log("glucose record below");
+//  console.log(glucJ);
+
   if (expired_tx) {
     const entry = [{
         'device': id,

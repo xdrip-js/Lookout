@@ -236,8 +236,8 @@ if [ -n $meterbg ]; then
         if [ $(bc -l <<< "$meterbg_raw_delta < 0") ]; then
 	  meterbg_raw_delta=$(bc -l <<< "0 - $meterbg_raw_delta")
         fi
-        if [ $(bc -l <<< "$meterbg_raw_delta > 60") ]; then
-	  echo "Raw/unfiltered compared to meterbg is $meterbg_raw_delta > 60, ignoring calibration"
+        if [ $(bc -l <<< "$meterbg_raw_delta > 70") ]; then
+	  echo "Raw/unfiltered compared to meterbg is $meterbg_raw_delta > 70, ignoring calibration"
         else
           echo "$raw,$meterbg,$datetime,$epochdate,$meterbgid,$filtered,$unfiltered" >> ./calibrations.csv
           ./calc-calibration.sh ./calibrations.csv ./calibration-linear.json

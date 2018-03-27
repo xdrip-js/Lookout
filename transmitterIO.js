@@ -362,31 +362,35 @@ module.exports = (io, extend_sensor_opt) => {
             console.log('Found sensor insert after latest calibration. Deleting calibration data.');
             storage.del('nsCalibration');
             storage.del('glucoseHist');
+
+            // set the glucose value to null
+            // so it doesn't show up in the Lookout GUI
+            sgv.glucose = null;
             sendSGV = false;
           }
       }
 
-      if (!sendSGV) {
-        return null;
-      }
-
       if (!sgv.glucose) {
-        console.log('No valid glucose to send. Doing nothing.');
-        return null;
+        console.log('No valid glucose to send.');
+        sendSGV = false;
       }
 
-      glucoseHist.push(sgv);
+      if (sendSGV) {
+        // a valid SGV value is ready to store and send
+        glucoseHist.push(sgv);
 
-      sgv.trend = calcTrend(glucoseHist);
+        sgv.trend = calcTrend(glucoseHist);
 
-      sgv.noise = calcSensorNoise(glucoseHist);
+        sgv.noise = calcSensorNoise(glucoseHist);
 
-      sgv.nsNoise = calcNSNoise(sgv.noise, glucoseHist);
+        sgv.nsNoise = calcNSNoise(sgv.noise, glucoseHist);
 
-      console.log('Current sensor trend: ' + Math.round(sgv.trend*10)/10 + ' Sensor Noise: ' + Math.round(sgv.noise*1000)/1000 + ' NS Noise: ' + sgv.nsNoise);
+        console.log('Current sensor trend: ' + Math.round(sgv.trend*10)/10 + ' Sensor Noise: ' + Math.round(sgv.noise*1000)/1000 + ' NS Noise: ' + sgv.nsNoise);
 
-      storeNewGlucose(glucoseHist);
-      sendNewGlucose(sgv);
+        storeNewGlucose(glucoseHist);
+      }
+
+      sendNewGlucose(sgv, sendSGV);
     })
     .catch((err) => {
       console.log('Process SGV Error: ' + err);
@@ -418,9 +422,12 @@ module.exports = (io, extend_sensor_opt) => {
       });
   }
 
-  const sendNewGlucose = (sgv) => {
+  const sendNewGlucose = (sgv, sendSGV) => {
     io.emit('glucose', sgv);
-    xDripAPS.post(sgv);
+
+    if (sendSGV) {
+      xDripAPS.post(sgv);
+    }
   }
 
   const stateString = (state) => {

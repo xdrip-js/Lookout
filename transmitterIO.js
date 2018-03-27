@@ -521,7 +521,7 @@ module.exports = (io, extend_sensor_opt) => {
       } else if (m.msg == "glucose") {
         const glucose = m.data;
         console.log('got glucose: ' + glucose.glucose + ' unfiltered: ' + glucose.unfiltered);
-        console.log('sensor state: ' + stateString(glucose.state);
+        console.log('sensor state: ' + stateString(glucose.state));
         processNewGlucose(glucose);
       } else if (m.msg == 'messageProcessed') {
         // TODO: check that dates match

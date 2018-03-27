@@ -33,7 +33,7 @@
     "request": "^2.83.0",
     "request-promise-native": "^1.0.5",
     "socket.io": "^1.7.3", 
-    "xdrip-js": "thebookins/xdrip.js",
+    "xdrip-js": "thebookins/xdrip-js",
     "yargs": "^10.0.3"
   },
   "devDependencies": {

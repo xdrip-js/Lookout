@@ -428,10 +428,10 @@ module.exports = (io, extend_sensor_opt, expired_tx_opt) => {
         return null;
       }
 
-//      if (!sgv.glucose) {
-//        console.log('No valid glucose to send. Doing nothing.');
-//        return null;
-//      }
+      if (!sgv.glucose) {
+        console.log('No valid glucose to send. Doing nothing.');
+        return null;
+      }
 
       glucoseHist.push(sgv);
 

@@ -497,6 +497,8 @@ if [ $(bc -l <<< "$noiseSend == 0") -eq 1 ]; then
 
   if [ -e ./noise.json ]; then
     noise=`jq -M '.[0] .noise' ./noise.json` 
+    # remove issue where jq returns scientific notation, convert to decimal
+    noise=$(awk -v noise="$noise" 'BEGIN { printf("%.2f", noise) }' </dev/null)
     log "Raw noise of $noise will be used to determine noiseSend value."
   fi
 

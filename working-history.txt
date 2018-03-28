@@ -1,4 +1,5 @@
 mkdir node
+i
 cd node
 wget https://nodejs.org/dist/v8.10.0/node-v8.10.0-linux-armv6l.tar.xz
 tar -xf node-v8.10.0-linux-armv6l.tar.xz

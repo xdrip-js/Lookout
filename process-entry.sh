@@ -540,19 +540,19 @@ if [ -e "./treatments-backfill.json" ]; then
   echo
 fi
 
-log "Posting glucose record to xdripAPS"
-./post-xdripAPS.sh ./entry-xdrip.json
-
 if [ -e "/usr/local/bin/fakemeter" ]; then
   export MEDTRONIC_PUMP_ID=`grep serial ~/myopenaps/pump.ini | tr -cd 0-9`
   export MEDTRONIC_FREQUENCY=`cat ~/myopenaps/monitor/medtronic_frequency.ini`
-  if ! listen -t 4s >& /dev/null ; then 
+  if ! listen -t 3s >& /dev/null ; then 
     log "Sending BG of $calibratedBG to pump via meterid $meterid"
     fakemeter -m $meterid  $calibratedBG 
   else
     log "Timed out trying to send BG of $calibratedBG to pump via meterid $meterid"
   fi
 fi
+
+log "Posting glucose record to xdripAPS"
+./post-xdripAPS.sh ./entry-xdrip.json
 
 log "Finished Lookout expired transmitter bash script process-entry.sh"
 echo

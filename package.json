@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "description": "A web app for communicating with an OpenAPS rig.",
   "main": "index.js",
+  "repository": {
+	  "type": "git",
+	  "url": "git://github.com/thebookins/Lookout.git"
+  },
   "scripts": {
     "pretest": "jshint public test index.js transmitterIO.js",
     "test": "mocha",
@@ -28,8 +32,8 @@
     "node-persist": "^2.1.0",
     "request": "^2.83.0",
     "request-promise-native": "^1.0.5",
-    "socket.io": "^1.7.3",
-    "xdrip-js": "thebookins/xdrip-js#dev",
+    "socket.io": "^1.7.3", 
+    "xdrip-js": "thebookins/xdrip-js",
     "yargs": "^10.0.3"
   },
   "devDependencies": {

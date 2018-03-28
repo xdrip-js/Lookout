@@ -1,0 +1,21 @@
+mkdir node
+cd node
+wget https://nodejs.org/dist/v8.10.0/node-v8.10.0-linux-armv6l.tar.xz
+tar -xf node-v8.10.0-linux-armv6l.tar.xz
+cd *6l
+sudo cp -R * /usr/local/
+# add /usr/local/bin to PATH env variable in .bash_profile
+node -v
+which node
+npm -v
+git clone https://github.com/thebookins/xdrip-js.git
+cd /root/src/xdrip-js
+sudo npm install
+cd /root/src/Lookout
+git checkout dev
+rm -rf node_modules
+npm cache clean --force
+sudo npm install
+sudo npm link
+Lookout
+history > working-history.txt

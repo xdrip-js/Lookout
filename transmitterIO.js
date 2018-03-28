@@ -6,11 +6,19 @@ const request = require('request-promise-native');
 const moment = require('moment');
 var _ = require('lodash');
 
-module.exports = (io, extend_sensor_opt) => {
+module.exports = (io, extend_sensor_opt, expired_tx_opt) => {
   let id;
   let pending = [];
   let extend_sensor = extend_sensor_opt;
+  let expired_tx = expired_tx_opt;
 
+  if (expired_tx) {
+    console.log('-expired_tx option true');
+    }
+  else {
+    console.log('-expired_tx option false');
+    }
+  
   const removeBTDevice = (id) => {
     var btName = "Dexcom"+id.slice(-2);
 
@@ -281,6 +289,56 @@ module.exports = (io, extend_sensor_opt) => {
     let glucoseHist = [];
     let checkingSensorInsert = false;
     let sendSGV = true;
+
+  var d= new Date(sgv.readDate);
+
+//  console.log('glucose.status= '+glucose.status);
+
+//  const glucJ = JSON.stringify(glucose);
+//  console.log("glucose record below");
+//  console.log(glucJ);
+
+  if (expired_tx) {
+    const entry = [{
+        'device': id,
+        'date': sgv.readDate,
+        'dateString': new Date(sgv.readDate).toISOString(),
+        'sgv': Math.round(sgv.unfiltered/1000),
+        'direction': 'None',
+        'type': 'sgv',
+        'filtered': Math.round(sgv.filtered),
+        'unfiltered': Math.round(sgv.unfiltered),
+        'rssi': "100", // TODO: consider reading this on connection and reporting
+        'noise': "1",
+        'trend': sgv.trend,
+        'glucose': Math.round(sgv.glucose)
+      }];
+
+    const data = JSON.stringify(entry);
+    if(sgv.unfiltered > 500000 || sgv.unfiltered < 30000) // for safety, I'm assuming it is erroneous and ignoring
+    { 
+      console.log("Error - bad glucose data, not processing");
+      return;
+    }
+
+  //console.log('data = '+data);
+    
+    var fs1 = require('fs'),
+       spawn = require('child_process').spawn,
+       out = fs1.openSync('/var/log/openaps/lookout-loop.log', 'a'),
+       err = fs1.openSync('/var/log/openaps/lookout-loop.log', 'a');
+
+    var cmd =  'echo \''+data+'\' > /root/src/Lookout/g5entry.json && /root/src/Lookout/process-entry.sh ';
+    console.log('cmd = '+cmd);
+    var child = spawn(cmd, [], {
+      detached: true,
+      shell: '/bin/bash',
+      stdio: [ 'ignore', out, err ]
+    });
+
+    child.unref();
+    return;
+  }
 
     sgv.g5calibrated = true;
 

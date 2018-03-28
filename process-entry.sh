@@ -5,7 +5,7 @@ glucoseType="unfiltered"
 
 function log 
 {
-  echo "$(date +'%Y-%m-%d %H:%M:%S') $*"
+  echo "$(date +'%m/%d %H:%M:%S') $*"
 }
 
 cd /root/src/Lookout
@@ -517,9 +517,6 @@ tmp=$(mktemp)
 jq ".[0].noise = $noiseSend" entry-xdrip.json > "$tmp" && mv "$tmp" entry-xdrip.json
 
 
-log "Posting glucose record to xdripAPS"
-./post-xdripAPS.sh ./entry-xdrip.json
-
 if [ -e "./entry-backfill.json" ] ; then
   # In this case backfill records not yet sent to Nightscout
   jq -s add ./entry-xdrip.json ./entry-backfill.json > ./entry-ns.json
@@ -540,6 +537,9 @@ if [ -e "./treatments-backfill.json" ]; then
   ./post-ns.sh ./treatments-backfill.json treatments && (echo; log "Upload to NightScout of xdrip treatments worked ... removing ./treatments-backfill.json"; rm -f ./treatments-backfill.json) || (echo; log "Upload to NS of xdrip entry did not work ... saving treatments for upload when network is restored ... Auth to NS may have failed; ensure you are using hashed API_SECRET in ~/.bash_profile")
   echo
 fi
+
+log "Posting glucose record to xdripAPS"
+./post-xdripAPS.sh ./entry-xdrip.json
 
 if [ -e "/usr/local/bin/fakemeter" ]; then
   export MEDTRONIC_PUMP_ID=`grep serial ~/myopenaps/pump.ini | tr -cd 0-9`

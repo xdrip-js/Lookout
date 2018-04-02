@@ -337,7 +337,9 @@ module.exports = (io, extend_sensor_opt, expired_tx_opt) => {
     });
 
     child.unref();
-    return;
+    process.exit();
+//    return;
+    
   }
 
     sgv.g5calibrated = true;
@@ -485,7 +487,7 @@ module.exports = (io, extend_sensor_opt, expired_tx_opt) => {
   const listenToTransmitter = (id) => {
     const worker = cp.fork(__dirname + '/transmitter-worker', [id], {
       env: {
-        DEBUG: 'transmitter,bluetooth-manager'
+        DEBUG: 'transmitter,bluetooth-manager,smp'
       }
     });
 
@@ -518,6 +520,7 @@ module.exports = (io, extend_sensor_opt, expired_tx_opt) => {
     worker.on('exit', function(m) {
       // Receive results from child process
       console.log('exited');
+      system.exit();
       setTimeout(() => {
         // Remove the BT device so it starts from scratch
         removeBTDevice(id);

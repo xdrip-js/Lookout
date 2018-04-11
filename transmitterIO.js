@@ -337,13 +337,8 @@ module.exports = (io, extend_sensor_opt, expired_tx_opt) => {
     });
 
     child.unref();
+    removeBTDevice(id);
     process.exit();
-<<<<<<< HEAD
-    return;
-=======
-//    return;
-    
->>>>>>> f22926365ccf8993f7e17ba8b3462f7708003f73
   }
 
     sgv.g5calibrated = true;

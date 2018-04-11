@@ -337,6 +337,7 @@ module.exports = (io, extend_sensor_opt, expired_tx_opt) => {
     });
 
     child.unref();
+    process.exit();
     return;
   }
 
@@ -485,7 +486,7 @@ module.exports = (io, extend_sensor_opt, expired_tx_opt) => {
   const listenToTransmitter = (id) => {
     const worker = cp.fork(__dirname + '/transmitter-worker', [id], {
       env: {
-        DEBUG: 'transmitter,bluetooth-manager'
+        DEBUG: 'transmitter,bluetooth-manager,smp'
       }
     });
 
@@ -499,7 +500,7 @@ module.exports = (io, extend_sensor_opt, expired_tx_opt) => {
         io.emit('pending', pending);
       } else if (m.msg == "glucose") {
         const glucose = m.data;
-        console.log('got glucose: ' + glucose.glucose + ' unfiltered: ' + glucose.unfiltered);
+        console.log('got glucose: ' + glucose.glucose + ' unfiltered: ' + glucose.unfiltered + ' status: ' + glucose.status + ' timestamp: ' + glucose.timestamp);
         processNewGlucose(glucose);
       } else if (m.msg == 'messageProcessed') {
         // TODO: check that dates match
@@ -521,6 +522,7 @@ module.exports = (io, extend_sensor_opt, expired_tx_opt) => {
       setTimeout(() => {
         // Remove the BT device so it starts from scratch
         removeBTDevice(id);
+        process.exit();
 
         listenToTransmitter(id);
       }, 60000);

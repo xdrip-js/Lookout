@@ -35,6 +35,11 @@ angular.module('AngularOpenAPS.cgm.sensor', [
     G5.sensor.calibrate(value);
     $location.path('/cgm/sensor/pending');
   };
+
+  $scope.stopSensor = function() {
+    G5.sensor.stop();
+    $location.path('/cgm/sensor/pending');
+  };
 }])
 
 .filter('state', function() {

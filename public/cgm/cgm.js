@@ -88,6 +88,7 @@ angular.module('AngularOpenAPS.cgm', [
       socket.emit('startSensor');
     },
     stop: function() {
+      console.log('stopping sensor');
       socket.emit('stopSensor');
     }
   };

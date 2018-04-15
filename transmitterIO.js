@@ -283,6 +283,7 @@ module.exports = (io, extend_sensor_opt) => {
     let sendSGV = true;
 
     sgv.g5calibrated = true;
+    sgv.stateString = stateString(sgv.state);
 
     storage.getItem('nsCalibration')
     .then(calibration => {
@@ -528,8 +529,10 @@ module.exports = (io, extend_sensor_opt) => {
       } else if (m.msg == "glucose") {
         const glucose = m.data;
         console.log('got glucose: ' + glucose.glucose + ' unfiltered: ' + glucose.unfiltered);
-        console.log('sensor state: ' + stateString(glucose.state));
+
         processNewGlucose(glucose);
+
+        console.log('sensor state: ' + glucose.stateString);
       } else if (m.msg == 'messageProcessed') {
         // TODO: check that dates match
         pending.shift();

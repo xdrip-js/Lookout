@@ -65,6 +65,9 @@ angular.module('AngularOpenAPS.cgm', [
     get state() {
       return glucose ? glucose.state : null;
     },
+    get stateString() {
+      return glucose ? glucose.stateString : null;
+    },
     get lastCalibration() {
       return lastCalibration;
     },

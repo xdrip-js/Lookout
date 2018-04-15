@@ -38,8 +38,6 @@ angular.module('AngularOpenAPS.cgm.sensor', [
 }])
 
 .filter('state', function() {
-  const stateString = (state) => {
-  }
   return function(state) {
     switch (state) {
       case 0x00:

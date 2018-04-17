@@ -1,12 +1,105 @@
 // const http = require("http");
 const os = require("os");
 const request = require("request")
+const requestPromise = require('request-promise-native');
+const moment = require('moment');
+
+const queryLatestSGVTime = () => {
+    const secret = process.env.API_SECRET;
+    let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json?';
+
+    // time format needs to match the output of 'date -d "3 hours ago" -Iminutes -u'
+    let ns_query = 'find\[type\]=sgv&count=1';
+
+    let ns_headers = {
+        'Content-Type': 'application/json'
+    };
+
+    if (secret.startsWith("token=")) {
+      ns_url = ns_url + secret + '&';
+    } else {
+      ns_headers = {
+        'Content-Type': 'application/json',
+        'API-SECRET': secret
+      };
+
+    }
+
+    ns_url = ns_url + ns_query;
+
+    let optionsNS = {
+        url: ns_url,
+        method: 'GET',
+        headers: ns_headers,
+        json: true
+    };
+
+    return requestPromise(optionsNS);
+};
+
+const postToXdrip = (entry) => {
+  const secret = process.env.API_SECRET;
+
+  const optionsX = {
+    url: 'http://127.0.0.1:5000/api/v1/entries',
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+          'API-SECRET': secret
+    },
+    body: entry,
+    json: true
+  };
+
+  request(optionsX, function (error, response, body) {
+    if (error) {
+      console.error('error posting json: ', error)
+    } else {
+      console.log('uploaded to xDripAPS, statusCode = ' + response.statusCode);
+    }
+  })
+};
+
+const postToNS = (entry) => {
+  const secret = process.env.API_SECRET;
+  let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json';
+  let ns_headers = {
+      'Content-Type': 'application/json'
+  };
+
+  if (secret.startsWith("token=")) {
+    ns_url = ns_url + '?' + secret;
+  } else {
+    ns_headers = {
+      'Content-Type': 'application/json',
+      'API-SECRET': secret
+    };
+  }
+
+  const optionsNS = {
+    url: ns_url,
+    method: 'POST',
+    headers: ns_headers,
+    body: entry,
+    json: true
+  };
+
+  request(optionsNS, function (error, response, body) {
+    if (error) {
+      console.error('error posting json: ', error)
+    } else {
+      console.log('uploaded to NS, statusCode = ' + response.statusCode);
+    }
+  })
+};
 
 module.exports = () => {
   return {
     // API (public) functions
-    post: (glucose) => {
+    post: (glucoseHist) => {
       // log error and ignore errant glucose values
+      let glucose = glucoseHist[glucoseHist.length-1];
+
       if (glucose.glucose > 800 || glucose.glucose < 20) {
         console.log('Invalid glucose value received from transmitter, ignoring');
         return;
@@ -48,77 +141,16 @@ module.exports = () => {
 
       const data = JSON.stringify(entry);
 
-      const secret = process.env.API_SECRET;
-      let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json';
-      let ns_headers = {
-          'Content-Type': 'application/json'
-      };
+      postToXdrip(entry);
 
-      if (secret.startsWith("token=")) {
-        ns_url = ns_url + '?' + secret;
-      } else {
-        ns_headers = {
-          'Content-Type': 'application/json',
-          'API-SECRET': secret
-        };
-      }
-
-      // // first post to localhost
-      // let options = {
-      //   hostname: '127.0.0.1', // could also try localhost ?
-      //   port: 5000,
-      //   path: '/api/v1/entries',
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'Content-Length': Buffer.byteLength(data),
-      //     'API-SECRET': secret
-      //   }
-      // };
-      //
-      // let req = http.request(options);
-      //
-      // req.on('error', function(e) {
-      //   console.log('problem with request: ' + e.message);
-      // });
-      //
-      // req.write(data);
-      // req.end();
-
-      const optionsNS = {
-          url: ns_url,
-          method: 'POST',
-          headers: ns_headers,
-          body: entry,
-          json: true
-      };
-
-      request(optionsNS, function (error, response, body) {
-        if (error) {
-          console.error('error posting json: ', error)
-        } else {
-          console.log('uploaded to NS, statusCode = ' + response.statusCode);
+      queryLatestSGVTime().then((body) => {
+        if (body.length > 0) {
+          latestTime = moment(body[0]['dateString']);
+          console.log('Latest SGV time in NS: ' + latestTime.format());
         }
-      })
 
-      const optionsX = {
-          url: 'http://127.0.0.1:5000/api/v1/entries',
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'API-SECRET': secret
-          },
-          body: entry,
-          json: true
-      };
-
-      request(optionsX, function (error, response, body) {
-        if (error) {
-          console.error('error posting json: ', error)
-        } else {
-          console.log('uploaded to xDripAPS, statusCode = ' + response.statusCode);
-        }
-      })
+         postToNS(entry);
+      });
     },
 
     postCalibration: (calData) => {

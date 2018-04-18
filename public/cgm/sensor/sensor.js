@@ -39,27 +39,6 @@ angular.module('AngularOpenAPS.cgm.sensor', [
 
 .filter('state', function() {
   return function(state) {
-   switch (state) {
-     case 0x01:
-       return "Stopped";
-     case 0x02:
-       return "Warmup";
-     case 0x04:
-       return "First calibration";
-     case 0x05:
-       return "Second calibration";
-     case 0x06:
-       return "OK";
-     case 0x07:
-       return "Need calibration";
-     case 0x0a:
-       return "Enter new BG meter value";
-     case 0x0b:
-       return "Failed sensor";
-     case 0x12:
-       return "???";
-     default:
-       return state ? "Unknown: 0x" + state.toString(16) : '--';
-     }
+    return state ? 'State: 0x' + state.toString(16) : '--';
   };
 });

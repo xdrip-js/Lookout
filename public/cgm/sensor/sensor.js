@@ -19,6 +19,10 @@ angular.module('AngularOpenAPS.cgm.sensor', [
     templateUrl: 'cgm/sensor/pending.html',
     controller: 'SensorController'
   });
+  $routeProvider.when('/cgm/sensor/stop', {
+    templateUrl: 'cgm/sensor/stop.html',
+    controller: 'SensorController'
+  });
 })
 
 .controller('SensorController', ['$scope', '$interval', '$location', 'G5', function ($scope, $interval, $location, G5) {
@@ -33,6 +37,11 @@ angular.module('AngularOpenAPS.cgm.sensor', [
 
   $scope.calibrate = function(value) {
     G5.sensor.calibrate(value);
+    $location.path('/cgm/sensor/pending');
+  };
+
+  $scope.stopSensor = function() {
+    G5.sensor.stop();
     $location.path('/cgm/sensor/pending');
   };
 }])

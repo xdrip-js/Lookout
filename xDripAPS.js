@@ -5,37 +5,75 @@ const requestPromise = require('request-promise-native');
 const moment = require('moment');
 
 const queryLatestSGVTime = () => {
-    const secret = process.env.API_SECRET;
-    let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json?';
+  const secret = process.env.API_SECRET;
+  let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json?';
 
-    // time format needs to match the output of 'date -d "3 hours ago" -Iminutes -u'
-    let ns_query = 'find\[type\]=sgv&count=1';
+  // time format needs to match the output of 'date -d "3 hours ago" -Iminutes -u'
+  let ns_query = 'find\[type\]=sgv&count=1';
 
-    let ns_headers = {
+  let ns_headers = {
         'Content-Type': 'application/json'
-    };
+  };
 
-    if (secret.startsWith("token=")) {
-      ns_url = ns_url + secret + '&';
-    } else {
-      ns_headers = {
-        'Content-Type': 'application/json',
+  if (secret.startsWith("token=")) {
+    ns_url = ns_url + secret + '&';
+  } else {
+    ns_headers = {
+      'Content-Type': 'application/json',
         'API-SECRET': secret
-      };
-
-    }
-
-    ns_url = ns_url + ns_query;
-
-    let optionsNS = {
-        url: ns_url,
-        method: 'GET',
-        headers: ns_headers,
-        json: true
     };
 
-    return requestPromise(optionsNS);
+  }
+
+  ns_url = ns_url + ns_query;
+
+  let optionsNS = {
+      url: ns_url,
+      method: 'GET',
+      headers: ns_headers,
+      json: true
+  };
+
+  return requestPromise(optionsNS);
 };
+
+const convertEntry = (glucose) => {
+  let direction;
+
+  if (glucose.trend <= -30) {
+    direction = 'DoubleDown';
+  } else if (glucose.trend <= -20) {
+    direction = 'SingleDown';
+  } else if (glucose.trend <= -10) {
+    direction = 'FortyFiveDown';
+  } else if (glucose.trend < 10) {
+    direction = 'Flat';
+  } else if (glucose.trend < 20) {
+    direction = 'FortyFiveUp';
+  } else if (glucose.trend < 30) {
+    direction = 'SingleUp';
+  } else {
+    direction = 'DoubleUp';
+  }
+
+  console.log('Trend: ' + Math.round(glucose.trend*10)/10 + ' direction: ' + direction);
+
+  return [{
+    'device': 'openaps://' + os.hostname(),
+    'date': glucose.readDate,
+    'dateString': new Date(glucose.readDate).toISOString(),
+    'sgv': glucose.glucose,
+    'direction': direction,
+    'type': 'sgv',
+    'filtered': glucose.filtered,
+    'unfiltered': glucose.unfiltered,
+    'rssi': "100", // TODO: consider reading this on connection and reporting
+    'noise': glucose.nsNoise,
+    'trend': glucose.trend,
+    'glucose': glucose.glucose
+  }];
+};
+
 
 const postToXdrip = (entry) => {
   const secret = process.env.API_SECRET;
@@ -105,39 +143,7 @@ module.exports = () => {
         return;
       }
 
-      let direction;
-      if (glucose.trend <= -30) {
-        direction = 'DoubleDown';
-      } else if (glucose.trend <= -20) {
-        direction = 'SingleDown';
-      } else if (glucose.trend <= -10) {
-        direction = 'FortyFiveDown';
-      } else if (glucose.trend < 10) {
-        direction = 'Flat';
-      } else if (glucose.trend < 20) {
-        direction = 'FortyFiveUp';
-      } else if (glucose.trend < 30) {
-        direction = 'SingleUp';
-      } else {
-        direction = 'DoubleUp';
-      }
-
-      console.log('Trend: ' + Math.round(glucose.trend*10)/10 + ' direction: ' + direction);
-
-      const entry = [{
-        'device': 'openaps://' + os.hostname(),
-        'date': glucose.readDate,
-        'dateString': new Date(glucose.readDate).toISOString(),
-        'sgv': glucose.glucose,
-        'direction': direction,
-        'type': 'sgv',
-        'filtered': glucose.filtered,
-        'unfiltered': glucose.unfiltered,
-        'rssi': "100", // TODO: consider reading this on connection and reporting
-        'noise': glucose.nsNoise,
-        'trend': glucose.trend,
-        'glucose': glucose.glucose
-      }];
+      let entry = convertEntry(glucose);
 
       const data = JSON.stringify(entry);
 
@@ -145,11 +151,17 @@ module.exports = () => {
 
       queryLatestSGVTime().then((body) => {
         if (body.length > 0) {
-          latestTime = moment(body[0]['dateString']);
-          console.log('Latest SGV time in NS: ' + latestTime.format());
-        }
+          let latestTime = moment(body[0]['dateString']);
+          let minutesSince = moment().diff(latestTime, 'minutes');
 
-         postToNS(entry);
+          console.log('Latest SGV time in NS: ' + latestTime.format() + ' minutes since: ' + minutesSince);
+
+          if (minutesSince > 6) {
+            backfillNightscout(glucoseHistory, latestTime);
+          }
+
+          postToNS(entry);
+        }
       });
     },
 

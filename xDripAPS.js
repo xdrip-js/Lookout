@@ -3,6 +3,7 @@ const os = require("os");
 const request = require("request")
 const requestPromise = require('request-promise-native');
 const moment = require('moment');
+var _ = require('lodash');
 
 const queryLatestSGVTime = () => {
   const secret = process.env.API_SECRET;
@@ -37,6 +38,23 @@ const queryLatestSGVTime = () => {
   return requestPromise(optionsNS);
 };
 
+const backfillNightscout = (glucoseHistory, latestTime) => {
+  console.log('Backfilling Nightscout');
+
+  _.each(glucoseHistory, (glucose) => {
+    let glucoseTime = moment(glucose.readDate);
+    let minutesAfterLast = glucoseTime.diff(latestTime, 'minutes');
+
+    if ((minutesAfterLast > 0) && (glucose.glucose)) {
+      let entry = convertEntry(glucose);
+
+      console.log('Backfilling Nightscout: ' + glucoseTime.format());
+
+      postToNS(entry);
+    }
+  });
+};
+
 const convertEntry = (glucose) => {
   let direction;
 
@@ -56,7 +74,7 @@ const convertEntry = (glucose) => {
     direction = 'DoubleUp';
   }
 
-  console.log('Trend: ' + Math.round(glucose.trend*10)/10 + ' direction: ' + direction);
+  console.log('Glucose: ' + glucose.glucose + ' Trend: ' + Math.round(glucose.trend*10)/10 + ' direction: ' + direction);
 
   return [{
     'device': 'openaps://' + os.hostname(),
@@ -145,8 +163,6 @@ module.exports = () => {
 
       let entry = convertEntry(glucose);
 
-      const data = JSON.stringify(entry);
-
       postToXdrip(entry);
 
       queryLatestSGVTime().then((body) => {
@@ -157,11 +173,17 @@ module.exports = () => {
           console.log('Latest SGV time in NS: ' + latestTime.format() + ' minutes since: ' + minutesSince);
 
           if (minutesSince > 6) {
-            backfillNightscout(glucoseHistory, latestTime);
+            backfillNightscout(glucoseHist, latestTime);
+          } else {
+            // backfillNightscout will upload the current
+            // entry in addition to the missing entries.
+            // Therefore, only post current entry to Nightscout
+            // if we aren't backfilling.
+            postToNS(entry);
           }
-
-          postToNS(entry);
         }
+      }).catch ((error) => {
+        console.log('Error testing for nightscout backfill or upload: ' + error);
       });
     },
 
@@ -176,8 +198,6 @@ module.exports = () => {
         'intercept': calData.intercept,
         'slope': calData.slope,
       }];
-
-      const data = JSON.stringify(entry);
 
       const secret = process.env.API_SECRET;
       let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json';

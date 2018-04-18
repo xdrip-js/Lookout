@@ -393,11 +393,10 @@ module.exports = (io, extend_sensor_opt) => {
 
         console.log('Current sensor trend: ' + Math.round(sgv.trend*10)/10 + ' Sensor Noise: ' + Math.round(sgv.noise*1000)/1000 + ' NS Noise: ' + sgv.nsNoise);
 
-        storeNewGlucose(glucoseHist);
       }
 
       storeNewGlucose(glucoseHist);
-      sendNewGlucose(sgv, glucoseHist);
+      sendNewGlucose(sgv, sendSGV, glucoseHist);
     })
     .catch((err) => {
       console.log('Process SGV Error: ' + err);
@@ -427,6 +426,14 @@ module.exports = (io, extend_sensor_opt) => {
       .catch((err) => {
         console.log('Unable to store glucoseHist: ' + err);
       });
+  }
+
+  const sendNewGlucose = (sgv, sendSGV, glucoseHist) => {
+    io.emit('glucose', sgv);
+
+    if (sendSGV) {
+      xDripAPS.post(glucoseHist);
+    }
   }
 
   const stateString = (state) => {
@@ -506,10 +513,6 @@ module.exports = (io, extend_sensor_opt) => {
       default:
         return state ? 'Unknown: 0x' + state.toString(16) : '--';
     }
-
-  const sendNewGlucose = (sgv, glucoseHist) => {
-    io.emit('glucose', sgv);
-    xDripAPS.post(glucoseHist);
   }
 
   // TODO: this should timeout, and cancel when we get a new id.

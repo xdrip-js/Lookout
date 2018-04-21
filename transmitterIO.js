@@ -51,13 +51,17 @@ module.exports = (io, extend_sensor_opt) => {
     // Check if we need a calibration
     if (!lastCal || (Math.abs(calErr) > 5)) {
       var calPairs = [];
+
+      calPairs.push(currSGV);
+
       // Suitable values need to be:
       //   less than 300 mg/dl
       //   greater than 80 mg/dl
       //   calibrated via G5, not Lookout
       //   12 minutes after the last G5 calibration time (it takes up to 2 readings to reflect calibration updates)
-      for (i=0; i < glucoseHist.length; ++i) {
-        let sgv = glucoseHist[i];
+      for (i=0; ((i < glucoseHist.length) && (calPairs.length < 10)); ++i) {
+        // Only use up to 10 of the most recent suitable readings
+        let sgv = glucoseHist[glucoseHist.length-i-1];
   
         if ((sgv.readDate > (lastG5CalTime + 12*60*1000)) && (sgv.glucose < 300) && (sgv.glucose > 80) && sgv.g5calibrated) {
           calPairs.push(sgv);

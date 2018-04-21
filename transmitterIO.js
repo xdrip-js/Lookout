@@ -403,12 +403,12 @@ module.exports = (io, extend_sensor_opt) => {
 
       glucoseHist = _.sortBy(glucoseHist, ['readDate']);
 
-      var minDate = moment().subtract(1, 'hours');
+      var minDate = moment().subtract(24, 'hours');
       var sliceStart = 0;
 
-      // only the store the last hour of glucose
-      // the primary use is to determine the
-      // trend and the noise values
+      // store the last 24 hours of glucose
+      // history is used to determine trend and noise values
+      // and back fill nightscout.
       for (var i=0; i < glucoseHist.length; ++i) {
         if (moment(glucoseHist[i].readDate).diff(minDate) < 0) {
           sliceStart = i+1;

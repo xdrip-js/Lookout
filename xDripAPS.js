@@ -1,42 +1,9 @@
 // const http = require("http");
-const os = require("os");
-const request = require("request")
+const os = require('os');
+const request = require('request');
 const requestPromise = require('request-promise-native');
 const moment = require('moment');
 var _ = require('lodash');
-
-const queryLatestSGVTime = () => {
-  const secret = process.env.API_SECRET;
-  let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json?';
-
-  // time format needs to match the output of 'date -d "3 hours ago" -Iminutes -u'
-  let ns_query = 'find\[type\]=sgv&count=1';
-
-  let ns_headers = {
-        'Content-Type': 'application/json'
-  };
-
-  if (secret.startsWith("token=")) {
-    ns_url = ns_url + secret + '&';
-  } else {
-    ns_headers = {
-      'Content-Type': 'application/json',
-        'API-SECRET': secret
-    };
-
-  }
-
-  ns_url = ns_url + ns_query;
-
-  let optionsNS = {
-      url: ns_url,
-      method: 'GET',
-      headers: ns_headers,
-      json: true
-  };
-
-  return requestPromise(optionsNS);
-};
 
 const backfillNightscout = (glucoseHistory, latestTime) => {
   console.log('Backfilling Nightscout');
@@ -109,27 +76,24 @@ const postToXdrip = (entry) => {
 
   request(optionsX, function (error, response, body) {
     if (error) {
-      console.error('error posting json: ', error)
+      console.error('error posting json: ', error);
     } else {
       console.log('uploaded to xDripAPS, statusCode = ' + response.statusCode);
     }
-  })
+  });
 };
 
 const postToNS = (entry) => {
   const secret = process.env.API_SECRET;
   let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json';
   let ns_headers = {
-      'Content-Type': 'application/json'
+    'Content-Type': 'application/json'
   };
 
   if (secret.startsWith("token=")) {
     ns_url = ns_url + '?' + secret;
   } else {
-    ns_headers = {
-      'Content-Type': 'application/json',
-      'API-SECRET': secret
-    };
+    ns_headers['API-SECRET'] = secret;
   }
 
   const optionsNS = {
@@ -142,11 +106,69 @@ const postToNS = (entry) => {
 
   request(optionsNS, function (error, response, body) {
     if (error) {
-      console.error('error posting json: ', error)
+      console.error('error posting json: ', error);
     } else {
       console.log('uploaded to NS, statusCode = ' + response.statusCode);
     }
-  })
+  });
+};
+
+const queryLatestCalTime = () => {
+  const secret = process.env.API_SECRET;
+  let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json?';
+
+  // time format needs to match the output of 'date -d "3 hours ago" -Iminutes -u'
+  let ns_query = 'find\[type\]=cal&count=1';
+
+  let ns_headers = {
+    'Content-Type': 'application/json'
+  };
+
+  if (secret.startsWith("token=")) {
+    ns_url = ns_url + secret + '&';
+  } else {
+    ns_headers['API-SECRET'] = secret;
+  }
+
+  ns_url = ns_url + ns_query;
+
+  let optionsNS = {
+    url: ns_url,
+    method: 'GET',
+    headers: ns_headers,
+    json: true
+  };
+
+  return requestPromise(optionsNS);
+};
+
+const queryLatestSGVs = (numResults) => {
+  const secret = process.env.API_SECRET;
+  let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json?';
+
+  // time format needs to match the output of 'date -d "3 hours ago" -Iminutes -u'
+  let ns_query = 'find\[type\]=sgv&count=' + numResults;
+
+  let ns_headers = {
+    'Content-Type': 'application/json'
+  };
+
+  if (secret.startsWith("token=")) {
+    ns_url = ns_url + secret + '&';
+  } else {
+    ns_headers['API-SECRET'] = secret;
+  }
+
+  ns_url = ns_url + ns_query;
+
+  let optionsNS = {
+    url: ns_url,
+    method: 'GET',
+    headers: ns_headers,
+    json: true
+  };
+
+  return requestPromise(optionsNS);
 };
 
 module.exports = () => {
@@ -165,9 +187,9 @@ module.exports = () => {
 
       postToXdrip(entry);
 
-      queryLatestSGVTime().then((body) => {
+      queryLatestSGVs(1).then((body) => {
         if (body.length > 0) {
-          let latestTime = moment(body[0]['dateString']);
+          let latestTime = moment(body[0].dateString);
           let minutesSince = moment().diff(latestTime, 'minutes');
 
           console.log('Latest SGV time in NS: ' + latestTime.format() + ' minutes since: ' + minutesSince);
@@ -202,7 +224,7 @@ module.exports = () => {
       const secret = process.env.API_SECRET;
       let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json';
       let ns_headers = {
-          'Content-Type': 'application/json'
+        'Content-Type': 'application/json'
       };
 
       if (secret.startsWith("token=")) {
@@ -212,20 +234,28 @@ module.exports = () => {
       }
 
       const optionsNS = {
-          url: ns_url,
-          method: 'POST',
-          headers: ns_headers,
-          body: entry,
-          json: true
+        url: ns_url,
+        method: 'POST',
+        headers: ns_headers,
+        body: entry,
+        json: true
       };
 
       request(optionsNS, function (error, response, body) {
         if (error) {
-          console.error('error posting json: ', error)
+          console.error('error posting json: ', error);
         } else {
           console.log('uploaded new calibration to NS, statusCode = ' + response.statusCode);
         }
-      })
+      });
+    },
+
+    latestCalTime: () => {
+      return queryLatestCalTime();
+    },
+
+    latestSGVs: (numResults) => {
+      return queryLatestSGVs(numResults);
     }
   };
 };

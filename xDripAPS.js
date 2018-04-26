@@ -113,7 +113,7 @@ const postToNS = (entry) => {
   });
 };
 
-const queryLatestCalTime = () => {
+const queryLatestCal = () => {
   const secret = process.env.API_SECRET;
   let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json?';
 
@@ -166,6 +166,63 @@ const queryLatestSGVs = (numResults) => {
     method: 'GET',
     headers: ns_headers,
     json: true
+  };
+
+  return requestPromise(optionsNS);
+};
+
+const querySGVsSince = (startTime, count) => {
+  const secret = process.env.API_SECRET;
+  let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json?';
+
+  // time format needs to match the output of 'date -d "3 hours ago" -Iminutes -u'
+  let ns_query = 'find\[type\]=sgv&find\[dateString\]\[\$gte\]=' + startTime.toISOString() + '&count=' + count;
+
+  let ns_headers = {
+    'Content-Type': 'application/json'
+  };
+
+  if (secret.startsWith("token=")) {
+    ns_url = ns_url + secret + '&';
+  } else {
+    ns_headers['API-SECRET'] = secret;
+  }
+
+  ns_url = ns_url + ns_query;
+
+  let optionsNS = {
+    url: ns_url,
+    method: 'GET',
+    headers: ns_headers,
+    json: true
+  };
+
+  return requestPromise(optionsNS);
+};
+
+const queryLatestSensorInserted = () => {
+  const secret = process.env.API_SECRET;
+  let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/treatments.json?';
+
+  let ns_query = 'find\[eventType\]\[\$regex\]=Sensor&count=1';
+
+  let ns_headers = {
+      'Content-Type': 'application/json'
+  };
+
+  if (secret.startsWith("token=")) {
+    ns_url = ns_url + secret + '&';
+  } else {
+    ns_headers['API-SECRET'] = secret;
+  }
+
+  ns_url = ns_url + ns_query;
+
+  let optionsNS = {
+      url: ns_url,
+      method: 'GET',
+      headers: ns_headers,
+      json: true
   };
 
   return requestPromise(optionsNS);
@@ -250,12 +307,20 @@ module.exports = () => {
       });
     },
 
-    latestCalTime: () => {
-      return queryLatestCalTime();
+    latestCal: () => {
+      return queryLatestCal();
     },
 
     latestSGVs: (numResults) => {
       return queryLatestSGVs(numResults);
+    },
+
+    SGVsSince: (startTime) => {
+      return querySGVsSince(startTime);
+    },
+
+    latestSensorInserted: () => {
+      return queryLatestSensorInserted();
     }
   };
 };

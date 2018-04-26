@@ -2,7 +2,6 @@ const xDripAPS = require("./xDripAPS")();
 const calibration = require('./calibration');
 const storage = require('node-persist');
 const cp = require('child_process');
-const request = require('request-promise-native');
 const moment = require('moment');
 var _ = require('lodash');
 
@@ -10,6 +9,10 @@ module.exports = (io, extend_sensor_opt) => {
   let id;
   let pending = [];
   let extend_sensor = extend_sensor_opt;
+  let syncTimer = null;
+  let worker = null;
+  let timerObj = null;
+
 
   const removeBTDevice = (id) => {
     var btName = "Dexcom"+id.slice(-2);
@@ -24,7 +27,7 @@ module.exports = (io, extend_sensor_opt) => {
       console.log(`stdout: ${stdout}`);
       console.log(`stderr: ${stderr}`);
     });
-  }
+  };
 
   const calculateNewNSCalibration = (lastCal, lastG5CalTime, glucoseHist, currSGV) => {
     // set it to a high number so we upload a new cal
@@ -70,7 +73,7 @@ module.exports = (io, extend_sensor_opt) => {
 
       // If we have at least 3 good pairs, use LSR
       if (calPairs.length > 3) {
-        calResult = calibration.lsrCalibration(calPairs);
+        let calResult = calibration.lsrCalibration(calPairs);
 
         if ((calResult.slope > 12.5) || (calResult.slope < 0.45)) {
             // wait until the next opportunity
@@ -88,7 +91,7 @@ module.exports = (io, extend_sensor_opt) => {
           type: calResult.calibrationType
         };
       } else if (calPairs.length > 0) {
-        calResult = calibration.singlePointCalibration(calPairs);
+        let calResult = calibration.singlePointCalibration(calPairs);
 
         console.log('Calibrated with Single Point');
 
@@ -107,40 +110,7 @@ module.exports = (io, extend_sensor_opt) => {
       console.log('No calibration update needed.');
       return null;
     }
-  }
-
-  const sensorInsertedCheck = (lastCal) => {
-      const secret = process.env.API_SECRET;
-      let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/treatments.json?';
-
-      // time format needs to match the output of 'date -d "3 hours ago" -Iminutes -u'
-      let ns_query = 'find\[created_at\]\[\$gte\]=' + moment().subtract(3, 'hours').toISOString() + '&find\[eventType\]\[\$regex\]=Sensor';
-
-      let ns_headers = {
-          'Content-Type': 'application/json'
-      };
-
-      if (secret.startsWith("token=")) {
-        ns_url = ns_url + secret + '&';
-      } else {
-        ns_headers = {
-          'Content-Type': 'application/json',
-          'API-SECRET': secret
-        };
-
-      }
-
-      ns_url = ns_url + ns_query;
-
-      let optionsNS = {
-          url: ns_url,
-          method: 'GET',
-          headers: ns_headers,
-          json: true
-      };
-
-      return request(optionsNS);
-  }
+  };
 
   // Calculate the sum of the distance of all points (overallDistance)
   // Calculate the overall distance between the first and the last point (overallDistance)
@@ -157,7 +127,7 @@ module.exports = (io, extend_sensor_opt) => {
 
     var sgvArr = glucoseHist.slice(-MAXRECORDS);
 
-    n=sgvArr.length;
+    let n=sgvArr.length;
 
     let firstSGV = sgvArr[0].glucose * 1000.0;
     let firstTime = sgvArr[0].readDate / 1000.0 * 30.0;
@@ -167,15 +137,15 @@ module.exports = (io, extend_sensor_opt) => {
 
     let xarr = [];
 
-    for (var i=0; i < n; i++) {
+    for (let i=0; i < n; i++) {
       xarr.push(sgvArr[i].readDate / 1000.0 * 30.0 - firstTime);
     }
 
     // sod = sum of distances
     var sod=0;
-    var lastDelta=0
+    var lastDelta=0;
 
-    for (var i=1; i < n; i++) {
+    for (let i=1; i < n; i++) {
       // y2y1Delta adds a multiplier that gives 
       // higher priority to the latest BG's
       let y2y1Delta=(sgvArr[i].glucose - sgvArr[i-1].glucose) * 1000.0 * (1 + i / (n*3));
@@ -196,7 +166,7 @@ module.exports = (io, extend_sensor_opt) => {
 
     var overallsod=Math.sqrt(Math.pow(lastSGV - firstSGV, 2) + Math.pow(lastTime - firstTime, 2));
 
-    if ((n < MINRECORDS) || (sod == 0)) {
+    if ((n < MINRECORDS) || (sod === 0)) {
       // assume no noise if no records
       noise = 0;
     } else {
@@ -204,13 +174,11 @@ module.exports = (io, extend_sensor_opt) => {
     }
 
     return noise;
-  }
+  };
 
   // Return 10 minute trend total
   const calcTrend = (glucoseHist) => {
-    let direction = "NONE";
     let sgvHist = null;
-    let totalDelta = 0;
 
     let trend = 0;
 
@@ -246,7 +214,7 @@ module.exports = (io, extend_sensor_opt) => {
     }
 
     return trend;
-  }
+  };
 
   // Return sensor noise
   const calcNSNoise = (noise, glucoseHist) => {
@@ -278,7 +246,7 @@ module.exports = (io, extend_sensor_opt) => {
     }
 
     return nsNoise;
-  }
+  };
 
   const processNewGlucose = (sgv) => {
     let lastCal = null;
@@ -360,7 +328,7 @@ module.exports = (io, extend_sensor_opt) => {
         // If it has been, it will clear the calibration value
         // and abort sending the SGV
         checkingSensorInsert = true;
-        return sensorInsertedCheck(lastCal);
+        return xDripAPS.latestSensorInserted();
       } else {
         return null;
       }
@@ -368,16 +336,16 @@ module.exports = (io, extend_sensor_opt) => {
     .then((body) => {
 
       if (checkingSensorInsert) {
-          if ((body.length > 0) && (moment(body[0]['created_at']).diff(moment(lastCal.date)) > 0)) {
-            console.log('Found sensor insert after latest calibration. Deleting calibration data.');
-            storage.del('nsCalibration');
-            storage.del('glucoseHist');
+        if ((body.length > 0) && (moment(body[0].created_at).diff(moment(lastCal.date)) > 0)) {
+          console.log('Found sensor insert after latest calibration. Deleting calibration data.');
+          storage.del('nsCalibration');
+          storage.del('glucoseHist');
 
-            // set the glucose value to null
-            // so it doesn't show up in the Lookout GUI
-            sgv.glucose = null;
-            sendSGV = false;
-          }
+          // set the glucose value to null
+          // so it doesn't show up in the Lookout GUI
+          sgv.glucose = null;
+          sendSGV = false;
+        }
       }
 
       if (!sgv.glucose) {
@@ -404,8 +372,8 @@ module.exports = (io, extend_sensor_opt) => {
     })
     .catch((err) => {
       console.log('Process SGV Error: ' + err);
-    })
-  }
+    });
+  };
 
   // Store the last hour of glucose readings
   const storeNewGlucose = (glucoseHist) => {
@@ -430,7 +398,7 @@ module.exports = (io, extend_sensor_opt) => {
       .catch((err) => {
         console.log('Unable to store glucoseHist: ' + err);
       });
-  }
+  };
 
   const sendNewGlucose = (sgv, sendSGV, glucoseHist) => {
     io.emit('glucose', sgv);
@@ -438,7 +406,7 @@ module.exports = (io, extend_sensor_opt) => {
     if (sendSGV) {
       xDripAPS.post(glucoseHist);
     }
-  }
+  };
 
   const stateString = (state) => {
     switch (state) {
@@ -517,11 +485,121 @@ module.exports = (io, extend_sensor_opt) => {
       default:
         return state ? 'Unknown: 0x' + state.toString(16) : '--';
     }
-  }
+  };
+
+  const syncNS = () => {
+    let calibrationComplete = false;
+    let glucoseComplete = false;
+
+    let rigCal = null;
+    let NSCal = null;
+
+    storage.getItem('calibration')
+    .then(calibration => {
+      console.log('Have rig calibration);
+      console.log(calibration);
+      rigCal = calibration;
+    })
+    .catch(error => {
+      console.log('Error getting rig calibration: ' + error);
+    })
+    .then(() => {
+      xDripAPS.latestCal()
+      .then(body => {
+        NSCal = body;
+      })
+      .catch(error => {
+        console.log('Error getting NS calibration: ' + error);
+      })
+      .then(() => {
+        if (NSCal && (NSCal.length > 0)) {
+          console.log("Have NS Cal - Need to check if it is more recent");
+          console.log(NSCal);
+
+          if (rigCal) {
+            console.log('Have NS and rig calibration values - need to determine which is most recent');
+          } else {
+            console.log('No rig calibration - need to store NS calibration');
+          }
+        } else {
+          if (rigCal) {
+            console.log('No NS calibration - need to upload rig calibration');
+          } else {
+            console.log('No rig or NS calibration');
+          }
+        }
+
+        calibrationComplete = true;
+
+        if (glucoseComplete) {
+          console.log('syncNS complete - setting 5 minute timer');
+          syncTimer = setTimeout(() => {
+            // Restart the syncNS after 5 minute
+            syncNS();
+          }, 5 * 60000);
+        }
+      });
+    });
+
+    let rigSGVs = null;
+    let NSSGVs = null;
+
+    storage.getItem('glucoseHist')
+    .then(glucoseHist => {
+      console.log('Have rig SGVs');
+      console.log(glucoseHist);
+      rigSGVs = glucoseHist;
+    })
+    .catch(error => {
+      console.log('Error getting rig SGVs: ' + error);
+    })
+    .then(() => {
+      let timeSince = moment().subtract(24, 'hours');
+
+      xDripAPS.SGVsSince(timeSince, 12*24*2)
+      .then(body => {
+        NSSGVs = body;
+      })
+      .catch(error => {
+        console.log('Error getting NS SGVs: ' + error);
+      })
+      .then(() => {
+        if (NSSGVs && NSSGVs.length > 0) {
+          console.log('Have NS SGVs - Need to check for missing SGVs');
+
+          if (rigSGVs) {
+            console.log('Have NS and rig SGV values - need to determine which need to merged');
+            console.log(rigSGVs);
+          } else {
+            console.log('No rig SGV values - need to store NS SGV values');
+          }
+        } else {
+          if (rigSGVs) {
+            console.log('No NS SGVs - need to upload rig SGVs');
+          } else {
+            console.log('No rig or NS SGVs');
+          }
+        }
+
+        glucoseComplete = true;
+
+        if (calibrationComplete) {
+          console.log('syncNS complete - setting 5 minute timer');
+          syncTimer = setTimeout(() => {
+            // Restart the syncNS after 5 minute
+            syncNS();
+          }, 5 * 60000);
+        }
+      });
+    });
+  };
 
   // TODO: this should timeout, and cancel when we get a new id.
   const listenToTransmitter = (id) => {
-    const worker = cp.fork(__dirname + '/transmitter-worker', [id], {
+    // Remove the BT device so it starts from scratch
+    removeBTDevice(id);
+
+    worker = cp.fork(__dirname + '/transmitter-worker', [id], {
       env: {
         DEBUG: 'transmitter,bluetooth-manager'
       }
@@ -552,21 +630,38 @@ module.exports = (io, extend_sensor_opt) => {
         storage.setItem('calibration', m.data)
         .then(() => {
           io.emit('calibrationData', m.data);
-        })
+        });
       }
     });
 
     worker.on('exit', function(m) {
+      worker = null;
+
       // Receive results from child process
       console.log('exited');
-      setTimeout(() => {
-        // Remove the BT device so it starts from scratch
-        removeBTDevice(id);
 
+      if (timerObj !==  null) {
+        clearTimeout(timerObj);
+      }
+
+      timerObj = setTimeout(() => {
+        // Restart the worker after 1 minute
         listenToTransmitter(id);
-      }, 60000);
+      }, 1 * 60000);
     });
-  }
+
+    timerObj = setTimeout(() => {
+      // After 6 minutes, kill the worker if it hasn't already exited
+      // When it exits after receiving kill signal, the on exit
+      // callback will fire to restart it
+      if (worker !== null) {
+        try {
+          console.log('Starting new worker, but one already exists. Attempting to kill it');
+          worker.kill('SIGTERM');
+        } catch (error) { }
+      }
+    }, 6 * 60000);
+  };
 
   // handle persistence here
   // make the storage direction relative to the install directory,
@@ -577,8 +672,7 @@ module.exports = (io, extend_sensor_opt) => {
   .then(value => {
     id = value || '500000';
 
-    // Remove the BT device so it starts from scratch
-    removeBTDevice(id);
+    syncNS();
 
     listenToTransmitter(id);
 
@@ -611,38 +705,45 @@ module.exports = (io, extend_sensor_opt) => {
       socket.on('startSensor', () => {
         console.log('received startSensor command');
         pending.push({date: Date.now(), type: "StartSensor"});
-        io.emit('pending', pending)
+        io.emit('pending', pending);
       });
       socket.on('stopSensor', () => {
         console.log('received stopSensor command');
         pending.push({date: Date.now(), type: "StopSensor"});
-        io.emit('pending', pending)
+        io.emit('pending', pending);
       });
       socket.on('calibrate', glucose => {
         console.log('received calibration of ' + glucose);
         pending.push({date: Date.now(), type: "CalibrateSensor", glucose});
-        io.emit('pending', pending)
+        io.emit('pending', pending);
       });
       socket.on('id', value => {
-        // Remove the old BT device so it starts from scratch
-        removeBTDevice(id);
+        if (value.length != 6) {
+          console.log('received invalid transmitter id of ' + value);
+        } else {
+          clearTimeout(timerObj);
 
-        console.log('received id of ' + value);
-        id = value;
-        storage.setItemSync('id', id);
-        // TODO: clear glucose on new id
-        // use io.emit rather than socket.emit
-        // since we want to nofify all connections
-        io.emit('id', id);
-        // const status = {id};
-        // console.log(JSON.stringify(status));
-        // fs.writeFile(__dirname + '/status.json', JSON.stringify(status), (err) => {
-        //   if (err) {
-        //     console.error(err);
-        //     return;
-        //   }
-        //   console.log("File has been created");
-        // });
+          if (worker !== null) {
+            try {
+              console.log('Attempting to kill worker for old id');
+              worker.kill('SIGTERM');
+            } catch (error) { }
+          }
+
+          // Remove the old BT device
+          removeBTDevice(id);
+
+          console.log('received id of ' + value);
+          id = value;
+
+          storage.setItemSync('id', id);
+          // TODO: clear glucose on new id
+          // use io.emit rather than socket.emit
+          // since we want to notify all connections
+          io.emit('id', id);
+
+          listenToTransmitter(id);
+        }
       });
     });
   });

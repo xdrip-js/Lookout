@@ -15,6 +15,7 @@ module.exports = async (io, extend_sensor_opt) => {
   let extend_sensor = extend_sensor_opt;
   let worker = null;
   let timerObj = null;
+  let SGVStorageLocked = false;
 
   const removeBTDevice = (id) => {
     var btName = 'Dexcom'+id.slice(-2);

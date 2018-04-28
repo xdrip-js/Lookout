@@ -1,4 +1,4 @@
-const xDripAPS = require("./xDripAPS")();
+const xDripAPS = require('./xDripAPS')();
 const calibration = require('./calibration');
 const storage = require('node-persist');
 const cp = require('child_process');
@@ -9,13 +9,33 @@ module.exports = async (io, extend_sensor_opt) => {
   let id;
   let pending = [];
   let extend_sensor = extend_sensor_opt;
-  let syncTimer = null;
   let worker = null;
   let timerObj = null;
+  let SGVStorageLocked = false;
 
+  const timeout = async (ms) => {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  };
+
+  const lockSGVStorage = async () => {
+    // sleep for 1 second at a time until
+    // the storage is unlocked
+    while (SGVStorageLocked) {
+      console.log('Storage locked... waiting 1 second');
+      await timeout(1000);
+    }
+
+    console.log('Storage locked.');
+    SGVStorageLocked = true;
+  };
+
+  const unlockSGVStorage = () => {
+    console.log('Storage unlocked.');
+    SGVStorageLocked = false;
+  };
 
   const removeBTDevice = (id) => {
-    var btName = "Dexcom"+id.slice(-2);
+    var btName = 'Dexcom'+id.slice(-2);
 
     cp.exec('bt-device -r '+btName, (err, stdout, stderr) => {
       if (err) {
@@ -76,9 +96,9 @@ module.exports = async (io, extend_sensor_opt) => {
         let calResult = calibration.lsrCalibration(calPairs);
 
         if ((calResult.slope > 12.5) || (calResult.slope < 0.45)) {
-            // wait until the next opportunity
-            console.log('Slope out of range to calibrate: ' + calResult.slope);
-            return null;
+          // wait until the next opportunity
+          console.log('Slope out of range to calibrate: ' + calResult.slope);
+          return null;
         }
 
         console.log('Calibrated with LSR');
@@ -254,6 +274,17 @@ module.exports = async (io, extend_sensor_opt) => {
     let sensorInsert = null;
     let sendSGV = true;
 
+    // Check if a new sensor has been inserted.
+    // If it has been, it will clear the calibration value
+    // and abort sending the SGV if we are applying Lookout
+    // calibration instead of G5 calibration
+    sensorInsert = await xDripAPS.latestSensorInserted()
+      .catch(error => {
+        console.log('Unable to get latest sensor inserted record from NS: ' + error);
+      });
+
+    await lockSGVStorage();
+
     sgv.g5calibrated = true;
     sgv.stateString = stateString(sgv.state);
 
@@ -263,19 +294,19 @@ module.exports = async (io, extend_sensor_opt) => {
     }
 
     lastCal = await storage.getItem('nsCalibration')
-    .catch(error => {
-      console.log('Unable to obtain current NS Calibration');
-    });
+      .catch(error => {
+        console.log('Unable to obtain current NS Calibration' + error);
+      });
 
     glucoseHist = await storage.getItem('glucoseHist')
-    .catch((err) => {
-      console.log('Error getting glucoseHist: ' + err);
-    });
+      .catch((err) => {
+        console.log('Error getting glucoseHist: ' + err);
+      });
 
     let storedLastG5CalData = await storage.getItem('calibration')
-    .catch((err) => {
-      console.log('Error getting lastG5CalData: ' + err);
-    });
+      .catch((err) => {
+        console.log('Error getting lastG5CalData: ' + err);
+      });
 
     let lastG5CalTime = 0;
     let newCal = null;
@@ -298,9 +329,9 @@ module.exports = async (io, extend_sensor_opt) => {
       console.log('New calibration: slope = ' + newCal.slope + ', intercept = ' + newCal.intercept + ', scale = ' + newCal.scale);
 
       storage.setItem('nsCalibration', newCal)
-      .catch(() => {
-        console.log('Unable to store new NS Calibration');
-      });
+        .catch(() => {
+          console.log('Unable to store new NS Calibration');
+        });
 
       xDripAPS.postCalibration(newCal);
     }
@@ -312,14 +343,6 @@ module.exports = async (io, extend_sensor_opt) => {
       console.log('Calibrated SGV: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered + ' slope: ' + lastCal.slope + ' intercept: ' + lastCal.intercept);
 
       sgv.g5calibrated = false;
-
-      // Check if a new sensor has been inserted.
-      // If it has been, it will clear the calibration value
-      // and abort sending the SGV
-      sensorInsert = await xDripAPS.latestSensorInserted()
-      .catch(error => {
-        console.log('Unable to get latest sensor inserted record from NS: ' + error);
-      });
 
       if (sensorInsert) {
         if ((sensorInsert.length > 0) && (moment(sensorInsert[0].created_at).diff(moment(lastCal.date)) > 0)) {
@@ -354,31 +377,33 @@ module.exports = async (io, extend_sensor_opt) => {
 
     }
 
-    storeNewGlucose(glucoseHist);
+    await storeNewGlucose(glucoseHist);
+
+    unlockSGVStorage();
 
     sendNewGlucose(sgv, sendSGV, glucoseHist);
   };
 
   // Store the last hour of glucose readings
-  const storeNewGlucose = (glucoseHist) => {
+  const storeNewGlucose = async (glucoseHist) => {
 
-      glucoseHist = _.sortBy(glucoseHist, ['readDate']);
+    glucoseHist = _.sortBy(glucoseHist, ['readDate']);
 
-      var minDate = moment().subtract(24, 'hours');
-      var sliceStart = 0;
+    var minDate = moment().subtract(24, 'hours');
+    var sliceStart = 0;
 
-      // store the last 24 hours of glucose
-      // history is used to determine trend and noise values
-      // and back fill nightscout.
-      for (var i=0; i < glucoseHist.length; ++i) {
-        if (moment(glucoseHist[i].readDate).diff(minDate) < 0) {
-          sliceStart = i+1;
-        }
+    // store the last 24 hours of glucose
+    // history is used to determine trend and noise values
+    // and back fill nightscout.
+    for (var i=0; i < glucoseHist.length; ++i) {
+      if (moment(glucoseHist[i].readDate).diff(minDate) < 0) {
+        sliceStart = i+1;
       }
+    }
 
-      glucoseHist = glucoseHist.slice(sliceStart);
+    glucoseHist = glucoseHist.slice(sliceStart);
 
-      storage.setItem('glucoseHist', glucoseHist)
+    await storage.setItem('glucoseHist', glucoseHist)
       .catch((err) => {
         console.log('Unable to store glucoseHist: ' + err);
       });
@@ -394,80 +419,80 @@ module.exports = async (io, extend_sensor_opt) => {
 
   const stateString = (state) => {
     switch (state) {
-      case 0x00:
-        return 'None';
-      case 0x01:
-        return 'Stopped';
-      case 0x02:
-        return 'Warmup';
-      case 0x03:
-        return 'Unused';
-      case 0x04:
-        return 'First calibration';
-      case 0x05:
-        return 'Second calibration';
-      case 0x06:
-        return 'OK';
-      case 0x07:
-        return 'Need calibration';
-      case 0x08:
-        return 'Calibration Error 1';
-      case 0x09:
-        return 'Calibration Error 0';
-      case 0x0a:
-        return 'Calibration Linearity Fit Failure';
-      case 0x0b:
-        return 'Sensor Failed Due to Counts Aberration';
-      case 0x0c:
-        return 'Sensor Failed Due to Residual Aberration';
-      case 0x0d:
-        return 'Out of Calibration Due To Outlier';
-      case 0x0e:
-        return 'Outlier Calibration Request - Need a Calibration';
-      case 0x0f:
-        return 'Session Expired';
-      case 0x10:
-        return 'Session Failed Due To Unrecoverable Error';
-      case 0x11:
-        return 'Session Failed Due To Transmitter Error';
-      case 0x12:
-        return 'Temporary Session Failure - ???';
-      case 0x13:
-        return 'Reserved';
-      case 0x80:
-        return 'Calibration State - Start';
-      case 0x81:
-        return 'Calibration State - Start Up';
-      case 0x82:
-        return 'Calibration State - First of Two Calibrations Needed';
-      case 0x83:
-        return 'Calibration State - High Wedge Display With First BG';
-      case 0x84:
-        return 'Unused Calibration State - Low Wedge Display With First BG';
-      case 0x85:
-        return 'Calibration State - Second of Two Calibrations Needed';
-      case 0x86:
-        return 'Calibration State - In Calibration Transmitter';
-      case 0x87:
-        return 'Calibration State - In Calibration Display';
-      case 0x88:
-        return 'Calibration State - High Wedge Transmitter';
-      case 0x89:
-        return 'Calibration State - Low Wedge Transmitter';
-      case 0x8a:
-        return 'Calibration State - Linearity Fit Transmitter';
-      case 0x8b:
-        return 'Calibration State - Out of Cal Due to Outlier Transmitter';
-      case 0x8c:
-        return 'Calibration State - High Wedge Display';
-      case 0x8d:
-        return 'Calibration State - Low Wedge Display';
-      case 0x8e:
-        return 'Calibration State - Linearity Fit Display';
-      case 0x8f:
-        return 'Calibration State - Session Not in Progress';
-      default:
-        return state ? 'Unknown: 0x' + state.toString(16) : '--';
+    case 0x00:
+      return 'None';
+    case 0x01:
+      return 'Stopped';
+    case 0x02:
+      return 'Warmup';
+    case 0x03:
+      return 'Unused';
+    case 0x04:
+      return 'First calibration';
+    case 0x05:
+      return 'Second calibration';
+    case 0x06:
+      return 'OK';
+    case 0x07:
+      return 'Need calibration';
+    case 0x08:
+      return 'Calibration Error 1';
+    case 0x09:
+      return 'Calibration Error 0';
+    case 0x0a:
+      return 'Calibration Linearity Fit Failure';
+    case 0x0b:
+      return 'Sensor Failed Due to Counts Aberration';
+    case 0x0c:
+      return 'Sensor Failed Due to Residual Aberration';
+    case 0x0d:
+      return 'Out of Calibration Due To Outlier';
+    case 0x0e:
+      return 'Outlier Calibration Request - Need a Calibration';
+    case 0x0f:
+      return 'Session Expired';
+    case 0x10:
+      return 'Session Failed Due To Unrecoverable Error';
+    case 0x11:
+      return 'Session Failed Due To Transmitter Error';
+    case 0x12:
+      return 'Temporary Session Failure - ???';
+    case 0x13:
+      return 'Reserved';
+    case 0x80:
+      return 'Calibration State - Start';
+    case 0x81:
+      return 'Calibration State - Start Up';
+    case 0x82:
+      return 'Calibration State - First of Two Calibrations Needed';
+    case 0x83:
+      return 'Calibration State - High Wedge Display With First BG';
+    case 0x84:
+      return 'Unused Calibration State - Low Wedge Display With First BG';
+    case 0x85:
+      return 'Calibration State - Second of Two Calibrations Needed';
+    case 0x86:
+      return 'Calibration State - In Calibration Transmitter';
+    case 0x87:
+      return 'Calibration State - In Calibration Display';
+    case 0x88:
+      return 'Calibration State - High Wedge Transmitter';
+    case 0x89:
+      return 'Calibration State - Low Wedge Transmitter';
+    case 0x8a:
+      return 'Calibration State - Linearity Fit Transmitter';
+    case 0x8b:
+      return 'Calibration State - Out of Cal Due to Outlier Transmitter';
+    case 0x8c:
+      return 'Calibration State - High Wedge Display';
+    case 0x8d:
+      return 'Calibration State - Low Wedge Display';
+    case 0x8e:
+      return 'Calibration State - Linearity Fit Display';
+    case 0x8f:
+      return 'Calibration State - Session Not in Progress';
+    default:
+      return state ? 'Unknown: 0x' + state.toString(16) : '--';
     }
   };
 
@@ -476,23 +501,25 @@ module.exports = async (io, extend_sensor_opt) => {
     let NSCal = null;
 
     NSCal = await xDripAPS.latestCal()
-    .catch(error => {
-      console.log('Error getting NS calibration: ' + error);
-    });
+      .catch(error => {
+        console.log('Error getting NS calibration: ' + error);
+      });
 
     console.log('SyncNS NS Cal:');
     console.log(NSCal);
 
+    await lockSGVStorage();
+
     rigCal = await storage.getItem('calibration')
-    .catch(error => {
-      console.log('Error getting rig calibration: ' + error);
-    });
+      .catch(error => {
+        console.log('Error getting rig calibration: ' + error);
+      });
 
     console.log('SyncNS Rig calibration:');
     console.log(rigCal);
 
     if (NSCal && (NSCal.length > 0)) {
-      console.log("Have NS Cal - Need to check if it is more recent");
+      console.log('Have NS Cal - Need to check if it is more recent');
       console.log(NSCal);
 
       if (rigCal) {
@@ -508,24 +535,30 @@ module.exports = async (io, extend_sensor_opt) => {
       }
     }
 
+    // unlockSGVStorage while we
+    // pull the NS data
+    unlockSGVStorage();
+
     let rigSGVs = null;
     let NSSGVs = null;
-
-    rigSGVs = await storage.getItem('glucoseHist')
-    .catch(error => {
-      console.log('Error getting rig SGVs: ' + error);
-    });
-
-    console.log('Rig SGVs: ' + rigSGVs.length);
 
     let timeSince = moment().subtract(24, 'hours');
 
     NSSGVs = await xDripAPS.SGVsSince(timeSince, 12*24*2)
-    .catch(error => {
-      console.log('Error getting NS SGVs: ' + error);
-    });
+      .catch(error => {
+        console.log('Error getting NS SGVs: ' + error);
+      });
 
     console.log('NS SGVs: ' + NSSGVs.length);
+
+    await lockSGVStorage();
+
+    rigSGVs = await storage.getItem('glucoseHist')
+      .catch(error => {
+        console.log('Error getting rig SGVs: ' + error);
+      });
+
+    console.log('Rig SGVs: ' + rigSGVs.length);
 
     if (NSSGVs && NSSGVs.length > 0) {
       console.log('Have NS SGVs - Need to check for missing SGVs');
@@ -544,8 +577,11 @@ module.exports = async (io, extend_sensor_opt) => {
       }
     }
 
+    unlockSGVStorage();
+
     console.log('syncNS complete - setting 5 minute timer');
-    syncTimer = setTimeout(() => {
+
+    setTimeout(() => {
       // Restart the syncNS after 5 minute
       syncNS();
     }, 5 * 60000);
@@ -563,14 +599,14 @@ module.exports = async (io, extend_sensor_opt) => {
     });
 
     worker.on('message', m => {
-      if (m.msg == "getMessages") {
+      if (m.msg == 'getMessages') {
         worker.send(pending);
         // NOTE: this will lead to missed messages if the rig
         // shuts down before acting on them, or in the
         // event of lost comms
         // better to return something from the worker
         io.emit('pending', pending);
-      } else if (m.msg == "glucose") {
+      } else if (m.msg == 'glucose') {
         const glucose = m.data;
         console.log('got glucose: ' + glucose.glucose + ' unfiltered: ' + glucose.unfiltered);
 
@@ -581,7 +617,7 @@ module.exports = async (io, extend_sensor_opt) => {
         // TODO: check that dates match
         pending.shift();
         io.emit('pending', pending);
-      } else if (m.msg == "calibrationData") {
+      } else if (m.msg == 'calibrationData') {
         // TODO: save to node-persist?
         console.log('Last calibration: ' + Math.round((Date.now() - m.data.date)/1000/60/60*10)/10 + ' hours ago');
         storage.setItem('calibration', m.data);
@@ -590,7 +626,10 @@ module.exports = async (io, extend_sensor_opt) => {
       }
     });
 
-    worker.on('exit', function(m) {
+    /*eslint-disable no-unused-vars*/
+    worker.on('exit', (m) => {
+    /*eslint-enable no-unused-vars*/
+
       worker = null;
 
       // Receive results from child process
@@ -614,7 +653,9 @@ module.exports = async (io, extend_sensor_opt) => {
         try {
           console.log('Starting new worker, but one already exists. Attempting to kill it');
           worker.kill('SIGTERM');
-        } catch (error) { }
+        } catch (error) {
+          console.log('Unable to kill existing worker: ' + error);
+        }
       }
     }, 6 * 60000);
   };
@@ -637,23 +678,23 @@ module.exports = async (io, extend_sensor_opt) => {
     // how do we initialise the connection with
     // all the data it needs?
 
-    console.log("about to emit id " + id);
+    console.log('about to emit id ' + id);
     socket.emit('id', id);
     socket.emit('pending', pending);
 
     let glucoseHist = await storage.getItem('glucoseHist')
-    .catch(error => {
-      console.log('Unable to get glucoseHist storage item');
-    });
+      .catch(error => {
+        console.log('Unable to get glucoseHist storage item: ' + error);
+      });
 
     if (glucoseHist) {
       socket.emit('glucose', glucoseHist[glucoseHist.length - 1]);
     }
 
     let calData = await storage.getItem('calibration')
-    .catch(error => {
-      console.log('Unable to get calibration storage item');
-    });
+      .catch(error => {
+        console.log('Unable to get calibration storage item: ' + error);
+      });
 
     if (calData) {
       socket.emit('calibrationData', calData);
@@ -666,17 +707,17 @@ module.exports = async (io, extend_sensor_opt) => {
     });
     socket.on('startSensor', () => {
       console.log('received startSensor command');
-      pending.push({date: Date.now(), type: "StartSensor"});
+      pending.push({date: Date.now(), type: 'StartSensor'});
       io.emit('pending', pending);
     });
     socket.on('stopSensor', () => {
       console.log('received stopSensor command');
-      pending.push({date: Date.now(), type: "StopSensor"});
+      pending.push({date: Date.now(), type: 'StopSensor'});
       io.emit('pending', pending);
     });
     socket.on('calibrate', glucose => {
       console.log('received calibration of ' + glucose);
-      pending.push({date: Date.now(), type: "CalibrateSensor", glucose});
+      pending.push({date: Date.now(), type: 'CalibrateSensor', glucose});
       io.emit('pending', pending);
     });
     socket.on('id', value => {
@@ -689,7 +730,9 @@ module.exports = async (io, extend_sensor_opt) => {
           try {
             console.log('Attempting to kill worker for old id');
             worker.kill('SIGTERM');
-          } catch (error) { }
+          } catch (error) {
+            console.log('Error killing old worker: ' + error);
+          }
         }
 
         // Remove the old BT device

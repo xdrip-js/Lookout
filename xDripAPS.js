@@ -307,19 +307,19 @@ module.exports = () => {
       });
     },
 
-    latestCal: () => {
+    latestCal: async () => {
       return queryLatestCal();
     },
 
-    latestSGVs: (numResults) => {
+    latestSGVs: async (numResults) => {
       return queryLatestSGVs(numResults);
     },
 
-    SGVsSince: (startTime) => {
+    SGVsSince: async (startTime) => {
       return querySGVsSince(startTime);
     },
 
-    latestSensorInserted: () => {
+    latestSensorInserted: async () => {
       return queryLatestSensorInserted();
     }
   };

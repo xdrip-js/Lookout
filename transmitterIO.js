@@ -521,16 +521,39 @@ module.exports = async (io, extend_sensor_opt) => {
     console.log(rigCal);
 
     if (NSCal && (NSCal.length > 0)) {
-      console.log('Have NS Cal - Need to check if it is more recent');
+      let NSCalLocalFormat = {
+        date: NSCal[0].date,
+        scale: NSCal[0].scale,
+        intercept: NSCal[0].intercept,
+        type: 'NightScoutSynced'
+      };
 
-      if (rigCal) {
-        console.log('Have NS and rig calibration values - need to determine which is most recent');
+      if (!rigCal) {
+        console.log('No rig calibration, storing NS calibration');
+
+        storage.setItem('nsCalibration', NSCalLocalFormat)
+          .catch(() => {
+            console.log('Unable to store NS Calibration');
+          });
+      } else if (rigCal.date < NSCalLocalFormat.date) {
+        console.log('NS calibration more recent than rig calibration NS Cal Date: ' + NSCalLocalFormat.date + ' Rig Cal Date: ' + rigCal.date);
+
+        storage.setItem('nsCalibration', NSCalLocalFormat)
+          .catch(() => {
+            console.log('Unable to store NS Calibration');
+          });
+      } else if (rigCal.date > NSCalLocalFormat.date) {
+        console.log('Rig calibration more recent than NS calibration NS Cal Date: ' + NSCalLocalFormat.date + ' Rig Cal Date: ' + rigCal.date);
+        console.log('Upoading rig calibration');
+
+        xDripAPS.postCalibration(rigCal);
       } else {
-        console.log('No rig calibration - need to store NS calibration');
+        console.log('Rig and NS calibration dates match - no sync needed');
       }
     } else {
       if (rigCal) {
-        console.log('No NS calibration - need to upload rig calibration');
+        console.log('No NS calibration - uploading rig calibration');
+        xDripAPS.postCalibration(rigCal);
       } else {
         console.log('No rig or NS calibration');
       }

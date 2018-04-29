@@ -288,6 +288,8 @@ module.exports = async (io, extend_sensor_opt) => {
     sgv.g5calibrated = true;
     sgv.stateString = stateString(sgv.state);
 
+    console.log('sensor state: ' + sgv.stateString);
+
     if (sgv.unfiltered > 10000) {
       sgv.unfiltered = sgv.unfiltered / 1000.0;
       sgv.filtered = sgv.filtered / 1000.0;
@@ -510,7 +512,7 @@ module.exports = async (io, extend_sensor_opt) => {
 
     await lockSGVStorage();
 
-    rigCal = await storage.getItem('calibration')
+    rigCal = await storage.getItem('nsCalibration')
       .catch(error => {
         console.log('Error getting rig calibration: ' + error);
       });
@@ -520,7 +522,6 @@ module.exports = async (io, extend_sensor_opt) => {
 
     if (NSCal && (NSCal.length > 0)) {
       console.log('Have NS Cal - Need to check if it is more recent');
-      console.log(NSCal);
 
       if (rigCal) {
         console.log('Have NS and rig calibration values - need to determine which is most recent');
@@ -549,7 +550,13 @@ module.exports = async (io, extend_sensor_opt) => {
         console.log('Error getting NS SGVs: ' + error);
       });
 
-    console.log('NS SGVs: ' + NSSGVs.length);
+    if (NSSGVs) {
+      console.log('SyncNS NS SGVs: ' + NSSGVs.length);
+
+      if (NSSGVs.length > 0) {
+        console.log(NSSGVs[0]);
+      }
+    }
 
     await lockSGVStorage();
 
@@ -558,14 +565,19 @@ module.exports = async (io, extend_sensor_opt) => {
         console.log('Error getting rig SGVs: ' + error);
       });
 
-    console.log('Rig SGVs: ' + rigSGVs.length);
+    if (rigSGVs) {
+      console.log('SyncNS Rig SGVs: ' + rigSGVs.length);
+
+      if (rigSGVs.length > 0) {
+        console.log(rigSGVs[0]);
+      }
+    }
 
     if (NSSGVs && NSSGVs.length > 0) {
       console.log('Have NS SGVs - Need to check for missing SGVs');
 
       if (rigSGVs) {
         console.log('Have NS and rig SGV values - need to determine which need to merged');
-        console.log(rigSGVs);
       } else {
         console.log('No rig SGV values - need to store NS SGV values');
       }
@@ -611,8 +623,6 @@ module.exports = async (io, extend_sensor_opt) => {
         console.log('got glucose: ' + glucose.glucose + ' unfiltered: ' + glucose.unfiltered);
 
         processNewGlucose(glucose);
-
-        console.log('sensor state: ' + glucose.stateString);
       } else if (m.msg == 'messageProcessed') {
         // TODO: check that dates match
         pending.shift();

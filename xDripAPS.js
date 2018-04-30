@@ -232,6 +232,35 @@ const queryLatestSensorInserted = () => {
   return requestPromise(optionsNS);
 };
 
+const queryBGChecksSince = (startTime) => {
+  const secret = process.env.API_SECRET;
+  let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/treatments.json?';
+
+  // time format needs to match the output of 'date -d "3 hours ago" -Iminutes -u'
+  let ns_query = 'find[eventType][$regex]=Check&find[created_at][$gte]=' + startTime.toISOString();
+
+  let ns_headers = {
+    'Content-Type': 'application/json'
+  };
+
+  if (secret.startsWith('token=')) {
+    ns_url = ns_url + secret + '&';
+  } else {
+    ns_headers['API-SECRET'] = secret;
+  }
+
+  ns_url = ns_url + ns_query;
+
+  let optionsNS = {
+    url: ns_url,
+    method: 'GET',
+    headers: ns_headers,
+    json: true
+  };
+
+  return requestPromise(optionsNS);
+};
+
 module.exports = () => {
   return {
     // API (public) functions
@@ -267,6 +296,49 @@ module.exports = () => {
         }
       }).catch ((error) => {
         console.log('Error testing for nightscout backfill or upload: ' + error);
+      });
+    },
+
+    postBGCheck: (BGCheck) => {
+      const entry = [{
+        'enteredBy': 'openaps://' + os.hostname(),
+        'eventType': 'BG Check',
+        'glucose': BGCheck.glucose,
+        'glucoseType': 'Finger',
+        'reason': 'G5 Calibration',
+        'duration': 0,
+        'units': 'mg/dl',
+        'created_at': moment(BGCheck.date).format()
+      }];
+
+      const secret = process.env.API_SECRET;
+      let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/treatments.json';
+      let ns_headers = {
+        'Content-Type': 'application/json'
+      };
+
+      if (secret.startsWith('token=')) {
+        ns_url = ns_url + '?' + secret;
+      } else {
+        ns_headers['API-SECRET'] = secret;
+      }
+
+      const optionsNS = {
+        url: ns_url,
+        method: 'POST',
+        headers: ns_headers,
+        body: entry,
+        json: true
+      };
+
+      /*eslint-disable no-unused-vars*/
+      request(optionsNS, function (error, response, body) {
+      /*eslint-enable no-unused-vars*/
+        if (error) {
+          console.error('error posting json: ', error);
+        } else {
+          console.log('uploaded new BG Check to NS, statusCode = ' + response.statusCode);
+        }
       });
     },
 
@@ -314,7 +386,21 @@ module.exports = () => {
     },
 
     latestCal: async () => {
-      return queryLatestCal();
+      let formattedCal = null;
+
+      let cal = await queryLatestCal();
+
+      if (cal && (cal.length > 0)) {
+        formattedCal = {
+          date: cal[0].date,
+          scale: cal[0].scale,
+          slope: cal[0].slope,
+          intercept: cal[0].intercept,
+          type: 'NightScoutSynced'
+        };
+      }
+
+      return formattedCal;
     },
 
     latestSGVs: async (numResults) => {
@@ -325,8 +411,21 @@ module.exports = () => {
       return querySGVsSince(startTime);
     },
 
+    BGChecksSince: async (startTime) => {
+      return queryBGChecksSince(startTime);
+    },
+
     latestSensorInserted: async () => {
-      return queryLatestSensorInserted();
+      let insertTime = null;
+
+     
+      let sensorInsert = await queryLatestSensorInserted();
+
+      if (sensorInsert && (sensorInsert.length > 0)) {
+        insertTime = moment(sensorInsert[0].created_at);
+      }
+
+      return insertTime;
     }
   };
 };

@@ -341,17 +341,16 @@ module.exports = async (io, extend_sensor_opt) => {
 
       sgv.g5calibrated = false;
 
-      if (sensorInsert) {
-        if ((sensorInsert.length > 0) && (moment(sensorInsert[0].created_at).diff(moment(lastCal.date)) > 0)) {
-          console.log('Found sensor insert after latest calibration. Deleting calibration data.');
-          storage.del('nsCalibration');
-          storage.del('glucoseHist');
+      if (sensorInsert && (sensorInsert.diff(moment(lastCal.date)) > 0)) {
+        console.log('Found sensor insert after latest calibration. Deleting calibration data.');
+        storage.del('nsCalibration');
+        storage.del('calibration');
+        storage.del('glucoseHist');
 
-          // set the glucose value to null
-          // so it doesn't show up in the Lookout GUI
-          sgv.glucose = null;
-          sendSGV = false;
-        }
+        // set the glucose value to null
+        // so it doesn't show up in the Lookout GUI
+        sgv.glucose = null;
+        sendSGV = false;
       }
     }
 
@@ -493,13 +492,14 @@ module.exports = async (io, extend_sensor_opt) => {
     }
   };
 
-  const syncNS = async () => {
+  const syncNSCal = async (sensorInsert) => {
     let rigCal = null;
     let NSCal = null;
 
     NSCal = await xDripAPS.latestCal()
       .catch(error => {
         console.log('Error getting NS calibration: ' + error);
+        return;
       });
 
     console.log('SyncNS NS Cal:');
@@ -515,30 +515,27 @@ module.exports = async (io, extend_sensor_opt) => {
     console.log('SyncNS Rig calibration:');
     console.log(rigCal);
 
-    if (NSCal && (NSCal.length > 0)) {
-      let NSCalLocalFormat = {
-        date: NSCal[0].date,
-        scale: NSCal[0].scale,
-        intercept: NSCal[0].intercept,
-        type: 'NightScoutSynced'
-      };
-
+    if (NSCal) {
       if (!rigCal) {
         console.log('No rig calibration, storing NS calibration');
 
-        storage.setItem('nsCalibration', NSCalLocalFormat)
-          .catch(() => {
-            console.log('Unable to store NS Calibration');
-          });
-      } else if (rigCal.date < NSCalLocalFormat.date) {
-        console.log('NS calibration more recent than rig calibration NS Cal Date: ' + NSCalLocalFormat.date + ' Rig Cal Date: ' + rigCal.date);
+        if (sensorInsert.diff(moment(NSCal.date)) > 0) {
+          console.log('Found sensor insert after latest NS calibration. Not updating local rig calibration');
+        } else {
+          storage.setItem('nsCalibration', NSCal)
+            .catch(() => {
+              console.log('Unable to store NS Calibration');
+            });
+        }
+      } else if (rigCal.date < NSCal.date) {
+        console.log('NS calibration more recent than rig calibration NS Cal Date: ' + NSCal.date + ' Rig Cal Date: ' + rigCal.date);
 
-        storage.setItem('nsCalibration', NSCalLocalFormat)
+        storage.setItem('nsCalibration', NSCal)
           .catch(() => {
             console.log('Unable to store NS Calibration');
           });
-      } else if (rigCal.date > NSCalLocalFormat.date) {
-        console.log('Rig calibration more recent than NS calibration NS Cal Date: ' + NSCalLocalFormat.date + ' Rig Cal Date: ' + rigCal.date);
+      } else if (rigCal.date > NSCal.date) {
+        console.log('Rig calibration more recent than NS calibration NS Cal Date: ' + NSCal.date + ' Rig Cal Date: ' + rigCal.date);
         console.log('Upoading rig calibration');
 
         xDripAPS.postCalibration(rigCal);
@@ -554,22 +551,27 @@ module.exports = async (io, extend_sensor_opt) => {
       }
     }
 
-    // unlockSGVStorage while we
-    // pull the NS data
     unlockSGVStorage();
+  };
+
+  const syncSGVs = async () => {
+    let timeSince = null;
 
     let rigSGVs = null;
     let NSSGVs = null;
 
-    let timeSince = moment().subtract(24, 'hours');
+    timeSince = moment().subtract(24, 'hours');
 
     NSSGVs = await xDripAPS.SGVsSince(timeSince, 12*24*2)
       .catch(error => {
         console.log('Error getting NS SGVs: ' + error);
+        return;
       });
 
     if (NSSGVs) {
       console.log('SyncNS NS SGVs: ' + NSSGVs.length);
+
+      NSSGVs = _.sortBy(NSSGVs, ['date']);
 
       if (NSSGVs.length > 0) {
         console.log(NSSGVs[0]);
@@ -585,6 +587,9 @@ module.exports = async (io, extend_sensor_opt) => {
 
     if (rigSGVs) {
       console.log('SyncNS Rig SGVs: ' + rigSGVs.length);
+
+      // we can assume the rigSGVs are sorted since we sort before
+      // storing them
 
       if (rigSGVs.length > 0) {
         console.log(rigSGVs[0]);
@@ -608,6 +613,52 @@ module.exports = async (io, extend_sensor_opt) => {
     }
 
     unlockSGVStorage();
+  };
+
+  const syncLSRCalData = async (sensorInsert) => {
+    let timeSince = null;
+    let NSBGChecks = null;
+
+    timeSince = moment().subtract(40, 'days');
+
+    NSBGChecks = await xDripAPS.BGChecksSince(timeSince)
+      .catch(error => {
+        console.log('Error getting NS BG Checks: ' + error);
+        return;
+      });
+
+    if (NSBGChecks) {
+      console.log('SyncNS NS BG Checks: ' + NSBGChecks.length);
+
+      if (NSBGChecks.length > 0) {
+        console.log(NSBGChecks[0]);
+      }
+    }
+  };
+
+  const syncNS = async () => {
+    let sensorInsert = null;
+
+    sensorInsert = await xDripAPS.latestSensorInserted()
+      .catch(error => {
+        console.log('Unable to get latest sensor inserted record from NS: ' + error);
+        return;
+      });
+
+    if (!sensorInsert) {
+      console.log('No sensor inserted record returned from NS');
+    }
+
+    // Do this serially, waiting for each to complete
+    // only for the purpose of making sure that
+    // if somehow this took longer than 5 minutes
+    // we would not have multiple copies running
+    // due to the timeout
+    await syncNSCal(sensorInsert);
+
+    await syncSGVs();
+
+    await syncLSRCalData(sensorInsert);
 
     console.log('syncNS complete - setting 5 minute timer');
 
@@ -617,7 +668,61 @@ module.exports = async (io, extend_sensor_opt) => {
     }, 5 * 60000);
   };
 
-  // TODO: this should timeout, and cancel when we get a new id.
+  const processG5CalData = async (calData) => {
+    let rigSGVs = null;
+    let matchingSGV = null;
+    let oldCalData = null;
+
+    console.log('Last calibration: ' + Math.round((Date.now() - calData.date)/1000/60/60*10)/10 + ' hours ago');
+
+    if (calData.glucose > 400 || calData.glucose < 20) {
+      console.log('G5 Last Calibration Data glucose out of range - ignoring');
+      return;
+    }
+
+    oldCalData = await storage.getItem('calibration')
+      .catch(error => {
+        console.log('Error getting G5 calibration: ' + error);
+      });
+
+    if (oldCalData && (Math.abs(oldCalData.date - calData.date) < 2*60*1000)) {
+      // The G5 transmitter report varies the time around
+      // the real time a little between read events.
+      // If they are within two minutes, assume it's the same
+      // check and bail out.
+      return;
+    }
+
+    rigSGVs = await storage.getItem('glucoseHist')
+      .catch(error => {
+        console.log('Error getting rig SGVs: ' + error);
+      });
+
+    if (rigSGVs) {
+      // we can assume they are already sorted
+      // since we sort before storing them
+
+      matchingSGV = _.find(rigSGVs, (o) => {
+        return o.readDate > calData.date;
+      });
+
+      if (matchingSGV) {
+        console.log('Matching SGV Unfiltered: ' + matchingSGV.unfiltered);
+        console.log('Matching Cal SGV: ' + calData.glucose);
+
+        calData.unfiltered = matchingSGV.unfiltered;
+      } else {
+        calData.unfiltered = null;
+      }
+    }
+
+    storage.setItem('calibration', calData);
+
+    xDripAPS.postBGCheck(calData);
+
+    io.emit('calibrationData', calData);
+  };
+
   const listenToTransmitter = (id) => {
     // Remove the BT device so it starts from scratch
     removeBTDevice(id);
@@ -646,11 +751,7 @@ module.exports = async (io, extend_sensor_opt) => {
         pending.shift();
         io.emit('pending', pending);
       } else if (m.msg == 'calibrationData') {
-        // TODO: save to node-persist?
-        console.log('Last calibration: ' + Math.round((Date.now() - m.data.date)/1000/60/60*10)/10 + ' hours ago');
-        storage.setItem('calibration', m.data);
-
-        io.emit('calibrationData', m.data);
+        processG5CalData(m.data);
       }
     });
 

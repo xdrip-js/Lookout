@@ -305,7 +305,7 @@ module.exports = async (io, extend_sensor_opt) => {
         console.log('Error getting glucoseHist: ' + err);
       });
 
-    let storedLastG5CalData = await storage.getItem('calibration')
+    let storedG5CalData = await storage.getItem('calibration')
       .catch((err) => {
         console.log('Error getting lastG5CalData: ' + err);
       });
@@ -313,8 +313,8 @@ module.exports = async (io, extend_sensor_opt) => {
     let lastG5CalTime = 0;
     let newCal = null;
 
-    if (storedLastG5CalData) {
-      lastG5CalTime = storedLastG5CalData.date;
+    if (storedG5CalData && (storedG5CalData.length > 0))  {
+      lastG5CalTime = storedG5CalData[storedG5CalData.length-1].date;
     }
 
     if (!glucoseHist) {
@@ -621,12 +621,9 @@ module.exports = async (io, extend_sensor_opt) => {
   };
 
   const syncLSRCalData = async (sensorInsert) => {
-    let timeSince = null;
     let NSBGChecks = null;
 
-    timeSince = moment().subtract(40, 'days');
-
-    NSBGChecks = await xDripAPS.BGChecksSince(timeSince)
+    NSBGChecks = await xDripAPS.BGChecksSince(sensorInsert)
       .catch(error => {
         console.log('Error getting NS BG Checks: ' + error);
         return;
@@ -636,7 +633,117 @@ module.exports = async (io, extend_sensor_opt) => {
       console.log('SyncNS NS BG Checks: ' + NSBGChecks.length);
 
       if (NSBGChecks.length > 0) {
+        _.sortBy(NSBGChecks, ['created_at']);
+
+        for (let index of NSBGChecks) {
+          let value = NSBGChecks[index];
+
+          if (!('unfiltered' in value)) {
+            let NSSGVs = null;
+            let timeSince = moment(value.created_at);
+
+            NSSGVs = await xDripAPS.SGVsSince(timeSince, 1)
+              .catch(error => {
+                console.log('Unable to get NS SGVs to match unfiltered with BG Check: ' + error);
+              });
+
+            if (NSSGVs && (NSSGVs.length > 0)) {
+              if (moment(NSSGVs[0].dateString).diff(timeSince) < 7) {
+                value.unfiltered = NSSGVs[0].unfiltered;
+                console.log('Adding unfiltered value to BGCheck at ' + timeSince.format() + ': id = ' + value._id);
+                xDripAPS.updateBGCheck(value._id, value);
+              }
+            }
+          }
+        }
+
         console.log(NSBGChecks[0]);
+      }
+    }
+
+    await lockSGVStorage();
+
+    let rigCalData = await storage.getItem('calibration')
+      .catch(error => {
+        console.log('Error getting rig G5 calibration: ' + error);
+      });
+
+    if (!rigCalData) {
+      rigCalData = [];
+    }
+
+    if (!NSBGChecks) {
+      NSBGChecks = [];
+    }
+
+    for (let nsIndex of NSBGChecks) {
+      let nsValue = NSBGChecks[nsIndex];
+      let rigValue = null;
+
+      for (let rigIndex of rigCalData) {
+        let timeDiff = moment(nsValue.created_at).diff(moment(rigCalData[rigIndex].date));
+
+        if (Math.abs(timeDiff) < 60*1000) {
+          rigValue = rigCalData[rigIndex];
+          break;
+        }
+      }
+
+      if (!rigValue) {
+        rigValue.date = moment(nsValue.created_at).format('x');
+        rigValue.glucose = nsValue.glucose;
+        rigValue.unfiltered = nsValue.unfiltered;
+
+        rigCalData.push(rigValue);
+      }
+    }
+
+    _.sortBy(rigCalData, ['date']);
+
+    let sliceStart = 0;
+
+    for (let i=0; i < rigCalData.length; ++i) {
+      if (moment(rigCalData[i].date).diff(sensorInsert) < 0) {
+        sliceStart = i+1;
+      }
+    }
+
+    rigCalData = rigCalData.slice(sliceStart);
+
+    storage.setItem('calibration', rigCalData);
+
+    unlockSGVStorage();
+
+    for (let rigIndex of rigCalData) {
+      let rigValue = rigCalData[rigIndex];
+      let nsValue = null;
+ 
+      for (let nsIndex of NSBGChecks) {
+        if (Math.abs(moment(nsValue.created_at).diff(moment(rigCalData[rigIndex].date))) < 60*1000) {
+          nsValue = NSBGChecks[nsIndex];
+          break;
+        }
+      }
+
+      if (!nsValue) {
+        if (!('unfiltered' in rigValue)) {
+          let NSSGVs = null;
+          let timeSince = moment(rigValue.date);
+
+          NSSGVs = await xDripAPS.SGVsSince(timeSince, 1)
+            .catch(error => {
+              console.log('Unable to get NS SGVs to match unfiltered with BG Check: ' + error);
+            });
+
+          if (NSSGVs && (NSSGVs.length > 0)) {
+            if (moment(NSSGVs[0].dateString).diff(timeSince) < 7) {
+              rigValue.unfiltered = NSSGVs[0].unfiltered;
+              console.log('Adding unfiltered value to BGCheck at ' + timeSince.format() + ': id = ' + value._id);
+            }
+          }
+        }
+
+        xDripAPS.postBGCheck(rigValue);
       }
     }
   };
@@ -690,7 +797,7 @@ module.exports = async (io, extend_sensor_opt) => {
         console.log('Error getting G5 calibration: ' + error);
       });
 
-    if (oldCalData && (Math.abs(oldCalData.date - calData.date) < 2*60*1000)) {
+    if (oldCalData && (oldCalData.length > 0) && (Math.abs(oldCalData[oldCalData.length-1].date - calData.date) < 2*60*1000)) {
       // The G5 transmitter report varies the time around
       // the real time a little between read events.
       // If they are within two minutes, assume it's the same
@@ -702,6 +809,8 @@ module.exports = async (io, extend_sensor_opt) => {
       .catch(error => {
         console.log('Error getting rig SGVs: ' + error);
       });
+
+    calData.unfiltered = null;
 
     if (rigSGVs) {
       // we can assume they are already sorted
@@ -716,12 +825,14 @@ module.exports = async (io, extend_sensor_opt) => {
         console.log('Matching Cal SGV: ' + calData.glucose);
 
         calData.unfiltered = matchingSGV.unfiltered;
-      } else {
-        calData.unfiltered = null;
       }
     }
 
-    storage.setItem('calibration', calData);
+    oldCalData.push(calData);
+
+    oldCalData = _.sortBy(oldCalData, ['date']);
+
+    storage.setItem('calibration', oldCalData);
 
     xDripAPS.postBGCheck(calData);
 
@@ -830,8 +941,8 @@ module.exports = async (io, extend_sensor_opt) => {
         console.log('Unable to get calibration storage item: ' + error);
       });
 
-    if (calData) {
-      socket.emit('calibrationData', calData);
+    if (calData && (calData.length > 0)) {
+      socket.emit('calibrationData', calData[calData.length - 1]);
     }
 
     socket.on('resetTx', () => {

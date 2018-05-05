@@ -650,6 +650,8 @@ module.exports = async (io, extend_sensor_opt) => {
           'filtered': nsSGV.filtered,
           'unfiltered': nsSGV.unfiltered,
           'glucose': nsSGV.sgv,
+          'nsNoise': nsSGV.noise,
+          'trend': nsSGV.trend,
           'g5calibrated': false
         };
 

@@ -6,7 +6,7 @@ const moment = require('moment');
 var _ = require('lodash');
 
 module.exports = async (io, extend_sensor_opt) => {
-  let id;
+  let txId;
   let pending = [];
   let extend_sensor = extend_sensor_opt;
   let worker = null;
@@ -354,7 +354,8 @@ module.exports = async (io, extend_sensor_opt) => {
       }
     }
 
-    if (!sgv.glucose) {
+    if (!sgv.glucose || sgv.glucose < 20) {
+      sgv.glucose = null;
       console.log('No valid glucose to send.');
       sendSGV = false;
     }
@@ -562,7 +563,7 @@ module.exports = async (io, extend_sensor_opt) => {
 
     timeSince = moment().subtract(24, 'hours');
 
-    nsSGVs = await xDripAPS.SGVsSince(timeSince, 12*24*2)
+    nsSGVs = await xDripAPS.SGVsSince(timeSince, 12*24*3)
       .catch(error => {
         console.log('Error getting NS SGVs: ' + error);
         return;
@@ -591,12 +592,27 @@ module.exports = async (io, extend_sensor_opt) => {
       rigSGVs = [];
     }
 
+    let minDate = moment().subtract(24, 'hours');
+    let sliceStart = 0;
+
+    // only review the last 24 hours of glucose
+    for (let i=0; i < rigSGVs.length; ++i) {
+      if (moment(rigSGVs[i].readDate).diff(minDate) < 0) {
+        sliceStart = i+1;
+      }
+    }
+
+    rigSGVs = rigSGVs.slice(sliceStart);
+
     console.log('SyncNS Rig SGVs: ' + rigSGVs.length);
 
     // we can assume the rigSGVs are sorted since we sort before
     // storing them
 
-    if (rigSGVs.length > 0) {
+    let rigSGVsLength = rigSGVs.length;
+    let rigIndex = 0;
+
+    if (rigSGVsLength > 0) {
       console.log(rigSGVs[0]);
     }
 
@@ -604,18 +620,21 @@ module.exports = async (io, extend_sensor_opt) => {
       let nsSGV = nsSGVs[nsIndex];
       let rigSGV = null;
 
-      for (let rigIndex = 0; rigIndex < rigSGVs.length; ++rigIndex) {
+      for (; rigIndex < rigSGVsLength; ++rigIndex) {
         let timeDiff = moment(nsSGV.dateString).diff(moment(rigSGVs[rigIndex].readDate));
 
         if (Math.abs(timeDiff) < 60*1000) {
           rigSGV = rigSGVs[rigIndex];
+          break;
+        } else if (timeDiff < 0) {
+          // bail when rig value is later in time than NS value
           break;
         }
       }
 
       if (!rigSGV) {
         rigSGV = {
-          'readDate': moment(nsSGV.dateString).format('x'),
+          'readDate': moment(nsSGV.dateString).valueOf(),
           'filtered': nsSGV.filtered,
           'unfiltered': nsSGV.unfiltered,
           'glucose': nsSGV.sgv,
@@ -626,7 +645,7 @@ module.exports = async (io, extend_sensor_opt) => {
       }
     }
 
-    _.sortBy(rigSGVs, ['readDate']);
+    rigSGVs = _.sortBy(rigSGVs, ['readDate']);
 
     await storage.setItem('glucoseHist', rigSGVs)
       .catch((err) => {
@@ -635,15 +654,20 @@ module.exports = async (io, extend_sensor_opt) => {
 
     unlockSGVStorage();
 
+    let nsIndex = 0;
+
     for (let rigIndex = 0; rigIndex < rigSGVs.length; ++rigIndex) {
       let rigSGV = rigSGVs[rigIndex];
       let nsSGV = null;
 
-      for (let nsIndex = 0; nsIndex < nsSGVs.length; ++nsIndex) {
-        let timeDiff = moment(nsSGV.dateString).diff(moment(rigSGVs[rigIndex].readDate));
+      for (; nsIndex < nsSGVs.length; ++nsIndex) {
+        let timeDiff = moment(nsSGVs[nsIndex].dateString).diff(moment(rigSGV.readDate));
 
         if (Math.abs(timeDiff) < 60*1000) {
           nsSGV = nsSGVs[nsIndex];
+          break;
+        } else if (timeDiff > 0) {
+          // Bail when NS value is later in time than rig value
           break;
         }
       }
@@ -670,30 +694,7 @@ module.exports = async (io, extend_sensor_opt) => {
 
     console.log('SyncNS NS BG Checks: ' + NSBGChecks.length);
 
-    _.sortBy(NSBGChecks, ['created_at']);
-
-    for (let index = 0; index < NSBGChecks.length; ++index) {
-      let value = NSBGChecks[index];
-
-      if (!('unfiltered' in value)) {
-        let NSSGVs = null;
-        let timeSince = moment(value.created_at);
-
-        // Get the NS SGV immediately after the BG Check
-        NSSGVs = await xDripAPS.SGVsSince(timeSince, 1)
-          .catch(error => {
-            console.log('Unable to get NS SGVs to match unfiltered with BG Check: ' + error);
-          });
-
-        if (NSSGVs && (NSSGVs.length > 0)) {
-          if (moment(NSSGVs[0].dateString).diff(timeSince) < 7) {
-            value.unfiltered = NSSGVs[0].unfiltered;
-            console.log('Adding unfiltered value to BGCheck at ' + timeSince.format() + ': id = ' + value._id);
-            xDripAPS.updateBGCheck(value._id, value);
-          }
-        }
-      }
-    }
+    NSBGChecks = _.sortBy(NSBGChecks, ['created_at']);
 
     if (NSBGChecks.length > 0) {
       console.log(NSBGChecks[0]);
@@ -706,33 +707,40 @@ module.exports = async (io, extend_sensor_opt) => {
         console.log('Error getting rig G5 calibration: ' + error);
       });
 
-    if (!rigCalData) {
+    if (!rigCalData || !Array.isArray(rigCalData)) {
       rigCalData = [];
     }
+
+    let rigCalDataLength = rigCalData.length;
+    let rigIndex = 0;
 
     for (let nsIndex = 0; nsIndex < NSBGChecks.length; ++nsIndex) {
       let nsValue = NSBGChecks[nsIndex];
       let rigValue = null;
 
-      for (let rigIndex = 0; rigIndex < rigCalData.length; ++rigIndex) {
+      for (; rigIndex < rigCalDataLength; ++rigIndex) {
         let timeDiff = moment(nsValue.created_at).diff(moment(rigCalData[rigIndex].date));
 
         if (Math.abs(timeDiff) < 60*1000) {
           rigValue = rigCalData[rigIndex];
           break;
+        } else if (timeDiff < 0) {
+          // Bail if rigCalData time is later than NS BG time
+          break;
         }
       }
 
       if (!rigValue) {
-        rigValue.date = moment(nsValue.created_at).format('x');
-        rigValue.glucose = nsValue.glucose;
-        rigValue.unfiltered = nsValue.unfiltered;
+        rigValue = {
+          'date': moment(nsValue.created_at).valueOf(),
+          'glucose': nsValue.glucose,
+        };
 
         rigCalData.push(rigValue);
       }
     }
 
-    _.sortBy(rigCalData, ['date']);
+    rigCalData = _.sortBy(rigCalData, ['date']);
 
     let sliceStart = 0;
 
@@ -746,6 +754,36 @@ module.exports = async (io, extend_sensor_opt) => {
 
     rigCalData = rigCalData.slice(sliceStart);
 
+    // Add unfiltered values if any are missing
+    for (let i=0; i < rigCalData.length; ++i) {
+      let rigValue = rigCalData[i];
+
+      if (!('unfiltered' in rigValue) || !rigValue.unfiltered) {
+        let NSSGVs = null;
+        let valueTime = moment(rigValue.date);
+        let timeStart = moment(rigValue.date).subtract(6, 'minutes');
+        let timeEnd = moment(rigValue.date).add(6, 'minutes');
+
+        // Get NS SGV immediately before BG Check
+        NSSGVs = await xDripAPS.SGVsBetween(timeStart, timeEnd, 5)
+          .catch(error => {
+            console.log('Unable to get NS SGVs to match unfiltered with BG Check: ' + error);
+          });
+
+        if (!NSSGVs) {
+          NSSGVs = [];
+        }
+
+        for (let i=0; i < NSSGVs.length; ++i) {
+          if (Math.abs(moment(NSSGVs[i].dateString).diff(valueTime)) < 5*60*1000) {
+            rigValue.unfiltered = NSSGVs[i].unfiltered;
+            console.log('Adding unfiltered value to BGCheck at ' + valueTime.utc().format() + ': id = ' + NSSGVs[i]._id + ' time = ' + NSSGVs[i].dateString);
+            break;
+          }
+        }
+      }
+    }
+
     await storage.setItem('calibration', rigCalData)
       .catch((err) => {
         console.log('Unable to store glucoseHist: ' + err);
@@ -753,36 +791,25 @@ module.exports = async (io, extend_sensor_opt) => {
 
     unlockSGVStorage();
 
+    let nsIndex = 0;
+
     for (let rigIndex = 0; rigIndex < rigCalData.length; ++rigIndex) {
       let rigValue = rigCalData[rigIndex];
       let nsValue = null;
  
-      for (let nsIndex = 0; nsIndex < NSBGChecks.length; ++nsIndex) {
-        if (Math.abs(moment(nsValue.created_at).diff(moment(rigCalData[rigIndex].date))) < 60*1000) {
+      for (; nsIndex < NSBGChecks.length; ++nsIndex) {
+        let timeDiff = moment(NSBGChecks[nsIndex].created_at).diff(moment(rigValue.date));
+
+        if (Math.abs(timeDiff) < 60*1000) {
           nsValue = NSBGChecks[nsIndex];
+          break;
+        } else if (timeDiff > 0) {
+          // bail out if NS BG Check is later in time than rig value
           break;
         }
       }
 
       if (!nsValue) {
-        if (!('unfiltered' in rigValue) || !rigValue.unfiltered) {
-          let NSSGVs = null;
-          let timeSince = moment(rigValue.date);
-
-          // Get NS SGV immediately following BG Check
-          NSSGVs = await xDripAPS.SGVsSince(timeSince, 1)
-            .catch(error => {
-              console.log('Unable to get NS SGVs to match unfiltered with BG Check: ' + error);
-            });
-
-          if (NSSGVs && (NSSGVs.length > 0)) {
-            if (moment(NSSGVs[0].dateString).diff(timeSince) < 7) {
-              rigValue.unfiltered = NSSGVs[0].unfiltered;
-              console.log('Adding unfiltered value to BGCheck at ' + timeSince.format() + ': id = ' + value._id);
-            }
-          }
-        }
-
         xDripAPS.postBGCheck(rigValue);
       }
     }
@@ -924,9 +951,13 @@ module.exports = async (io, extend_sensor_opt) => {
         clearTimeout(timerObj);
       }
 
+      if (id !== txId) {
+        removeBTDevice(id);
+      }
+
       timerObj = setTimeout(() => {
         // Restart the worker after 1 minute
-        listenToTransmitter(id);
+        listenToTransmitter(txId);
       }, 1 * 60000);
     });
 
@@ -952,19 +983,19 @@ module.exports = async (io, extend_sensor_opt) => {
 
   let value = await storage.getItem('id');
 
-  id = value || '500000';
+  txId = value || '500000';
 
   syncNS();
 
-  listenToTransmitter(id);
+  listenToTransmitter(txId);
 
   io.on('connection', async socket => {
     // TODO: should this just be a 'data' message?
     // how do we initialise the connection with
     // all the data it needs?
 
-    console.log('about to emit id ' + id);
-    socket.emit('id', id);
+    console.log('about to emit id ' + txId);
+    socket.emit('id', txId);
     socket.emit('pending', pending);
 
     let glucoseHist = await storage.getItem('glucoseHist')
@@ -1004,9 +1035,9 @@ module.exports = async (io, extend_sensor_opt) => {
       if (value.length != 6) {
         console.log('received invalid transmitter id of ' + value);
       } else {
-        clearTimeout(timerObj);
-
         if (worker !== null) {
+          // When worker exits, listenToTransmitter will
+          // be scheduled
           try {
             console.log('Attempting to kill worker for old id');
             worker.kill('SIGTERM');
@@ -1015,19 +1046,14 @@ module.exports = async (io, extend_sensor_opt) => {
           }
         }
 
-        // Remove the old BT device
-        removeBTDevice(id);
-
         console.log('received id of ' + value);
-        id = value;
+        txId = value;
 
-        storage.setItemSync('id', id);
+        storage.setItemSync('id', txId);
         // TODO: clear glucose on new id
         // use io.emit rather than socket.emit
         // since we want to notify all connections
-        io.emit('id', id);
-
-        listenToTransmitter(id);
+        io.emit('id', txId);
       }
     });
   });

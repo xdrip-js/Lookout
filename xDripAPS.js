@@ -157,6 +157,64 @@ const queryLatestSGVs = (numResults) => {
   return requestPromise(optionsNS);
 };
 
+const querySGVsBefore = (startTime, count) => {
+  const secret = process.env.API_SECRET;
+  let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json?';
+
+  // time format needs to match the output of 'date -d "3 hours ago" -Iminutes -u'
+  let ns_query = 'find[type]=sgv&find[dateString][$lte]=' + startTime.toISOString() + '&count=' + count;
+
+  let ns_headers = {
+    'Content-Type': 'application/json'
+  };
+
+  if (secret.startsWith('token=')) {
+    ns_url = ns_url + secret + '&';
+  } else {
+    ns_headers['API-SECRET'] = secret;
+  }
+
+  ns_url = ns_url + ns_query;
+
+  let optionsNS = {
+    url: ns_url,
+    method: 'GET',
+    headers: ns_headers,
+    json: true
+  };
+
+  return requestPromise(optionsNS);
+};
+
+const querySGVsBetween = (startTime, endTime, count) => {
+  const secret = process.env.API_SECRET;
+  let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json?';
+
+  // time format needs to match the output of 'date -d "3 hours ago" -Iminutes -u'
+  let ns_query = 'find[type]=sgv&find[dateString][$gte]=' + startTime.toISOString() + '&find[dateString][$lte]=' + endTime.toISOString() + '&count=' + count;
+
+  let ns_headers = {
+    'Content-Type': 'application/json'
+  };
+
+  if (secret.startsWith('token=')) {
+    ns_url = ns_url + secret + '&';
+  } else {
+    ns_headers['API-SECRET'] = secret;
+  }
+
+  ns_url = ns_url + ns_query;
+
+  let optionsNS = {
+    url: ns_url,
+    method: 'GET',
+    headers: ns_headers,
+    json: true
+  };
+
+  return requestPromise(optionsNS);
+};
+
 const querySGVsSince = (startTime, count) => {
   const secret = process.env.API_SECRET;
   let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json?';
@@ -248,7 +306,6 @@ const convertBGCheck = (BGCheck) => {
     'enteredBy': 'openaps://' + os.hostname(),
     'eventType': 'BG Check',
     'glucose': BGCheck.glucose,
-    'unfiltered': BGCheck.unfiltered,
     'glucoseType': 'Finger',
     'reason': 'G5 Calibration',
     'duration': 0,
@@ -403,8 +460,16 @@ module.exports = () => {
       return queryLatestSGVs(numResults);
     },
 
-    SGVsSince: async (startTime) => {
-      return querySGVsSince(startTime);
+    SGVsSince: async (startTime, numResults) => {
+      return querySGVsSince(startTime, numResults);
+    },
+
+    SGVsBefore: async (startTime, numResults) => {
+      return querySGVsBefore(startTime, numResults);
+    },
+
+    SGVsBetween: async (startTime, endTime, numResults) => {
+      return querySGVsBetween(startTime, endTime, numResults);
     },
 
     BGChecksSince: async (startTime) => {

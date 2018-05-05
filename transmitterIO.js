@@ -501,12 +501,18 @@ module.exports = async (io, extend_sensor_opt) => {
   const syncNSCal = async (sensorInsert) => {
     let rigCal = null;
     let NSCal = null;
+    let nsQueryError = false;
 
     NSCal = await xDripAPS.latestCal()
       .catch(error => {
         console.log('Error getting NS calibration: ' + error);
+        nsQueryError = true;
         return;
       });
+
+    if (nsQueryError) {
+      return;
+    }
 
     console.log('SyncNS NS Cal:');
     console.log(NSCal);
@@ -565,14 +571,20 @@ module.exports = async (io, extend_sensor_opt) => {
 
     let rigSGVs = null;
     let nsSGVs = null;
+    let nsQueryError = false;
 
     timeSince = moment().subtract(24, 'hours');
 
     nsSGVs = await xDripAPS.SGVsSince(timeSince, 12*24*3)
       .catch(error => {
         console.log('Error getting NS SGVs: ' + error);
+        nsQueryError = true;
         return;
       });
+
+    if (nsQueryError) {
+      return;
+    }
 
     if (!nsSGVs) {
       nsSGVs = [];
@@ -685,13 +697,19 @@ module.exports = async (io, extend_sensor_opt) => {
 
   const syncLSRCalData = async (sensorInsert) => {
     let NSBGChecks = null;
+    let nsQueryError = false;
 
     NSBGChecks = await xDripAPS.BGChecksSince(sensorInsert)
       .catch(error => {
         // Bail out since we can't sync if we don't have NS access
         console.log('Error getting NS BG Checks: ' + error);
+        nsQueryError = true;
         return;
       });
+
+    if (nsQueryError) {
+      return;
+    }
 
     if (!NSBGChecks) {
       NSBGChecks = [];
@@ -822,12 +840,18 @@ module.exports = async (io, extend_sensor_opt) => {
 
   const syncNS = async () => {
     let sensorInsert = null;
+    let nsQueryError = false;
 
     sensorInsert = await xDripAPS.latestSensorInserted()
       .catch(error => {
         console.log('Unable to get latest sensor inserted record from NS: ' + error);
+        nsQueryError = true;
         return;
       });
+
+    if (nsQueryError) {
+      return;
+    }
 
     if (!sensorInsert) {
       console.log('No sensor inserted record returned from NS');

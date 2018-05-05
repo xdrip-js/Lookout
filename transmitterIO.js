@@ -850,6 +850,13 @@ module.exports = async (io, extend_sensor_opt) => {
       });
 
     if (nsQueryError) {
+      console.log('syncNS - Setting 5 minute timer to try again');
+
+      setTimeout(() => {
+        // Restart the syncNS after 5 minute
+        syncNS();
+      }, 5 * 60000);
+
       return;
     }
 

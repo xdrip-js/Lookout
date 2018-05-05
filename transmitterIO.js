@@ -377,7 +377,7 @@ module.exports = async (io, extend_sensor_opt) => {
 
     unlockSGVStorage();
 
-    sendNewGlucose(sgv, sendSGV, glucoseHist);
+    sendNewGlucose(sgv, sendSGV);
   };
 
   // Store the last hour of glucose readings
@@ -405,11 +405,11 @@ module.exports = async (io, extend_sensor_opt) => {
       });
   };
 
-  const sendNewGlucose = (sgv, sendSGV, glucoseHist) => {
+  const sendNewGlucose = (sgv, sendSGV) => {
     io.emit('glucose', sgv);
 
     if (sendSGV) {
-      xDripAPS.post(glucoseHist);
+      xDripAPS.post(sgv);
     }
   };
 
@@ -522,7 +522,7 @@ module.exports = async (io, extend_sensor_opt) => {
         if (sensorInsert.diff(moment(NSCal.date)) > 0) {
           console.log('Found sensor insert after latest NS calibration. Not updating local rig calibration');
         } else {
-          storage.setItem('nsCalibration', NSCal)
+          await storage.setItem('nsCalibration', NSCal)
             .catch(() => {
               console.log('Unable to store NS Calibration');
             });
@@ -558,24 +558,26 @@ module.exports = async (io, extend_sensor_opt) => {
     let timeSince = null;
 
     let rigSGVs = null;
-    let NSSGVs = null;
+    let nsSGVs = null;
 
     timeSince = moment().subtract(24, 'hours');
 
-    NSSGVs = await xDripAPS.SGVsSince(timeSince, 12*24*2)
+    nsSGVs = await xDripAPS.SGVsSince(timeSince, 12*24*2)
       .catch(error => {
         console.log('Error getting NS SGVs: ' + error);
         return;
       });
 
-    if (NSSGVs) {
-      console.log('SyncNS NS SGVs: ' + NSSGVs.length);
+    if (!nsSGVs) {
+      nsSGVs = [];
+    }
 
-      NSSGVs = _.sortBy(NSSGVs, ['date']);
+    console.log('SyncNS NS SGVs: ' + nsSGVs.length);
 
-      if (NSSGVs.length > 0) {
-        console.log(NSSGVs[0]);
-      }
+    nsSGVs = _.sortBy(nsSGVs, ['date']);
+
+    if (nsSGVs.length > 0) {
+      console.log(nsSGVs[0]);
     }
 
     await lockSGVStorage();
@@ -585,34 +587,71 @@ module.exports = async (io, extend_sensor_opt) => {
         console.log('Error getting rig SGVs: ' + error);
       });
 
-    if (rigSGVs) {
-      console.log('SyncNS Rig SGVs: ' + rigSGVs.length);
+    if (!rigSGVs) {
+      rigSGVs = [];
+    }
 
-      // we can assume the rigSGVs are sorted since we sort before
-      // storing them
+    console.log('SyncNS Rig SGVs: ' + rigSGVs.length);
 
-      if (rigSGVs.length > 0) {
-        console.log(rigSGVs[0]);
+    // we can assume the rigSGVs are sorted since we sort before
+    // storing them
+
+    if (rigSGVs.length > 0) {
+      console.log(rigSGVs[0]);
+    }
+
+    for (let nsIndex = 0; nsIndex < nsSGVs.length; ++nsIndex) {
+      let nsSGV = nsSGVs[nsIndex];
+      let rigSGV = null;
+
+      for (let rigIndex = 0; rigIndex < rigSGVs.length; ++rigIndex) {
+        let timeDiff = moment(nsSGV.dateString).diff(moment(rigSGVs[rigIndex].readDate));
+
+        if (Math.abs(timeDiff) < 60*1000) {
+          rigSGV = rigSGVs[rigIndex];
+          break;
+        }
+      }
+
+      if (!rigSGV) {
+        rigSGV = {
+          'readDate': moment(nsSGV.dateString).format('x'),
+          'filtered': nsSGV.filtered,
+          'unfiltered': nsSGV.unfiltered,
+          'glucose': nsSGV.sgv,
+          'g5calibrated': false
+        };
+
+        rigSGVs.push(rigSGV);
       }
     }
 
-    if (NSSGVs && NSSGVs.length > 0) {
-      console.log('Have NS SGVs - Need to check for missing SGVs');
+    _.sortBy(rigSGVs, ['readDate']);
 
-      if (rigSGVs) {
-        console.log('Have NS and rig SGV values - need to determine which need to merged');
-      } else {
-        console.log('No rig SGV values - need to store NS SGV values');
-      }
-    } else {
-      if (rigSGVs) {
-        console.log('No NS SGVs - need to upload rig SGVs');
-      } else {
-        console.log('No rig or NS SGVs');
-      }
-    }
+    await storage.setItem('glucoseHist', rigSGVs)
+      .catch((err) => {
+        console.log('Unable to store glucoseHist: ' + err);
+      });
 
     unlockSGVStorage();
+
+    for (let rigIndex = 0; rigIndex < rigSGVs.length; ++rigIndex) {
+      let rigSGV = rigSGVs[rigIndex];
+      let nsSGV = null;
+
+      for (let nsIndex = 0; nsIndex < nsSGVs.length; ++nsIndex) {
+        let timeDiff = moment(nsSGV.dateString).diff(moment(rigSGVs[rigIndex].readDate));
+
+        if (Math.abs(timeDiff) < 60*1000) {
+          nsSGV = nsSGVs[nsIndex];
+          break;
+        }
+      }
+
+      if (!nsSGV) {
+        xDripAPS.post(rigSGV);
+      }
+    }
   };
 
   const syncLSRCalData = async (sensorInsert) => {
@@ -620,40 +659,44 @@ module.exports = async (io, extend_sensor_opt) => {
 
     NSBGChecks = await xDripAPS.BGChecksSince(sensorInsert)
       .catch(error => {
+        // Bail out since we can't sync if we don't have NS access
         console.log('Error getting NS BG Checks: ' + error);
         return;
       });
 
-    if (NSBGChecks) {
-      console.log('SyncNS NS BG Checks: ' + NSBGChecks.length);
+    if (!NSBGChecks) {
+      NSBGChecks = [];
+    }
 
-      if (NSBGChecks.length > 0) {
-        _.sortBy(NSBGChecks, ['created_at']);
+    console.log('SyncNS NS BG Checks: ' + NSBGChecks.length);
 
-        for (let index of NSBGChecks) {
-          let value = NSBGChecks[index];
+    _.sortBy(NSBGChecks, ['created_at']);
 
-          if (!('unfiltered' in value)) {
-            let NSSGVs = null;
-            let timeSince = moment(value.created_at);
+    for (let index = 0; index < NSBGChecks.length; ++index) {
+      let value = NSBGChecks[index];
 
-            NSSGVs = await xDripAPS.SGVsSince(timeSince, 1)
-              .catch(error => {
-                console.log('Unable to get NS SGVs to match unfiltered with BG Check: ' + error);
-              });
+      if (!('unfiltered' in value)) {
+        let NSSGVs = null;
+        let timeSince = moment(value.created_at);
 
-            if (NSSGVs && (NSSGVs.length > 0)) {
-              if (moment(NSSGVs[0].dateString).diff(timeSince) < 7) {
-                value.unfiltered = NSSGVs[0].unfiltered;
-                console.log('Adding unfiltered value to BGCheck at ' + timeSince.format() + ': id = ' + value._id);
-                xDripAPS.updateBGCheck(value._id, value);
-              }
-            }
+        // Get the NS SGV immediately after the BG Check
+        NSSGVs = await xDripAPS.SGVsSince(timeSince, 1)
+          .catch(error => {
+            console.log('Unable to get NS SGVs to match unfiltered with BG Check: ' + error);
+          });
+
+        if (NSSGVs && (NSSGVs.length > 0)) {
+          if (moment(NSSGVs[0].dateString).diff(timeSince) < 7) {
+            value.unfiltered = NSSGVs[0].unfiltered;
+            console.log('Adding unfiltered value to BGCheck at ' + timeSince.format() + ': id = ' + value._id);
+            xDripAPS.updateBGCheck(value._id, value);
           }
         }
-
-        console.log(NSBGChecks[0]);
       }
+    }
+
+    if (NSBGChecks.length > 0) {
+      console.log(NSBGChecks[0]);
     }
 
     await lockSGVStorage();
@@ -667,15 +710,11 @@ module.exports = async (io, extend_sensor_opt) => {
       rigCalData = [];
     }
 
-    if (!NSBGChecks) {
-      NSBGChecks = [];
-    }
-
-    for (let nsIndex of NSBGChecks) {
+    for (let nsIndex = 0; nsIndex < NSBGChecks.length; ++nsIndex) {
       let nsValue = NSBGChecks[nsIndex];
       let rigValue = null;
 
-      for (let rigIndex of rigCalData) {
+      for (let rigIndex = 0; rigIndex < rigCalData.length; ++rigIndex) {
         let timeDiff = moment(nsValue.created_at).diff(moment(rigCalData[rigIndex].date));
 
         if (Math.abs(timeDiff) < 60*1000) {
@@ -697,6 +736,8 @@ module.exports = async (io, extend_sensor_opt) => {
 
     let sliceStart = 0;
 
+    // Remove any cal data we have
+    // that predates the last sensor insert
     for (let i=0; i < rigCalData.length; ++i) {
       if (moment(rigCalData[i].date).diff(sensorInsert) < 0) {
         sliceStart = i+1;
@@ -705,15 +746,18 @@ module.exports = async (io, extend_sensor_opt) => {
 
     rigCalData = rigCalData.slice(sliceStart);
 
-    storage.setItem('calibration', rigCalData);
+    await storage.setItem('calibration', rigCalData)
+      .catch((err) => {
+        console.log('Unable to store glucoseHist: ' + err);
+      });
 
     unlockSGVStorage();
 
-    for (let rigIndex of rigCalData) {
+    for (let rigIndex = 0; rigIndex < rigCalData.length; ++rigIndex) {
       let rigValue = rigCalData[rigIndex];
       let nsValue = null;
  
-      for (let nsIndex of NSBGChecks) {
+      for (let nsIndex = 0; nsIndex < NSBGChecks.length; ++nsIndex) {
         if (Math.abs(moment(nsValue.created_at).diff(moment(rigCalData[rigIndex].date))) < 60*1000) {
           nsValue = NSBGChecks[nsIndex];
           break;
@@ -721,10 +765,11 @@ module.exports = async (io, extend_sensor_opt) => {
       }
 
       if (!nsValue) {
-        if (!('unfiltered' in rigValue)) {
+        if (!('unfiltered' in rigValue) || !rigValue.unfiltered) {
           let NSSGVs = null;
           let timeSince = moment(rigValue.date);
 
+          // Get NS SGV immediately following BG Check
           NSSGVs = await xDripAPS.SGVsSince(timeSince, 1)
             .catch(error => {
               console.log('Unable to get NS SGVs to match unfiltered with BG Check: ' + error);

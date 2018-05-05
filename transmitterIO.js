@@ -851,7 +851,11 @@ module.exports = async (io, extend_sensor_opt) => {
         return;
       });
 
-    if (nsQueryError) {
+    if (!sensorInsert) {
+      console.log('No sensor inserted record returned from NS');
+    }
+
+    if (nsQueryError || !sensorInsert) {
       console.log('syncNS - Setting 5 minute timer to try again');
 
       setTimeout(() => {
@@ -860,10 +864,6 @@ module.exports = async (io, extend_sensor_opt) => {
       }, 5 * 60000);
 
       return;
-    }
-
-    if (!sensorInsert) {
-      console.log('No sensor inserted record returned from NS');
     }
 
     // Do this serially, waiting for each to complete

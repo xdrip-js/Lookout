@@ -247,8 +247,9 @@ const querySGVsSince = (startTime, count) => {
 const queryLatestSensorInserted = () => {
   const secret = process.env.API_SECRET;
   let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/treatments.json?';
+  let oldestTime = moment().utc().subtract(2400, 'hours');
 
-  let ns_query = 'find[eventType][$regex]=Sensor&count=1';
+  let ns_query = 'find[created_at][$gte]=' + oldestTime.format() + '&find[eventType][$regex]=Sensor&count=1';
 
   let ns_headers = {
     'Content-Type': 'application/json'
@@ -479,7 +480,6 @@ module.exports = () => {
     latestSensorInserted: async () => {
       let insertTime = null;
 
-     
       let sensorInsert = await queryLatestSensorInserted();
 
       if (sensorInsert && (sensorInsert.length > 0)) {

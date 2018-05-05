@@ -3,24 +3,6 @@ const os = require('os');
 const request = require('request');
 const requestPromise = require('request-promise-native');
 const moment = require('moment');
-var _ = require('lodash');
-
-const backfillNightscout = (glucoseHistory, latestTime) => {
-  console.log('Backfilling Nightscout');
-
-  _.each(glucoseHistory, (glucose) => {
-    let glucoseTime = moment(glucose.readDate);
-    let minutesAfterLast = glucoseTime.diff(latestTime, 'minutes');
-
-    if ((minutesAfterLast > 0) && (glucose.glucose)) {
-      let entry = convertEntry(glucose);
-
-      console.log('Backfilling Nightscout: ' + glucoseTime.format());
-
-      postToNS(entry);
-    }
-  });
-};
 
 const convertEntry = (glucose) => {
   let direction;
@@ -278,39 +260,12 @@ const convertBGCheck = (BGCheck) => {
 module.exports = () => {
   return {
     // API (public) functions
-    post: (glucoseHist) => {
-      // log error and ignore errant glucose values
-      let glucose = glucoseHist[glucoseHist.length-1];
-
-      if (glucose.glucose > 800 || glucose.glucose < 20) {
-        console.log('Invalid glucose value received from transmitter, ignoring');
-        return;
-      }
-
+    post: (glucose) => {
       let entry = convertEntry(glucose);
 
       postToXdrip(entry);
 
-      queryLatestSGVs(1).then((body) => {
-        if (body.length > 0) {
-          let latestTime = moment(body[0].dateString);
-          let minutesSince = moment().diff(latestTime, 'minutes');
-
-          console.log('Latest SGV time in NS: ' + latestTime.format() + ' minutes since: ' + minutesSince);
-
-          if (minutesSince > 6) {
-            backfillNightscout(glucoseHist, latestTime);
-          } else {
-            // backfillNightscout will upload the current
-            // entry in addition to the missing entries.
-            // Therefore, only post current entry to Nightscout
-            // if we aren't backfilling.
-            postToNS(entry);
-          }
-        }
-      }).catch ((error) => {
-        console.log('Error testing for nightscout backfill or upload: ' + error);
-      });
+      postToNS(entry);
     },
 
     updateBGCheck: (id, BGCheck) => {

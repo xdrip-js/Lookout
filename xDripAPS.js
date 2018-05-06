@@ -318,10 +318,12 @@ const convertBGCheck = (BGCheck) => {
 module.exports = () => {
   return {
     // API (public) functions
-    post: (glucose) => {
+    post: (glucose, sendToXdrip) => {
       let entry = convertEntry(glucose);
 
-      postToXdrip(entry);
+      if (sendToXdrip) {
+        postToXdrip(entry);
+      }
 
       postToNS(entry);
     },

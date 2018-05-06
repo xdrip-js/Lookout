@@ -892,6 +892,8 @@ module.exports = async (io, extend_sensor_opt) => {
       return;
     }
 
+    await lockSGVStorage();
+
     oldCalData = await storage.getItem('calibration')
       .catch(error => {
         console.log('Error getting G5 calibration: ' + error);
@@ -933,6 +935,8 @@ module.exports = async (io, extend_sensor_opt) => {
     oldCalData = _.sortBy(oldCalData, ['date']);
 
     storage.setItem('calibration', oldCalData);
+
+    unlockSGVStorage();
 
     xDripAPS.postBGCheck(calData);
 

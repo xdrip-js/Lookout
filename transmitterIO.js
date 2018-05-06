@@ -415,7 +415,7 @@ module.exports = async (io, extend_sensor_opt) => {
     io.emit('glucose', sgv);
 
     if (sendSGV) {
-      xDripAPS.post(sgv);
+      xDripAPS.post(sgv, true);
     }
   };
 
@@ -692,7 +692,7 @@ module.exports = async (io, extend_sensor_opt) => {
       }
 
       if (!nsSGV) {
-        xDripAPS.post(rigSGV);
+        xDripAPS.post(rigSGV, false);
       }
     }
   };

@@ -379,7 +379,10 @@ module.exports = async (io, extend_sensor_opt) => {
 
     }
 
-    await storeNewGlucose(glucoseHist);
+    await storeNewGlucose(glucoseHist)
+      .catch(() => {
+        console.log('Unable to store new glucose');
+      });
 
     unlockSGVStorage();
 
@@ -939,7 +942,10 @@ module.exports = async (io, extend_sensor_opt) => {
 
     oldCalData = _.sortBy(oldCalData, ['date']);
 
-    storage.setItem('calibration', oldCalData);
+    storage.setItem('calibration', oldCalData)
+      .catch(error => {
+        console.log('Error saving calibration data: ' + error);
+      });
 
     unlockSGVStorage();
 

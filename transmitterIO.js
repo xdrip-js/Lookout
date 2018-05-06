@@ -907,6 +907,9 @@ module.exports = async (io, extend_sensor_opt) => {
       // the real time a little between read events.
       // If they are within two minutes, assume it's the same
       // check and bail out.
+
+      unlockSGVStorage();
+
       return;
     }
 

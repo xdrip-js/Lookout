@@ -412,6 +412,7 @@ module.exports = () => {
 
     postAnnouncement: (message) => {
       const entry = [{
+        'created_at': moment().format(),
         'enteredBy': 'openaps://' + os.hostname(),
         'eventType': 'Announcement',
         'notes': message

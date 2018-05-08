@@ -177,9 +177,7 @@ module.exports = async (io, extend_sensor_opt) => {
     }
 
     if (sendSGV) {
-      // a valid SGV value is ready to store and send
-      glucoseHist.push(sgv);
-
+      // a valid SGV value is available, so calculate trend and noise
       sgv.trend = stats.calcTrend(glucoseHist);
 
       sgv.noise = stats.calcSensorNoise(glucoseHist);
@@ -187,8 +185,10 @@ module.exports = async (io, extend_sensor_opt) => {
       sgv.nsNoise = stats.calcNSNoise(sgv.noise, glucoseHist);
 
       console.log('Current sensor trend: ' + Math.round(sgv.trend*10)/10 + ' Sensor Noise: ' + Math.round(sgv.noise*1000)/1000 + ' NS Noise: ' + sgv.nsNoise);
-
     }
+
+    // Store it regardless for state change history
+    glucoseHist.push(sgv);
 
     await storeNewGlucose(glucoseHist)
       .catch(() => {

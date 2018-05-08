@@ -814,7 +814,7 @@ module.exports = async (io, extend_sensor_opt) => {
 
     await storage.setItem('calibration', rigCalData)
       .catch((err) => {
-        console.log('Unable to store glucoseHist: ' + err);
+        console.log('Unable to store calibration: ' + err);
       });
 
     unlockSGVStorage();

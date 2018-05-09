@@ -288,6 +288,11 @@ module.exports = async (io, extend_sensor_opt) => {
     sgv.g5calibrated = true;
     sgv.stateString = stateString(sgv.state);
 
+    if (sgv.unfiltered > 1000) {
+      sgv.unfiltered = sgv.unfiltered / 1000.0;
+      sgv.filtered = sgv.filtered / 1000.0;
+    }
+
     console.log('sensor state: ' + sgv.stateString);
 
     if (sgv.unfiltered > 10000) {

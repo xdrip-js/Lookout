@@ -332,15 +332,6 @@ module.exports = async (io, extend_sensor_opt) => {
 
     if (newCal) {
       lastCal = newCal;
-
-      console.log('New calibration: slope = ' + newCal.slope + ', intercept = ' + newCal.intercept + ', scale = ' + newCal.scale);
-
-      storage.setItem('nsCalibration', newCal)
-        .catch(() => {
-          console.log('Unable to store new NS Calibration');
-        });
-
-      xDripAPS.postCalibration(newCal);
     }
 
     if (!sgv.glucose && extend_sensor && lastCal) {
@@ -353,9 +344,16 @@ module.exports = async (io, extend_sensor_opt) => {
 
       if (sensorInsert && (sensorInsert.diff(moment(lastCal.date)) > 0)) {
         console.log('Found sensor insert after latest calibration. Deleting calibration data.');
-        storage.del('nsCalibration');
-        storage.del('calibration');
-        storage.del('glucoseHist');
+        await storage.del('nsCalibration');
+        await storage.del('glucoseHist');
+
+        newCal = {
+          date: Date.now(),
+          scale: 1,
+          intercept: 0,
+          slope: 1,
+          type: 'Unity'
+        };       
 
         // set the glucose value to null
         // so it doesn't show up in the Lookout GUI
@@ -363,6 +361,18 @@ module.exports = async (io, extend_sensor_opt) => {
         sendSGV = false;
       }
     }
+
+    if (newCal) {
+      console.log('New calibration: slope = ' + newCal.slope + ', intercept = ' + newCal.intercept + ', scale = ' + newCal.scale);
+
+      await storage.setItem('nsCalibration', newCal)
+        .catch(() => {
+          console.log('Unable to store new NS Calibration');
+        });
+
+      xDripAPS.postCalibration(newCal);
+    }
+
 
     if (!sgv.glucose || sgv.glucose < 20) {
       sgv.glucose = null;

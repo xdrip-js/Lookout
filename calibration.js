@@ -1,5 +1,3 @@
-var _ = require('lodash');
-
 //Rule 1 - Clear calibration records upon CGM Sensor Change/Insert
 //Rule 2 - Don't allow any BG calibrations or take in any new calibrations 
 //         within 15 minutes of last sensor insert
@@ -32,8 +30,14 @@ exports.lsrCalibration = (calibrationPairs) => {
   var sumXY=0;
   var sumXSq=0;
   var sumYSq=0;
-  var r=0;
-  var n=calibrationPairs.length
+  let sumSqDiffX = 0;
+  let sumSqDiffY = 0;
+  /*eslint-disable no-unused-vars*/
+  let yError=0;
+  let slopeError=0;
+  /*eslint-enable no-unused-vars*/
+
+  var n=calibrationPairs.length;
   var tarr = [];
 
   var returnVal = {
@@ -50,9 +54,6 @@ exports.lsrCalibration = (calibrationPairs) => {
   meanX = sumX / n;
   meanY = sumY / n;
 
-  sumSqDiffX = 0;
-  sumSqDiffY = 0;
-
   for (let i=0; i < n; ++i) {
     let diff = calibrationPairs[i].glucose - meanX;
     sumSqDiffX = sumSqDiffX + diff*diff;
@@ -65,15 +66,13 @@ exports.lsrCalibration = (calibrationPairs) => {
   stddevY = Math.sqrt(sumSqDiffY / (n-1));
 
 
-  var usingDates=0
-
   var firstDate=calibrationPairs[0].readDate;
 
   for (let i=0; i<n; i++) {
-      tarr.push(calibrationPairs[i].readDate - firstDate); 
+    tarr.push(calibrationPairs[i].readDate - firstDate); 
   }
 
-  var multiplier=1
+  var multiplier=1;
 
   for (let i=0; i<n; i++ ) {
     if (i != 0) {
@@ -127,8 +126,8 @@ exports.singlePointCalibration = (calibrationPairs) => {
     'calibrationType': 'SinglePoint'
   };
 
-  x=calibrationPairs[calibrationPairs.length-1].glucose;
-  y=calibrationPairs[calibrationPairs.length-1].unfiltered;
+  let x=calibrationPairs[calibrationPairs.length-1].glucose;
+  let y=calibrationPairs[calibrationPairs.length-1].unfiltered;
   returnVal.yIntercept=0;
   returnVal.slope=y / x;
   console.log('singlePointCalibration: x=' + x + ', y=' + y + ', slope=' + returnVal.slope + ', yIntercept=0'); 

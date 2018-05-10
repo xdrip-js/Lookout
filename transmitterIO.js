@@ -340,6 +340,7 @@ module.exports = async (io, extend_sensor_opt) => {
       if (sensorInsert && (sensorInsert.diff(moment(lastCal.date)) > 0)) {
         console.log('Found sensor insert after latest calibration. Deleting calibration data.');
         await storage.del('nsCalibration');
+        await storage.del('calibration');
         await storage.del('glucoseHist');
 
         newCal = {

@@ -738,6 +738,10 @@ module.exports = async (io, extend_sensor_opt) => {
 
     console.log('SyncNS NS BG Checks: ' + NSBGChecks.length);
 
+    for (let nsIndex = 0; nsIndex < NSBGChecks.length; ++nsIndex) {
+      NSBGChecks[nsIndex].created_at = moment(NSBGChecks[nsIndex].created_at).format();
+    }
+
     NSBGChecks = _.sortBy(NSBGChecks, ['created_at']);
 
     if (NSBGChecks.length > 0) {

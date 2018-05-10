@@ -94,6 +94,10 @@ angular.module('AngularOpenAPS.cgm', [
         console.log('starting sensor');
         socket.emit('startSensor');
       },
+      backstart: function() {
+        console.log('starting sensor 2 hours prior to now');
+        socket.emit('backStartSensor');
+      },
       stop: function() {
         console.log('stopping sensor');
         socket.emit('stopSensor');

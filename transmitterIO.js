@@ -520,9 +520,16 @@ module.exports = async (io, extend_sensor_opt) => {
       pending.push({date: Date.now(), type: 'StartSensor'});
       io.emit('pending', pending);
     });
+    socket.on('backStartSensor', () => {
+      console.log('received backStartSensor command');
+      pending.push({date: Date.now(), type: "BackStartSensor"});
+      io.emit('pending', pending)
+    });
     socket.on('stopSensor', () => {
       console.log('received stopSensor command');
-      pending.push({date: Date.now(), type: 'StopSensor'});
+      // Stop sensor 3 hours prior to now to enable a rapid restart
+      // if one is desired.
+      pending.push({date: Date.now() - 3*60*1000, type: 'StopSensor'});
       io.emit('pending', pending);
     });
     socket.on('calibration', glucose => {

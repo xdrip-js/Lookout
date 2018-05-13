@@ -922,15 +922,21 @@ module.exports = async (io, extend_sensor_opt) => {
         console.log('Error getting G5 calibration: ' + error);
       });
 
-    if (oldCalData && (oldCalData.length > 0) && (Math.abs(oldCalData[oldCalData.length-1].date - calData.date) < 2*60*1000)) {
-      // The G5 transmitter report varies the time around
-      // the real time a little between read events.
-      // If they are within two minutes, assume it's the same
-      // check and bail out.
+    if (!oldCalData) {
+      oldCalData = [];
+    }
 
-      unlockSGVStorage();
+    for (let i = (oldCalData.length-1); i >= 0; --i) {
+      if (Math.abs(oldCalData[i].date - calData.date) < 2*60*1000) {
+        // The G5 transmitter report varies the time around
+        // the real time a little between read events.
+        // If they are within two minutes, assume it's the same
+        // check and bail out.
 
-      return;
+        unlockSGVStorage();
+
+        return;
+      }
     }
 
     rigSGVs = await storage.getItem('glucoseHist')

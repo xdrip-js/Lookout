@@ -180,6 +180,9 @@ module.exports = async (io, extend_sensor_opt) => {
       sendSGV = false;
     }
 
+    // Store it regardless for state change history
+    glucoseHist.push(sgv);
+
     if (sendSGV) {
       // a valid SGV value is available, so calculate trend and noise
       sgv.trend = stats.calcTrend(glucoseHist);
@@ -192,9 +195,6 @@ module.exports = async (io, extend_sensor_opt) => {
       // Put in light noise to account for uncertainty
       sgv.noise = .4;
     }
-
-    // Store it regardless for state change history
-    glucoseHist.push(sgv);
 
     sgv.nsNoise = calcNSNoise(sgv.noise, glucoseHist);
 

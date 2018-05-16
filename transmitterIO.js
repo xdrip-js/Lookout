@@ -578,6 +578,8 @@ module.exports = async (io, extend_sensor_opt) => {
     }
 
     unlockSGVStorage();
+
+    console.log('syncNSCal complete');
   };
 
   const syncSGVs = async () => {
@@ -709,6 +711,8 @@ module.exports = async (io, extend_sensor_opt) => {
         xDripAPS.post(rigSGV, false);
       }
     }
+
+    console.log('syncSGVs complete');
   };
 
   const syncLSRCalData = async (sensorInsert) => {
@@ -856,6 +860,8 @@ module.exports = async (io, extend_sensor_opt) => {
         xDripAPS.postBGCheck(rigValue);
       }
     }
+
+    console.log('syncLSRCalData complete');
   };
 
   const syncNS = async () => {
@@ -889,18 +895,31 @@ module.exports = async (io, extend_sensor_opt) => {
     // if somehow this took longer than 5 minutes
     // we would not have multiple copies running
     // due to the timeout
-    await syncNSCal(sensorInsert);
+    let syncNSCalPromise = syncNSCal(sensorInsert)
+      .catch(error => {
+        console.log('Error syncing NS Calibration: ' + error);
+      });
 
-    await syncSGVs();
+    let syncSGVsPromise = syncSGVs()
+      .catch(error => {
+        console.log('Error syncing SGVs: ' + error);
+      });
 
-    await syncLSRCalData(sensorInsert);
+    let syncLSRCalDataPromise = syncLSRCalData(sensorInsert)
+      .catch(error => {
+        console.log('Error syncing LSR Cal Data: ' + error);
+      });
 
-    console.log('syncNS complete - setting 5 minute timer');
+    /*eslint-disable no-unused-vars*/
+    Promise.all([syncNSCalPromise, syncSGVsPromise, syncLSRCalDataPromise]).then(values => {
+    /*eslint-enable no-unused-vars*/
+      console.log('syncNS complete - setting 5 minute timer');
 
-    setTimeout(() => {
-      // Restart the syncNS after 5 minute
-      syncNS();
-    }, 5 * 60000);
+      setTimeout(() => {
+        // Restart the syncNS after 5 minute
+        syncNS();
+      }, 5 * 60000);
+    });
   };
 
   const processG5CalData = async (calData) => {

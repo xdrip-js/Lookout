@@ -18,6 +18,11 @@ sudo apt-get install nodejs -y
 ```
 If you later need to revert your rig's NodeJS to the legacy version, follow the steps in the below section "Reverting NodeJS".
 
+Lookout uses the bluez-tools software. Here are the instructions for installing bluez-tools:
+
+sudo apt-get install bluez-tools
+
+
 ## Installation
 ```
 git clone https://github.com/thebookins/Lookout.git

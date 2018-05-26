@@ -529,8 +529,7 @@ module.exports = async (io, extend_sensor_opt) => {
       return;
     }
 
-    console.log('SyncNS NS Cal:');
-    console.log(NSCal);
+    console.log('SyncNS NS Cal - date: ' + moment(NSCal.date).format() + ' slope: ' + Math.round(NSCal.slope*100)/100 + ' intercept: ' + Math.round(NSCal.intercept*10)/10);
 
     await lockSGVStorage();
 
@@ -539,8 +538,7 @@ module.exports = async (io, extend_sensor_opt) => {
         console.log('Error getting rig calibration: ' + error);
       });
 
-    console.log('SyncNS Rig calibration:');
-    console.log(rigCal);
+    console.log('SyncNS Rig Cal - date: ' + moment(rigCal.date).format() + ' slope: ' + Math.round(rigCal.slope*100)/100 + ' intercept: ' + Math.round(rigCal.intercept*10)/10);
 
     if (NSCal) {
       if (!rigCal) {
@@ -612,7 +610,8 @@ module.exports = async (io, extend_sensor_opt) => {
     nsSGVs = _.sortBy(nsSGVs, ['date']);
 
     if (nsSGVs.length > 0) {
-      console.log(nsSGVs[0]);
+      let sgv = nsSGVs[nsSGVs.length-1];
+      console.log('Most recent SGV - date: ' + moment(sgv.date).format() + ' sgv: ' + sgv.sgv + ' unfiltered: ' + sgv.unfiltered);
     }
 
     await lockSGVStorage();
@@ -647,7 +646,8 @@ module.exports = async (io, extend_sensor_opt) => {
     let rigIndex = 0;
 
     if (rigSGVsLength > 0) {
-      console.log(rigSGVs[0]);
+      let sgv = rigSGVs[rigSGVsLength-1];
+      console.log('Most recent SGV - date: ' + moment(sgv.readDate).format() + ' sgv: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered);
     }
 
     for (let nsIndex = 0; nsIndex < nsSGVs.length; ++nsIndex) {
@@ -745,7 +745,8 @@ module.exports = async (io, extend_sensor_opt) => {
     NSBGChecks = _.sortBy(NSBGChecks, ['created_at']);
 
     if (NSBGChecks.length > 0) {
-      console.log(NSBGChecks[0]);
+      let bgCheck = NSBGChecks[NSBGChecks.length-1];
+      console.log('Most recent NS BG Check - date: ' + moment(bgCheck.create_at).format() + ' type: ' + bgCheck.glucoseType + ' glucose: ' + bgCheck.glucose);
     }
 
     await lockSGVStorage();

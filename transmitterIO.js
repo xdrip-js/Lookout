@@ -894,50 +894,32 @@ module.exports = async (io, extend_sensor_opt) => {
     // For each of these, we catch any errors and then
     // call resolve so the Promise.all works as it
     // should and doesn't trigger early because of an error
-    var syncNSCalPromise = new timeLimitedPromise(4*60*1000, (resolve, reject) => {
-      syncNSCal(sensorInsert)
-        .catch(error => {
-          console.log('Error syncing NS Calibration: ' + error);
-          resolve();
-        })
-        .then(() => {
-          resolve();
-        });
+    var syncNSCalPromise = new timeLimitedPromise(4*60*1000, async (resolve) => {
+      await syncNSCal(sensorInsert);
+      resolve();
     });
 
-
-    let syncSGVsPromise = new timeLimitedPromise(4*60*1000, (resolve, reject) => {
-      syncSGVs()
-        .catch(error => {
-          console.log('Error syncing SGVs: ' + error);
-          resolve();
-        })
-        .then(() => {
-          resolve();
-        });
+    let syncSGVsPromise = new timeLimitedPromise(4*60*1000, async (resolve) => {
+      await syncSGVs();
+      resolve();
     });
 
-    let syncLSRCalDataPromise = new timeLimitedPromise(4*60*1000, (resolve, reject) => {
-      syncLSRCalData(sensorInsert)
-        .catch(error => {
-          console.log('Error syncing LSR Cal Data: ' + error);
-          resolve();
-        })
-        .then(() => {
-          resolve();
-        });
+    let syncLSRCalDataPromise = new timeLimitedPromise(4*60*1000, async (resolve) => {
+      await syncLSRCalData(sensorInsert);
+      resolve();
     });
 
-    /*eslint-disable no-unused-vars*/
-    Promise.all([syncNSCalPromise, syncSGVsPromise, syncLSRCalDataPromise]).then(values => {
-    /*eslint-enable no-unused-vars*/
-      console.log('syncNS complete - setting 5 minute timer');
+    Promise.all([syncNSCalPromise, syncSGVsPromise, syncLSRCalDataPromise])
+      .catch(error => {
+        console.log('syncNS error: ' + error);
+      }).then( () => {
+        console.log('syncNS complete - setting 5 minute timer');
 
-      setTimeout(() => {
-        // Restart the syncNS after 5 minute
-        syncNS();
-      }, 5 * 60000);
-    });
+        setTimeout(() => {
+          // Restart the syncNS after 5 minute
+          syncNS();
+        }, 5 * 60000);
+      });
   };
 
   const processG5CalData = async (calData) => {

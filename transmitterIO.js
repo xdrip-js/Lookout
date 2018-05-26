@@ -611,7 +611,7 @@ module.exports = async (io, extend_sensor_opt) => {
 
     if (nsSGVs.length > 0) {
       let sgv = nsSGVs[nsSGVs.length-1];
-      console.log('Most recent SGV - date: ' + moment(sgv.date).format() + ' sgv: ' + sgv.sgv + ' unfiltered: ' + sgv.unfiltered);
+      console.log('Most recent NS SGV - date: ' + moment(sgv.date).format() + ' sgv: ' + sgv.sgv + ' unfiltered: ' + sgv.unfiltered);
     }
 
     await lockSGVStorage();
@@ -647,7 +647,7 @@ module.exports = async (io, extend_sensor_opt) => {
 
     if (rigSGVsLength > 0) {
       let sgv = rigSGVs[rigSGVsLength-1];
-      console.log('Most recent SGV - date: ' + moment(sgv.readDate).format() + ' sgv: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered);
+      console.log('Most recent rig SGV - date: ' + moment(sgv.readDate).format() + ' sgv: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered);
     }
 
     for (let nsIndex = 0; nsIndex < nsSGVs.length; ++nsIndex) {
@@ -762,6 +762,11 @@ module.exports = async (io, extend_sensor_opt) => {
 
     let rigCalDataLength = rigCalData.length;
     let rigIndex = 0;
+
+    if (rigCalDataLength > 0) {
+      let bgCheck = rigCalData[rigCalDataLength-1];
+      console.log('Most recent Rig BG Check - date: ' + moment(bgCheck.date).format() + ' glucose: ' + bgCheck.glucose + ' unfiltered: ' + bgCheck.unfiltered);
+    }
 
     for (let nsIndex = 0; nsIndex < NSBGChecks.length; ++nsIndex) {
       let nsValue = NSBGChecks[nsIndex];

@@ -3,6 +3,7 @@ const calibration = require('./calibration');
 const storage = require('node-persist');
 const cp = require('child_process');
 const moment = require('moment');
+const timeLimitedPromise = require('./timeLimitedPromise');
 var _ = require('lodash');
 
 module.exports = async (io, extend_sensor_opt) => {
@@ -890,25 +891,42 @@ module.exports = async (io, extend_sensor_opt) => {
       return;
     }
 
-    // Do this serially, waiting for each to complete
-    // only for the purpose of making sure that
-    // if somehow this took longer than 5 minutes
-    // we would not have multiple copies running
-    // due to the timeout
-    let syncNSCalPromise = syncNSCal(sensorInsert)
-      .catch(error => {
-        console.log('Error syncing NS Calibration: ' + error);
-      });
+    // For each of these, we catch any errors and then
+    // call resolve so the Promise.all works as it
+    // should and doesn't trigger early because of an error
+    var syncNSCalPromise = new timeLimitedPromise(4*60*1000, (resolve, reject) => {
+      syncNSCal(sensorInsert)
+        .catch(error => {
+          console.log('Error syncing NS Calibration: ' + error);
+          resolve();
+        })
+        .then(() => {
+          resolve();
+        });
+    });
 
-    let syncSGVsPromise = syncSGVs()
-      .catch(error => {
-        console.log('Error syncing SGVs: ' + error);
-      });
 
-    let syncLSRCalDataPromise = syncLSRCalData(sensorInsert)
-      .catch(error => {
-        console.log('Error syncing LSR Cal Data: ' + error);
-      });
+    let syncSGVsPromise = new timeLimitedPromise(4*60*1000, (resolve, reject) => {
+      syncSGVs()
+        .catch(error => {
+          console.log('Error syncing SGVs: ' + error);
+          resolve();
+        })
+        .then(() => {
+          resolve();
+        });
+    });
+
+    let syncLSRCalDataPromise = new timeLimitedPromise(4*60*1000, (resolve, reject) => {
+      syncLSRCalData(sensorInsert)
+        .catch(error => {
+          console.log('Error syncing LSR Cal Data: ' + error);
+          resolve();
+        })
+        .then(() => {
+          resolve();
+        });
+    });
 
     /*eslint-disable no-unused-vars*/
     Promise.all([syncNSCalPromise, syncSGVsPromise, syncLSRCalDataPromise]).then(values => {

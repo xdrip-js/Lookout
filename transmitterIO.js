@@ -16,7 +16,7 @@ module.exports = (io, extend_sensor_opt) => {
 
     cp.exec('bt-device -r '+btName, (err, stdout, stderr) => {
       if (err) {
-        console.log('Unable to remove BT Device: '+btName);
+        console.log('Unable to remove BT Device: ' + btName+' - ' + err);
         return;
       }
 

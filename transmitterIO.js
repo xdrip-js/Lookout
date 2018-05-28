@@ -30,7 +30,7 @@ module.exports = async (io, extend_sensor_opt) => {
     });
   };
 
-  const calculateNewNSCalibration = (lastCal, lastG5CalTime, glucoseHist, currSGV) => {
+  const calculateG5Calibration = (lastCal, lastG5CalTime, glucoseHist, currSGV) => {
     // set it to a high number so we upload a new cal
     // if we don't have a previous calibration
 
@@ -276,7 +276,7 @@ module.exports = async (io, extend_sensor_opt) => {
 
     console.log('sensor state: ' + sgv.stateString);
 
-    lastCal = await storage.getItem('nsCalibration')
+    lastCal = await storage.getItem('g5Calibration')
       .catch(error => {
         console.log('Unable to obtain current NS Calibration' + error);
       });
@@ -303,7 +303,11 @@ module.exports = async (io, extend_sensor_opt) => {
     }
 
     if (glucoseHist.length > 0) {
-      newCal = calculateNewNSCalibration(lastCal, lastG5CalTime, glucoseHist, sgv);
+      newCal = calculateG5Calibration(lastCal, lastG5CalTime, glucoseHist, sgv);
+
+      if (glucoseHist[glucoseHist.length-1].state != sgv.state) {
+        xDripAPS.postAnnouncement('Sensor ' + sgv.stateString);
+      }
     }
 
     if (newCal) {
@@ -320,7 +324,7 @@ module.exports = async (io, extend_sensor_opt) => {
 
       if (sensorInsert && (sensorInsert.diff(moment(lastCal.date)) > 0)) {
         console.log('Found sensor insert after latest calibration. Deleting calibration data.');
-        await storage.del('nsCalibration');
+        await storage.del('g5Calibration');
         await storage.del('calibration');
         await storage.del('glucoseHist');
 
@@ -342,7 +346,7 @@ module.exports = async (io, extend_sensor_opt) => {
     if (newCal) {
       console.log('New calibration: slope = ' + newCal.slope + ', intercept = ' + newCal.intercept + ', scale = ' + newCal.scale);
 
-      await storage.setItem('nsCalibration', newCal)
+      await storage.setItem('g5Calibration', newCal)
         .catch(() => {
           console.log('Unable to store new NS Calibration');
         });
@@ -493,7 +497,7 @@ module.exports = async (io, extend_sensor_opt) => {
     }
   };
 
-  const syncNSCal = async (sensorInsert) => {
+  const syncCal = async (sensorInsert) => {
     let rigCal = null;
     let NSCal = null;
     let nsQueryError = false;
@@ -513,7 +517,7 @@ module.exports = async (io, extend_sensor_opt) => {
 
     await storageLock.lockStorage();
 
-    rigCal = await storage.getItem('nsCalibration')
+    rigCal = await storage.getItem('g5Calibration')
       .catch(error => {
         console.log('Error getting rig calibration: ' + error);
       });
@@ -527,7 +531,7 @@ module.exports = async (io, extend_sensor_opt) => {
         if (sensorInsert.diff(moment(NSCal.date)) > 0) {
           console.log('Found sensor insert after latest NS calibration. Not updating local rig calibration');
         } else {
-          await storage.setItem('nsCalibration', NSCal)
+          await storage.setItem('g5Calibration', NSCal)
             .catch(() => {
               console.log('Unable to store NS Calibration');
             });
@@ -535,7 +539,7 @@ module.exports = async (io, extend_sensor_opt) => {
       } else if (rigCal.date < NSCal.date) {
         console.log('NS calibration more recent than rig calibration NS Cal Date: ' + NSCal.date + ' Rig Cal Date: ' + rigCal.date);
 
-        storage.setItem('nsCalibration', NSCal)
+        storage.setItem('g5Calibration', NSCal)
           .catch(() => {
             console.log('Unable to store NS Calibration');
           });
@@ -558,7 +562,7 @@ module.exports = async (io, extend_sensor_opt) => {
 
     storageLock.unlockStorage();
 
-    console.log('syncNSCal complete');
+    console.log('syncCal complete');
   };
 
   const syncSGVs = async () => {
@@ -880,8 +884,8 @@ module.exports = async (io, extend_sensor_opt) => {
     // For each of these, we catch any errors and then
     // call resolve so the Promise.all works as it
     // should and doesn't trigger early because of an error
-    var syncNSCalPromise = new timeLimitedPromise(4*60*1000, async (resolve) => {
-      await syncNSCal(sensorInsert);
+    var syncCalPromise = new timeLimitedPromise(4*60*1000, async (resolve) => {
+      await syncCal(sensorInsert);
       resolve();
     });
 
@@ -895,7 +899,7 @@ module.exports = async (io, extend_sensor_opt) => {
       resolve();
     });
 
-    Promise.all([syncNSCalPromise, syncSGVsPromise, syncLSRCalDataPromise])
+    Promise.all([syncCalPromise, syncSGVsPromise, syncLSRCalDataPromise])
       .catch(error => {
         console.log('syncNS error: ' + error);
       }).then( () => {

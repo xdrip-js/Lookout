@@ -11,6 +11,10 @@ angular.module('AngularOpenAPS.cgm.transmitter', [
     templateUrl: 'cgm/transmitter/pair.html',
     controller: 'TransmitterController'
   });
+  $routeProvider.when('/cgm/transmitter/reset', {
+    templateUrl: 'cgm/transmitter/reset.html',
+    controller: 'TransmitterController'
+  });
 })
 
 .controller('TransmitterController', ['$scope', '$interval', '$location', 'G5', function ($scope, $interval, $location, G5) {

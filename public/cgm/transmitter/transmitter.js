@@ -36,6 +36,11 @@ angular.module('AngularOpenAPS.cgm.transmitter', [
     G5.transmitter.id = id;
     $location.path('/cgm/transmitter');
   };
+
+  $scope.resetG5Tx = function() {
+    G5.transmitter.reset();
+    $location.path('/cgm/transmitter');
+  };
 }])
 
 .filter('status', function() {

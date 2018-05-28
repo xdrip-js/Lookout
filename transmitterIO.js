@@ -249,6 +249,25 @@ module.exports = async (io, extend_sensor_opt) => {
     return nsNoise;
   };
 
+  const calcGlucose = (sgv, calibration) => {
+    return Math.round((sgv.unfiltered-calibration.intercept)/calibration.slope);
+  };
+
+  const getLastG5Cal = (bgChecks) => {
+    let lastG5Cal = null;
+
+    if (bgChecks) {
+      for (let ii=(bgChecks.length-1); ii >= 0; --ii) {
+        if (bgChecks[ii].type == 'G5') {
+          lastG5Cal = bgChecks[ii];
+          break;
+        }
+      }
+    }
+
+    return lastG5Cal;
+  };
+
   const processNewGlucose = async (sgv) => {
     let lastCal = null;
     let glucoseHist = null;
@@ -291,16 +310,18 @@ module.exports = async (io, extend_sensor_opt) => {
         console.log('Error getting glucoseHist: ' + err);
       });
 
-    let storedG5CalData = await storage.getItem('calibration')
+    let bgChecks = await storage.getItem('bgChecks')
       .catch((err) => {
-        console.log('Error getting lastG5CalData: ' + err);
+        console.log('Error getting bgChecks: ' + err);
       });
 
     let lastG5CalTime = 0;
     let newCal = null;
 
-    if (storedG5CalData && (storedG5CalData.length > 0))  {
-      lastG5CalTime = storedG5CalData[storedG5CalData.length-1].date;
+    let lastG5Cal = getLastG5Cal(bgChecks);
+
+    if (lastG5Cal) {
+      lastG5CalTime = lastG5Cal.date;
     }
 
     if (!glucoseHist) {
@@ -330,7 +351,7 @@ module.exports = async (io, extend_sensor_opt) => {
       if (sensorInsert && (sensorInsert.diff(moment(lastCal.date)) > 0)) {
         console.log('Found sensor insert after latest calibration. Deleting calibration data.');
         await storage.del('g5Calibration');
-        await storage.del('calibration');
+        await storage.del('bgChecks');
         await storage.del('glucoseHist');
 
         newCal = {
@@ -705,7 +726,7 @@ module.exports = async (io, extend_sensor_opt) => {
     console.log('syncSGVs complete');
   };
 
-  const syncLSRCalData = async (sensorInsert) => {
+  const syncBGChecks = async (sensorInsert) => {
     let NSBGChecks = null;
     let nsQueryError = false;
 
@@ -740,20 +761,20 @@ module.exports = async (io, extend_sensor_opt) => {
 
     await storageLock.lockStorage();
 
-    let rigCalData = await storage.getItem('calibration')
+    let rigBGChecks = await storage.getItem('bgChecks')
       .catch(error => {
-        console.log('Error getting rig G5 calibration: ' + error);
+        console.log('Error getting bgChecks: ' + error);
       });
 
-    if (!rigCalData || !Array.isArray(rigCalData)) {
-      rigCalData = [];
+    if (!rigBGChecks || !Array.isArray(rigBGChecks)) {
+      rigBGChecks = [];
     }
 
-    let rigCalDataLength = rigCalData.length;
+    let rigDataLength = rigBGChecks.length;
     let rigIndex = 0;
 
-    if (rigCalDataLength > 0) {
-      let bgCheck = rigCalData[rigCalDataLength-1];
+    if (rigDataLength > 0) {
+      let bgCheck = rigBGChecks[rigDataLength-1];
       console.log('Most recent Rig BG Check - date: ' + moment(bgCheck.date).format() + ' glucose: ' + bgCheck.glucose + ' unfiltered: ' + bgCheck.unfiltered);
     }
 
@@ -761,14 +782,14 @@ module.exports = async (io, extend_sensor_opt) => {
       let nsValue = NSBGChecks[nsIndex];
       let rigValue = null;
 
-      for (; rigIndex < rigCalDataLength; ++rigIndex) {
-        let timeDiff = moment(nsValue.created_at).diff(moment(rigCalData[rigIndex].date));
+      for (; rigIndex < rigDataLength; ++rigIndex) {
+        let timeDiff = moment(nsValue.created_at).diff(moment(rigBGChecks[rigIndex].date));
 
         if (Math.abs(timeDiff) < 60*1000) {
-          rigValue = rigCalData[rigIndex];
+          rigValue = rigBGChecks[rigIndex];
           break;
         } else if (timeDiff < 0) {
-          // Bail if rigCalData time is later than NS BG time
+          // Bail if rigBGChecks time is later than NS BG time
           break;
         }
       }
@@ -777,29 +798,30 @@ module.exports = async (io, extend_sensor_opt) => {
         rigValue = {
           'date': moment(nsValue.created_at).valueOf(),
           'glucose': nsValue.glucose,
+          'type': 'NS'
         };
 
-        rigCalData.push(rigValue);
+        rigBGChecks.push(rigValue);
       }
     }
 
-    rigCalData = _.sortBy(rigCalData, ['date']);
+    rigBGChecks = _.sortBy(rigBGChecks, ['date']);
 
     let sliceStart = 0;
 
     // Remove any cal data we have
     // that predates the last sensor insert
-    for (let i=0; i < rigCalData.length; ++i) {
-      if (moment(rigCalData[i].date).diff(sensorInsert) < 0) {
+    for (let i=0; i < rigBGChecks.length; ++i) {
+      if (moment(rigBGChecks[i].date).diff(sensorInsert) < 0) {
         sliceStart = i+1;
       }
     }
 
-    rigCalData = rigCalData.slice(sliceStart);
+    rigBGChecks = rigBGChecks.slice(sliceStart);
 
     // Add unfiltered values if any are missing
-    for (let i=0; i < rigCalData.length; ++i) {
-      let rigValue = rigCalData[i];
+    for (let i=0; i < rigBGChecks.length; ++i) {
+      let rigValue = rigBGChecks[i];
 
       if (!('unfiltered' in rigValue) || !rigValue.unfiltered) {
         let NSSGVs = null;
@@ -827,17 +849,17 @@ module.exports = async (io, extend_sensor_opt) => {
       }
     }
 
-    await storage.setItem('calibration', rigCalData)
+    await storage.setItem('bgChecks', rigBGChecks)
       .catch((err) => {
-        console.log('Unable to store calibration: ' + err);
+        console.log('Unable to store bgChecks: ' + err);
       });
 
     storageLock.unlockStorage();
 
     let nsIndex = 0;
 
-    for (let rigIndex = 0; rigIndex < rigCalData.length; ++rigIndex) {
-      let rigValue = rigCalData[rigIndex];
+    for (let rigIndex = 0; rigIndex < rigBGChecks.length; ++rigIndex) {
+      let rigValue = rigBGChecks[rigIndex];
       let nsValue = null;
  
       for (; nsIndex < NSBGChecks.length; ++nsIndex) {
@@ -857,7 +879,7 @@ module.exports = async (io, extend_sensor_opt) => {
       }
     }
 
-    console.log('syncLSRCalData complete');
+    console.log('syncBGChecks complete');
   };
 
   const syncNS = async () => {
@@ -899,12 +921,12 @@ module.exports = async (io, extend_sensor_opt) => {
       resolve();
     });
 
-    let syncLSRCalDataPromise = new timeLimitedPromise(4*60*1000, async (resolve) => {
-      await syncLSRCalData(sensorInsert);
+    let syncBGChecksPromise = new timeLimitedPromise(4*60*1000, async (resolve) => {
+      await syncBGChecks(sensorInsert);
       resolve();
     });
 
-    Promise.all([syncCalPromise, syncSGVsPromise, syncLSRCalDataPromise])
+    Promise.all([syncCalPromise, syncSGVsPromise, syncBGChecksPromise])
       .catch(error => {
         console.log('syncNS error: ' + error);
       }).then( () => {
@@ -920,7 +942,7 @@ module.exports = async (io, extend_sensor_opt) => {
   const processG5CalData = async (calData) => {
     let rigSGVs = null;
     let matchingSGV = null;
-    let oldCalData = null;
+    let bgChecks = null;
 
     console.log('Last calibration: ' + Math.round((Date.now() - calData.date)/1000/60/60*10)/10 + ' hours ago');
 
@@ -929,19 +951,21 @@ module.exports = async (io, extend_sensor_opt) => {
       return;
     }
 
+    calData.type = 'G5';
+
     await storageLock.lockStorage();
 
-    oldCalData = await storage.getItem('calibration')
+    bgChecks = await storage.getItem('bgChecks')
       .catch(error => {
-        console.log('Error getting G5 calibration: ' + error);
+        console.log('Error getting bgChecks: ' + error);
       });
 
-    if (!oldCalData) {
-      oldCalData = [];
+    if (!bgChecks) {
+      bgChecks = [];
     }
 
-    for (let i = (oldCalData.length-1); i >= 0; --i) {
-      if (Math.abs(oldCalData[i].date - calData.date) < 2*60*1000) {
+    for (let i = (bgChecks.length-1); i >= 0; --i) {
+      if (Math.abs(bgChecks[i].date - calData.date) < 2*60*1000) {
         // The G5 transmitter report varies the time around
         // the real time a little between read events.
         // If they are within two minutes, assume it's the same
@@ -958,7 +982,7 @@ module.exports = async (io, extend_sensor_opt) => {
         console.log('Error getting rig SGVs: ' + error);
       });
 
-    calData.unfiltered = null;
+    calData.unfiltered = 0;
 
     if (rigSGVs) {
       // we can assume they are already sorted
@@ -976,13 +1000,13 @@ module.exports = async (io, extend_sensor_opt) => {
       }
     }
 
-    oldCalData.push(calData);
+    bgChecks.push(calData);
 
-    oldCalData = _.sortBy(oldCalData, ['date']);
+    bgChecks = _.sortBy(bgChecks, ['date']);
 
-    storage.setItem('calibration', oldCalData)
+    storage.setItem('bgChecks', bgChecks)
       .catch(error => {
-        console.log('Error saving calibration data: ' + error);
+        console.log('Error saving bgChecks: ' + error);
       });
 
     storageLock.unlockStorage();
@@ -1093,13 +1117,15 @@ module.exports = async (io, extend_sensor_opt) => {
       socket.emit('glucose', glucoseHist[glucoseHist.length - 1]);
     }
 
-    let calData = await storage.getItem('calibration')
+    let bgChecks = await storage.getItem('bgChecks')
       .catch(error => {
-        console.log('Unable to get calibration storage item: ' + error);
+        console.log('Unable to get bgChecks storage item: ' + error);
       });
 
-    if (calData && (calData.length > 0)) {
-      socket.emit('calibrationData', calData[calData.length - 1]);
+    let lastG5Cal = getLastG5Cal(bgChecks);
+
+    if (lastG5Cal) {
+      socket.emit('calibrationData', lastG5Cal);
     }
 
     socket.on('resetTx', () => {
@@ -1117,7 +1143,7 @@ module.exports = async (io, extend_sensor_opt) => {
       pending.push({date: Date.now(), type: 'StopSensor'});
       io.emit('pending', pending);
     });
-    socket.on('calibrate', glucose => {
+    socket.on('calibration', glucose => {
       console.log('received calibration of ' + glucose);
       pending.push({date: Date.now(), type: 'CalibrateSensor', glucose});
       io.emit('pending', pending);

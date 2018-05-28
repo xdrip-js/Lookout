@@ -24,7 +24,9 @@ const syncCal = async (sensorInsert) => {
     return;
   }
 
-  console.log('SyncNS NS Cal - date: ' + moment(NSCal.date).format() + ' slope: ' + Math.round(NSCal.slope*100)/100 + ' intercept: ' + Math.round(NSCal.intercept*10)/10);
+  if (NSCal) {
+    console.log('SyncNS NS Cal - date: ' + moment(NSCal.date).format() + ' slope: ' + Math.round(NSCal.slope*100)/100 + ' intercept: ' + Math.round(NSCal.intercept*10)/10);
+  }
 
   await storageLock.lockStorage();
 
@@ -33,7 +35,9 @@ const syncCal = async (sensorInsert) => {
       console.log('Error getting rig calibration: ' + error);
     });
 
-  console.log('SyncNS Rig Cal - date: ' + moment(rigCal.date).format() + ' slope: ' + Math.round(rigCal.slope*100)/100 + ' intercept: ' + Math.round(rigCal.intercept*10)/10);
+  if (rigCal) {
+    console.log('SyncNS Rig Cal - date: ' + moment(rigCal.date).format() + ' slope: ' + Math.round(rigCal.slope*100)/100 + ' intercept: ' + Math.round(rigCal.intercept*10)/10);
+  }
 
   if (NSCal) {
     if (!rigCal) {

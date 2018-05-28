@@ -20,7 +20,7 @@ var exports = module.exports = {};
 //   glucose => the "true" glucose value for the pair
 //   unfiltered => the sensor's unfiltered glucose value for the pair
 //   readDate => the sensor's read date for the pair in ms since 1/1/1970 00:00
-exports.lsrCalibration = (calibrationPairs) => {
+const lsrCalibration = (calibrationPairs) => {
   var sumX=0;
   var sumY=0;
   var meanX=0;
@@ -119,7 +119,7 @@ exports.lsrCalibration = (calibrationPairs) => {
   return returnVal;
 };
 
-exports.singlePointCalibration = (calibrationPairs) => {
+const singlePointCalibration = (calibrationPairs) => {
   var returnVal = {
     'slope': 0,
     'yIntercept': 0,
@@ -133,5 +133,88 @@ exports.singlePointCalibration = (calibrationPairs) => {
   console.log('singlePointCalibration: x=' + x + ', y=' + y + ', slope=' + returnVal.slope + ', yIntercept=0'); 
 
   return returnVal;
+};
+
+exports.calculateG5Calibration = (lastCal, lastG5CalTime, glucoseHist, currSGV) => {
+  // set it to a high number so we upload a new cal
+  // if we don't have a previous calibration
+
+  // Do not calculate a new calibration value
+  // if we don't have a valid calibrated glucose reading
+  if (currSGV.glucose > 300 || currSGV.glucose < 80) {
+    console.log('Current glucose out of range to calibrate: ' + currSGV.glucose);
+    return null;
+  }
+
+  var calErr = 100;
+  var calValue;
+  var i;
+
+  if (lastCal) {
+    calValue = (currSGV.unfiltered-lastCal.intercept)/lastCal.slope;
+    calErr = calValue - currSGV.glucose;
+
+    console.log('Current calibration error: ' + Math.round(calErr*10)/10 + ' calibrated value: ' + Math.round(calValue*10)/10 + ' slope: ' + Math.round(lastCal.slope*10)/10 + ' intercept: ' + Math.round(lastCal.intercept*10)/10);
+  }
+
+  // Check if we need a calibration
+  if (!lastCal || (Math.abs(calErr) > 5)) {
+    var calPairs = [];
+
+    calPairs.push(currSGV);
+
+    // Suitable values need to be:
+    //   less than 300 mg/dl
+    //   greater than 80 mg/dl
+    //   calibrated via G5, not Lookout
+    //   12 minutes after the last G5 calibration time (it takes up to 2 readings to reflect calibration updates)
+    for (i=0; ((i < glucoseHist.length) && (calPairs.length < 10)); ++i) {
+      // Only use up to 10 of the most recent suitable readings
+      let sgv = glucoseHist[glucoseHist.length-i-1];
+
+      if ((sgv.readDate > (lastG5CalTime + 12*60*1000)) && (sgv.glucose < 300) && (sgv.glucose > 80) && sgv.g5calibrated) {
+        calPairs.push(sgv);
+      }
+    }
+
+    // If we have at least 3 good pairs, use LSR
+    if (calPairs.length > 3) {
+      let calResult = lsrCalibration(calPairs);
+
+      if ((calResult.slope > 12.5) || (calResult.slope < 0.45)) {
+        // wait until the next opportunity
+        console.log('Slope out of range to calibrate: ' + calResult.slope);
+        return null;
+      }
+
+      console.log('Calibrated with LSR');
+
+      return {
+        date: Date.now(),
+        scale: 1,
+        intercept: calResult.yIntercept,
+        slope: calResult.slope,
+        type: calResult.calibrationType
+      };
+    } else if (calPairs.length > 0) {
+      let calResult = singlePointCalibration(calPairs);
+
+      console.log('Calibrated with Single Point');
+
+      return {
+        date: Date.now(),
+        scale: 1,
+        intercept: calResult.yIntercept,
+        slope: calResult.slope,
+        type: calResult.calibrationType
+      };
+    } else {
+      console.log('Calibration needed, but no suitable glucose pairs found.');
+      return null;
+    }
+  } else {
+    console.log('No calibration update needed.');
+    return null;
+  }
 };
 

@@ -249,10 +249,6 @@ module.exports = async (io, extend_sensor_opt) => {
     return nsNoise;
   };
 
-  const calcGlucose = (sgv, calibration) => {
-    return Math.round((sgv.unfiltered-calibration.intercept)/calibration.slope);
-  };
-
   const getLastG5Cal = (bgChecks) => {
     let lastG5Cal = null;
 

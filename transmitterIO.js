@@ -514,6 +514,10 @@ module.exports = async (io, extend_sensor_opt) => {
         console.log('received id of ' + value);
         txId = value;
 
+        storage.del('g5Calibration');
+        storage.del('bgChecks');
+        storage.del('glucoseHist');
+
         storage.setItemSync('id', txId);
         // TODO: clear glucose on new id
         // use io.emit rather than socket.emit

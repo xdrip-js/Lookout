@@ -4,6 +4,8 @@ const storage = require('node-persist');
 const cp = require('child_process');
 const moment = require('moment');
 const timeLimitedPromise = require('./timeLimitedPromise');
+const storageLock = require('./storageLock');
+
 var _ = require('lodash');
 
 module.exports = async (io, extend_sensor_opt) => {
@@ -12,28 +14,6 @@ module.exports = async (io, extend_sensor_opt) => {
   let extend_sensor = extend_sensor_opt;
   let worker = null;
   let timerObj = null;
-  let SGVStorageLocked = false;
-
-  const timeout = async (ms) => {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  };
-
-  const lockSGVStorage = async () => {
-    // sleep for 1 second at a time until
-    // the storage is unlocked
-    while (SGVStorageLocked) {
-      console.log('Storage locked... waiting 1 second');
-      await timeout(1000);
-    }
-
-    console.log('Storage locked.');
-    SGVStorageLocked = true;
-  };
-
-  const unlockSGVStorage = () => {
-    console.log('Storage unlocked.');
-    SGVStorageLocked = false;
-  };
 
   const removeBTDevice = (id) => {
     var btName = 'Dexcom'+id.slice(-2);
@@ -284,7 +264,7 @@ module.exports = async (io, extend_sensor_opt) => {
         console.log('Unable to get latest sensor inserted record from NS: ' + error);
       });
 
-    await lockSGVStorage();
+    await storageLock.lockStorage();
 
     sgv.g5calibrated = true;
     sgv.stateString = stateString(sgv.state);
@@ -396,7 +376,7 @@ module.exports = async (io, extend_sensor_opt) => {
         console.log('Unable to store new glucose');
       });
 
-    unlockSGVStorage();
+    storageLock.unlockStorage();
 
     sendNewGlucose(sgv, sendSGV);
   };
@@ -531,7 +511,7 @@ module.exports = async (io, extend_sensor_opt) => {
 
     console.log('SyncNS NS Cal - date: ' + moment(NSCal.date).format() + ' slope: ' + Math.round(NSCal.slope*100)/100 + ' intercept: ' + Math.round(NSCal.intercept*10)/10);
 
-    await lockSGVStorage();
+    await storageLock.lockStorage();
 
     rigCal = await storage.getItem('nsCalibration')
       .catch(error => {
@@ -576,7 +556,7 @@ module.exports = async (io, extend_sensor_opt) => {
       }
     }
 
-    unlockSGVStorage();
+    storageLock.unlockStorage();
 
     console.log('syncNSCal complete');
   };
@@ -614,7 +594,7 @@ module.exports = async (io, extend_sensor_opt) => {
       console.log('Most recent NS SGV - date: ' + moment(sgv.date).format() + ' sgv: ' + sgv.sgv + ' unfiltered: ' + sgv.unfiltered);
     }
 
-    await lockSGVStorage();
+    await storageLock.lockStorage();
 
     rigSGVs = await storage.getItem('glucoseHist')
       .catch(error => {
@@ -688,7 +668,7 @@ module.exports = async (io, extend_sensor_opt) => {
         console.log('Unable to store glucoseHist: ' + err);
       });
 
-    unlockSGVStorage();
+    storageLock.unlockStorage();
 
     let nsIndex = 0;
 
@@ -749,7 +729,7 @@ module.exports = async (io, extend_sensor_opt) => {
       console.log('Most recent NS BG Check - date: ' + moment(bgCheck.create_at).format() + ' type: ' + bgCheck.glucoseType + ' glucose: ' + bgCheck.glucose);
     }
 
-    await lockSGVStorage();
+    await storageLock.lockStorage();
 
     let rigCalData = await storage.getItem('calibration')
       .catch(error => {
@@ -843,7 +823,7 @@ module.exports = async (io, extend_sensor_opt) => {
         console.log('Unable to store calibration: ' + err);
       });
 
-    unlockSGVStorage();
+    storageLock.unlockStorage();
 
     let nsIndex = 0;
 
@@ -940,7 +920,7 @@ module.exports = async (io, extend_sensor_opt) => {
       return;
     }
 
-    await lockSGVStorage();
+    await storageLock.lockStorage();
 
     oldCalData = await storage.getItem('calibration')
       .catch(error => {
@@ -958,7 +938,7 @@ module.exports = async (io, extend_sensor_opt) => {
         // If they are within two minutes, assume it's the same
         // check and bail out.
 
-        unlockSGVStorage();
+        storageLock.unlockStorage();
 
         return;
       }
@@ -996,7 +976,7 @@ module.exports = async (io, extend_sensor_opt) => {
         console.log('Error saving calibration data: ' + error);
       });
 
-    unlockSGVStorage();
+    storageLock.unlockStorage();
 
     xDripAPS.postBGCheck(calData);
 

@@ -47,6 +47,25 @@ module.exports = async (io, extend_sensor_opt) => {
     return lastG5Cal;
   };
 
+  const calcGlucose = (sgv, calibration) => {
+    return Math.round((sgv.unfiltered-calibration.intercept)/calibration.slope);
+  };
+
+  const getLastG5Cal = (bgChecks) => {
+    let lastG5Cal = null;
+
+    if (bgChecks) {
+      for (let ii=(bgChecks.length-1); ii >= 0; --ii) {
+        if (bgChecks[ii].type == 'G5') {
+          lastG5Cal = bgChecks[ii];
+          break;
+        }
+      }
+    }
+
+    return lastG5Cal;
+  };
+
   const processNewGlucose = async (sgv) => {
     let lastCal = null;
     let glucoseHist = null;

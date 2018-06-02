@@ -114,7 +114,7 @@ module.exports = async (io, extend_sensor_opt) => {
       lastCal = newCal;
     }
 
-    if (!sgv.glucose && extend_sensor && lastCal) {
+    if (!sgv.glucose && extend_sensor && lastCal && (lastCal.type !== 'Unity')) {
       sgv.glucose = Math.round((sgv.unfiltered-lastCal.intercept)/lastCal.slope);
 
       console.log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value');

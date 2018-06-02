@@ -454,6 +454,10 @@ module.exports = () => {
           intercept: cal[0].intercept,
           type: 'NightScoutSynced'
         };
+
+        if ((cal[0].slope==1) && (cal[0].intercept==0)) {
+          formattedCal.type = 'Unity';
+        }
       }
 
       return formattedCal;

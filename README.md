@@ -43,7 +43,8 @@ To see verbose output, use `sudo DEBUG=* Lookout`, and replace the `*` with a co
 To run in simulated mode, use `node index.js --sim`.
 
 To view the app, open a browser and navigate to `http://<local IP address>:3000`. E.g. http://localhost:3000 or http://192.168.1.3:3000. This will vary depending on your local network setup.
-![app](https://user-images.githubusercontent.com/12263040/29741914-36d4bfe4-8ab9-11e7-891e-6c23263db499.png)
+
+![app](images/home.png)
 
 ## Using the browser to control your G5
 Once the browser is open to your Lookout page (see above steps), you can start the sensor and calibrate through it. (Note that you can also continue using the Dexcom receiver alongside Lookout to do these things as well. Both the receiver and Lookout will get the latest updates from the G5 transmitter after a reading or two, provided they are in range and connected.)

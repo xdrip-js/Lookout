@@ -173,6 +173,7 @@ const syncSGVs = async () => {
         'glucose': nsSGV.sgv,
         'nsNoise': nsSGV.noise,
         'trend': nsSGV.trend,
+        'state': 0x00, // Set state to None
         'g5calibrated': false
       };
 

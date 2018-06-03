@@ -122,7 +122,7 @@ module.exports = async (io, extend_sensor_opt) => {
 
       sgv.g5calibrated = false;
 
-      if (sensorInsert && (sensorInsert.diff(moment(lastCal.date)) > 0)) {
+      if (sensorInsert && (sensorInsert.diff(moment(lastCal.date).subtract(6, 'minutes')) > 0)) {
         console.log('Found sensor insert after latest calibration. Deleting calibration data.');
         await storage.del('g5Calibration');
         await storage.del('bgChecks');
@@ -342,7 +342,20 @@ module.exports = async (io, extend_sensor_opt) => {
 
     calData.unfiltered = 0;
 
-    if (rigSGVs) {
+    if (rigSGVs && (rigSGVs.length > 0)) {
+      // check the sensor state
+      // don't use this cal message data
+      // if sensor state isn't OK
+      // In stopped state and maybe other states,
+      // the last calibration data is not valid
+      let latestSGV = rigSGVs[rigSGVs.length-1];
+
+      if (latestSGV.state != 0x06) {
+        console.log('Sensor state not "OK" - not using latest calibration message data.');
+        storageLock.unlockStorage();
+        return;
+      }
+
       // we can assume they are already sorted
       // since we sort before storing them
 

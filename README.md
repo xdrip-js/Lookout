@@ -43,6 +43,7 @@ To see verbose output, use `sudo DEBUG=* Lookout`, and replace the `*` with a co
 To run in simulated mode, use `node index.js --sim`.
 
 To view the app, open a browser and navigate to `http://<local IP address>:3000`. E.g. http://localhost:3000 or http://192.168.1.3:3000. This will vary depending on your local network setup.
+
 ![app](images/home.png)
 
 ## Using the browser to control your G5

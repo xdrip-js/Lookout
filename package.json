@@ -4,7 +4,7 @@
   "description": "A web app for communicating with an OpenAPS rig.",
   "main": "index.js",
   "scripts": {
-    "pretest": "jshint public test index.js transmitterIO.js",
+    "pretest": "jshint public index.js transmitterIO.js",
     "test": "mocha"
   },
   "author": "Paul Dickens",

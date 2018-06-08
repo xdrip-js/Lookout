@@ -47,6 +47,7 @@ const postToXdrip = (entry) => {
 
   const optionsX = {
     url: 'http://127.0.0.1:5000/api/v1/entries',
+    timeout: 30*1000,
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -82,6 +83,7 @@ const postToNS = (entry) => {
 
   const optionsNS = {
     url: ns_url,
+    timeout: 30*1000,
     method: 'POST',
     headers: ns_headers,
     body: entry,
@@ -120,6 +122,7 @@ const queryLatestCal = () => {
 
   let optionsNS = {
     url: ns_url,
+    timeout: 30*1000,
     method: 'GET',
     headers: ns_headers,
     json: true
@@ -149,6 +152,7 @@ const queryLatestSGVs = (numResults) => {
 
   let optionsNS = {
     url: ns_url,
+    timeout: 30*1000,
     method: 'GET',
     headers: ns_headers,
     json: true
@@ -178,6 +182,7 @@ const querySGVsBefore = (startTime, count) => {
 
   let optionsNS = {
     url: ns_url,
+    timeout: 30*1000,
     method: 'GET',
     headers: ns_headers,
     json: true
@@ -207,6 +212,7 @@ const querySGVsBetween = (startTime, endTime, count) => {
 
   let optionsNS = {
     url: ns_url,
+    timeout: 30*1000,
     method: 'GET',
     headers: ns_headers,
     json: true
@@ -236,6 +242,7 @@ const querySGVsSince = (startTime, count) => {
 
   let optionsNS = {
     url: ns_url,
+    timeout: 30*1000,
     method: 'GET',
     headers: ns_headers,
     json: true
@@ -265,6 +272,7 @@ const queryLatestSensorInserted = () => {
 
   let optionsNS = {
     url: ns_url,
+    timeout: 30*1000,
     method: 'GET',
     headers: ns_headers,
     json: true
@@ -294,6 +302,7 @@ const queryBGChecksSince = (startTime) => {
 
   let optionsNS = {
     url: ns_url,
+    timeout: 30*1000,
     method: 'GET',
     headers: ns_headers,
     json: true
@@ -347,6 +356,7 @@ module.exports = () => {
 
       const optionsNS = {
         url: ns_url,
+        timeout: 30*1000,
         method: 'PUT',
         headers: ns_headers,
         data: entry,
@@ -381,6 +391,7 @@ module.exports = () => {
 
       const optionsNS = {
         url: ns_url,
+        timeout: 30*1000,
         method: 'POST',
         headers: ns_headers,
         body: entry,
@@ -424,6 +435,7 @@ module.exports = () => {
 
       const optionsNS = {
         url: ns_url,
+        timeout: 30*1000,
         method: 'POST',
         headers: ns_headers,
         body: entry,

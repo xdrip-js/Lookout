@@ -4,7 +4,7 @@
   "description": "A web app for communicating with an OpenAPS rig.",
   "main": "index.js",
   "scripts": {
-    "pretest": "jshint public test index.js transmitterIO.js",
+    "pretest": "jshint public index.js transmitterIO.js",
     "test": "mocha"
   },
   "author": "Paul Dickens",
@@ -27,7 +27,7 @@
     "request": "^2.83.0",
     "request-promise-native": "^1.0.5",
     "socket.io": "^1.7.3",
-    "xdrip-js": "thebookins/xdrip-js",
+    "xdrip-js": "xdrip-js/xdrip-js",
     "yargs": "^10.0.3"
   },
   "devDependencies": {

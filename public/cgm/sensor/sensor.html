@@ -11,7 +11,7 @@
     <div class="list-group">
       <!-- Sensor state -->
       <span class="list-group-item">State
-        <span class="pull-right">{{ sensor.state | state }}</span></span>
+        <span class="pull-right">{{ sensor.stateString }}</span></span>
       <!-- Sensor Age -->
       <span class="list-group-item">Age
         <span class="pull-right">{{ age | time }}</span></span>
@@ -20,6 +20,8 @@
         <i class="fa fa-chevron-right pull-right"></i></a>
       <!-- Last Calibration -->
       <a class="list-group-item" href="/cgm/sensor/calibration">Last Calibration
+        <i class="fa fa-chevron-right pull-right"></i></a>
+      <a class="list-group-item" href="/cgm/sensor/stop">Stop Sensor
         <i class="fa fa-chevron-right pull-right"></i></a>
       <!-- Pending -->
       <a class="list-group-item" href="/cgm/sensor/pending">Pending

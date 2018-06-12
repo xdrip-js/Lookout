@@ -20,6 +20,7 @@ angular.module('AngularOpenAPS.cgm', [
   // TODO: replace these with the real thing (faked for now)
   let version = "1.2.3.4";
   let lastCalibration;
+  let history = [];
 
   let pendingActions;// = [
   //   {date: Date.now(), glucose: 100},
@@ -58,11 +59,14 @@ angular.module('AngularOpenAPS.cgm', [
       // only return the properties glucose, filtered, readDate and trend
       // - we don't need the rest
       return glucose ?
-        (({ glucose, filtered, readDate, trend }) => ({ glucose, filtered, readDate, trend }))(glucose) :
+        (({ glucose, filtered, unfiltered, readDate, trend }) => ({ glucose, filtered, unfiltered, readDate, trend }))(glucose) :
         null;
     },
     get state() {
       return glucose ? glucose.state : null;
+    },
+    get stateString() {
+      return glucose ? glucose.stateString : null;
     },
     get lastCalibration() {
       return lastCalibration;
@@ -72,6 +76,9 @@ angular.module('AngularOpenAPS.cgm', [
     },
     get pendingActions() {
       return pendingActions;
+    },
+    get history() {
+      return history;
     },
 
     // methods
@@ -84,6 +91,7 @@ angular.module('AngularOpenAPS.cgm', [
       socket.emit('startSensor');
     },
     stop: function() {
+      console.log('stopping sensor');
       socket.emit('stopSensor');
     }
   };
@@ -116,4 +124,9 @@ angular.module('AngularOpenAPS.cgm', [
     console.log('got calibration data');
     lastCalibration = data;
   });
+
+  socket.on('glucoseHistory', data => {
+    console.log('got glucose history');
+    history = data;
+  })
 }]);

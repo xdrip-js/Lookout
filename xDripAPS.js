@@ -16,7 +16,7 @@ module.exports = () => {
       if (glucose.trend <= -30) {
         direction = 'DoubleDown';
       } else if (glucose.trend <= -20) {
-        direction = 'SingeDown';
+        direction = 'SingleDown';
       } else if (glucose.trend <= -10) {
         direction = 'FortyFiveDown';
       } else if (glucose.trend < 10) {
@@ -29,6 +29,8 @@ module.exports = () => {
         direction = 'DoubleUp';
       }
 
+      console.log('Trend: ' + Math.round(glucose.trend*10)/10 + ' direction: ' + direction);
+
       const entry = [{
         'device': 'openaps://' + os.hostname(),
         'date': glucose.readDate,
@@ -39,7 +41,7 @@ module.exports = () => {
         'filtered': glucose.filtered,
         'unfiltered': glucose.unfiltered,
         'rssi': "100", // TODO: consider reading this on connection and reporting
-        'noise': "1",
+        'noise': glucose.nsNoise,
         'trend': glucose.trend,
         'glucose': glucose.glucose
       }];
@@ -115,6 +117,49 @@ module.exports = () => {
           console.error('error posting json: ', error)
         } else {
           console.log('uploaded to xDripAPS, statusCode = ' + response.statusCode);
+        }
+      })
+    },
+
+    postCalibration: (calData) => {
+
+      const entry = [{
+        'device': 'openaps://' + os.hostname(),
+        'type': 'cal',
+        'date': calData.date,
+        'dateString': new Date(calData.date).toISOString(),
+        'scale': calData.scale,
+        'intercept': calData.intercept,
+        'slope': calData.slope,
+      }];
+
+      const data = JSON.stringify(entry);
+
+      const secret = process.env.API_SECRET;
+      let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json';
+      let ns_headers = {
+          'Content-Type': 'application/json'
+      };
+
+      if (secret.startsWith("token=")) {
+        ns_url = ns_url + '?' + secret;
+      } else {
+        ns_headers['API-SECRET'] = secret;
+      }
+
+      const optionsNS = {
+          url: ns_url,
+          method: 'POST',
+          headers: ns_headers,
+          body: entry,
+          json: true
+      };
+
+      request(optionsNS, function (error, response, body) {
+        if (error) {
+          console.error('error posting json: ', error)
+        } else {
+          console.log('uploaded new calibration to NS, statusCode = ' + response.statusCode);
         }
       })
     }

@@ -286,7 +286,7 @@ const queryBGChecksSince = (startTime) => {
   let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/treatments.json?';
 
   // time format needs to match the output of 'date -d "3 hours ago" -Iminutes -u'
-  let ns_query = 'find[eventType][$regex]=Check&find[created_at][$gte]=' + startTime.toISOString();
+  let ns_query = 'find[eventType][$regex]=Check&find[created_at][$gte]=' + startTime.format();
 
   let ns_headers = {
     'Content-Type': 'application/json'
@@ -356,6 +356,7 @@ module.exports = () => {
 
       const optionsNS = {
         url: ns_url,
+        timeout: 30*1000,
         method: 'PUT',
         headers: ns_headers,
         data: entry,

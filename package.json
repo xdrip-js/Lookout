@@ -4,7 +4,7 @@
   "description": "A web app for communicating with an OpenAPS rig.",
   "main": "index.js",
   "scripts": {
-    "pretest": "jshint public index.js transmitterIO.js",
+    "pretest": "eslint public index.js transmitterIO.js",
     "test": "mocha"
   },
   "author": "Paul Dickens",
@@ -40,7 +40,7 @@
     "esversion": 6,
     "node": true,
     "expr": true,
-    "varstmt": true,
+    "varstmt": false,
     "globals": {
       "angular": false
     }

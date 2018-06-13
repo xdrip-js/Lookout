@@ -1,77 +1,80 @@
 {
-  "name": "Lookout",
-  "version": "0.1.0",
-  "description": "A web app for communicating with an OpenAPS rig.",
-  "main": "index.js",
-  "scripts": {
-    "pretest": "./node_modules/.bin/eslint \"./**/*.js\"",
-    "test": "mocha"
-  },
-  "author": "Paul Dickens",
-  "license": "MIT",
-  "bin": "./index.js",
-  "dependencies": {
-    "angular": "^1.6.4",
-    "angular-chart.js": "^1.1.1",
-    "angular-route": "^1.6.4",
-    "angular-sanitize": "^1.6.6",
-    "angular-socket-io": "^0.7.0",
-    "chart.js": "^2.7.1",
-    "chokidar": "^1.7.0",
-    "express": "^4.15.2",
-    "lodash": "^4.15.0",
-    "mobile-angular-ui": "^1.3.4",
-    "moment": "^2.19.2",
-    "ngstorage": "^0.3.11",
-    "node-persist": "^2.1.0",
-    "request": "^2.83.0",
-    "request-promise-native": "^1.0.5",
-    "socket.io": "^1.7.3",
-    "xdrip-js": "xdrip-js/xdrip-js",
-    "yargs": "^10.0.3"
-  },
-  "devDependencies": {
-    "chai": "^3.5.0",
-    "chai-spies": "^0.7.1",
-    "eslint": "^4.19.1",
-    "mocha": "^3.2.0"
-  },
-  "eslintConfig": {
-    "env": {
-        "es6": true,
-        "node": true,
-        "browser": true
+    "name": "Lookout",
+    "version": "0.1.0",
+    "description": "A web app for communicating with an OpenAPS rig.",
+    "main": "index.js",
+    "scripts": {
+        "pretest": "./node_modules/.bin/eslint \"./**/*.js\"",
+        "test": "mocha"
     },
-    "extends": "eslint:recommended",
-    "parserOptions": {
-        "ecmaVersion": 8,
-        "ecmaFeatures": {
-            "experimentalObjectRestSpread": true,
-            "jsx": true
+    "author": "Paul Dickens",
+    "license": "MIT",
+    "bin": "./index.js",
+    "dependencies": {
+        "angular": "^1.6.4",
+        "angular-chart.js": "^1.1.1",
+        "angular-route": "^1.6.4",
+        "angular-sanitize": "^1.6.6",
+        "angular-socket-io": "^0.7.0",
+        "chart.js": "^2.7.1",
+        "chokidar": "^1.7.0",
+        "express": "^4.15.2",
+        "lodash": "^4.15.0",
+        "mobile-angular-ui": "^1.3.4",
+        "moment": "^2.19.2",
+        "ngstorage": "^0.3.11",
+        "node-persist": "^2.1.0",
+        "request": "^2.83.0",
+        "request-promise-native": "^1.0.5",
+        "socket.io": "^1.7.3",
+        "xdrip-js": "xdrip-js/xdrip-js",
+        "yargs": "^10.0.3"
+    },
+    "devDependencies": {
+        "chai": "^3.5.0",
+        "chai-spies": "^0.7.1",
+        "eslint": "^4.19.1",
+        "mocha": "^3.2.0"
+        "should": "^13.2.1",
+    },
+    "eslintConfig": {
+        "env": {
+            "es6": true,
+            "node": true,
+            "browser": true
+        },
+        "extends": "eslint:recommended",
+        "parserOptions": {
+            "ecmaVersion": 8,
+            "ecmaFeatures": {
+                "experimentalObjectRestSpread": true,
+                "jsx": true
+            }
+        },
+        "globals": {
+            "angular": false,
+            "io": false,
+            "describe": false,
+            "it": false
+        },
+        "rules": {
+            "no-console": 0,
+            "indent": [
+                "error",
+                2
+            ],
+            "linebreak-style": [
+                "error",
+                "unix"
+            ],
+            "quotes": [
+                "error",
+                "single"
+            ],
+            "semi": [
+                "error",
+                "always"
+            ]
         }
-    },
-    "globals": {
-        "angular": false,
-        "io": false
-    },
-    "rules": {
-        "no-console":0,
-        "indent": [
-            "error",
-            2
-        ],
-        "linebreak-style": [
-            "error",
-            "unix"
-        ],
-        "quotes": [
-            "error",
-            "single"
-        ],
-        "semi": [
-            "error",
-            "always"
-        ]
     }
-  }
 }

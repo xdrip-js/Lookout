@@ -4,7 +4,7 @@
   "description": "A web app for communicating with an OpenAPS rig.",
   "main": "index.js",
   "scripts": {
-    "pretest": "eslint public index.js transmitterIO.js",
+    "pretest": "./node_modules/.bin/eslint \"./**/*.js\"",
     "test": "mocha"
   },
   "author": "Paul Dickens",
@@ -33,16 +33,45 @@
   "devDependencies": {
     "chai": "^3.5.0",
     "chai-spies": "^0.7.1",
-    "jshint": "^2.9.4",
+    "eslint": "^4.19.1",
     "mocha": "^3.2.0"
   },
-  "jshintConfig": {
-    "esversion": 6,
-    "node": true,
-    "expr": true,
-    "varstmt": false,
+  "eslintConfig": {
+    "env": {
+        "es6": true,
+        "node": true,
+        "browser": true
+    },
+    "extends": "eslint:recommended",
+    "parserOptions": {
+        "ecmaVersion": 8,
+        "ecmaFeatures": {
+            "experimentalObjectRestSpread": true,
+            "jsx": true
+        }
+    },
     "globals": {
-      "angular": false
+        "angular": false,
+        "io": false
+    },
+    "rules": {
+        "no-console":0,
+        "indent": [
+            "error",
+            2
+        ],
+        "linebreak-style": [
+            "error",
+            "unix"
+        ],
+        "quotes": [
+            "error",
+            "single"
+        ],
+        "semi": [
+            "error",
+            "always"
+        ]
     }
   }
 }

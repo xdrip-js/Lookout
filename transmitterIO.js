@@ -593,6 +593,12 @@ module.exports = (io, extend_sensor_opt) => {
           socket.emit('calibrationData', calibration);
         }
       });
+
+      socket.on('resetTx', () => {
+        console.log('received resetTx command');
+        pending.push({date: Date.now(), type: 'ResetTx'});
+        io.emit('pending', pending);
+      });
       socket.on('startSensor', () => {
         console.log('received startSensor command');
         pending.push({date: Date.now(), type: "StartSensor"});

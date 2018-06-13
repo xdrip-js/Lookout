@@ -47,6 +47,10 @@ angular.module('AngularOpenAPS.cgm', [
     },
     get status() {
       return glucose ? glucose.status : null;
+    },
+    reset: function() {
+      console.log('resetting transmitter');
+      socket.emit('resetTx');
     }
   };
 

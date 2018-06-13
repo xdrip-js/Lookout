@@ -1,7 +1,7 @@
-const xDripAPS = require("./xDripAPS")();
-const Transmitter = require('xdrip-js');
 
+/*eslint-disable no-unused-vars*/
 module.exports = (io, extend_sensor) => {
+/*eslint-enable no-unused-vars*/
   let id = 'ABCDEF';
   const version = '1.2.3.4';
   const glucose = {
@@ -36,7 +36,7 @@ module.exports = (io, extend_sensor) => {
 
   io.on('connection', (socket) => {
     socket.emit('id', id);
-    socket.emit('version', '1.2.3.4');
+    socket.emit('version', version);
     socket.emit('glucose', glucose);
     socket.emit('calibration', calibration);
     socket.emit('glucoseHistory', glucoseHistory);
@@ -52,8 +52,8 @@ module.exports = (io, extend_sensor) => {
       // storage.setItemSync('calibration', pending);
       // io.emit('calibration', pending);
     });
-    socket.on('id', id => {
-      id = id;
+    socket.on('id', txId => {
+      id = txId;
       io.emit('id', id);
     });
   });

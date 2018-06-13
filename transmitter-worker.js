@@ -3,12 +3,14 @@ const Transmitter = require('xdrip-js');
 const id = process.argv[2];
 
 const getMessages = () => {
+  /*eslint-disable no-unused-vars*/
   return new Promise((resolve, reject) => {
+  /*eslint-enable no-unused-vars*/
     process.on('message', messages => {
       resolve(messages);
     });
     // TODO: consider adding a timeout here, with resolve([]), or reject
-    process.send({msg: "getMessages"});
+    process.send({msg: 'getMessages'});
   });
 };
 
@@ -16,7 +18,7 @@ console.log('kicking off');
 const transmitter = new Transmitter(id, getMessages);
 
 transmitter.on('glucose', glucose => {
-  process.send({msg: "glucose", data: glucose});
+  process.send({msg: 'glucose', data: glucose});
 });
 
 transmitter.on('messageProcessed', data => {

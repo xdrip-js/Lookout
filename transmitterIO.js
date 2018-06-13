@@ -15,7 +15,6 @@ module.exports = async (io, extend_sensor_opt) => {
   let extend_sensor = extend_sensor_opt;
   let worker = null;
   let timerObj = null;
-  let SGVStorageLocked = false;
 
   const removeBTDevice = (id) => {
     var btName = 'Dexcom'+id.slice(-2);
@@ -30,25 +29,6 @@ module.exports = async (io, extend_sensor_opt) => {
       console.log(`stdout: ${stdout}`);
       console.log(`stderr: ${stderr}`);
     });
-  };
-
-  const getLastG5Cal = (bgChecks) => {
-    let lastG5Cal = null;
-
-    if (bgChecks) {
-      for (let ii=(bgChecks.length-1); ii >= 0; --ii) {
-        if (bgChecks[ii].type == 'G5') {
-          lastG5Cal = bgChecks[ii];
-          break;
-        }
-      }
-    }
-
-    return lastG5Cal;
-  };
-
-  const calcGlucose = (sgv, calibration) => {
-    return Math.round((sgv.unfiltered-calibration.intercept)/calibration.slope);
   };
 
   const getLastG5Cal = (bgChecks) => {

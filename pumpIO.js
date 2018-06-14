@@ -17,11 +17,11 @@ module.exports = (io) => {
         }
       });
     }, 1000);
-  }
+  };
 
   chokidar.watch('myopenaps/settings/basal_profile.json')
-  .on('change', readBasalProfile)
-  .on('add', readBasalProfile);
+    .on('change', readBasalProfile)
+    .on('add', readBasalProfile);
 
   io.on('connection', socket => {
     socket.emit('basalProfile', basalProfile);

@@ -22,10 +22,10 @@ module.exports = (io) => {
         }
       });
     }, 1000);
-  }
+  };
   chokidar.watch(openapsDir + '/iob.json')
-  .on('change', readIOB)
-  .on('add', readIOB);
+    .on('change', readIOB)
+    .on('add', readIOB);
 
   const readEnacted = (path) => {
     console.log(`Reading file ${path}`);
@@ -54,10 +54,10 @@ module.exports = (io) => {
         }
       });
     }, 1000);
-  }
+  };
   chokidar.watch(openapsDir + '/enact/enacted.json')
-  .on('change', readEnacted)
-  .on('add', readEnacted);
+    .on('change', readEnacted)
+    .on('add', readEnacted);
 
   io.on('connection', socket => {
     socket.emit('iob', iob);

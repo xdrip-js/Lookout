@@ -6,14 +6,14 @@
 
 ## Pre-installation
 You must update your rig's NodeJS based on https://github.com/xdrip-js/xdrip-js/wiki (only use the "Updating NodeJS" section of those instructions, you should not install xdrip-js manually, it will be installed in the next step as part of Lookout.)
-As of 14-Jan-2018, these steps are:
+As of 13-Jun-2018, these steps are:
 ```
-The version of Node that ships with jubilinux is old (v0.10.something). Here are the instructions for updating Node:
+The version of Node that ships with jubilinux is old (v0.10.something). Lookout requires version 8 or later. Here are the instructions for updating Node:
 
 sudo apt-get remove nodered -y
 sudo apt-get remove nodejs nodejs-legacy -y
 sudo apt-get remove npm  -y # if you installed npm
-sudo curl -sL https://deb.nodesource.com/setup_6.x | sudo bash -
+sudo curl -sL https://deb.nodesource.com/setup_8.x | sudo bash -
 sudo apt-get install nodejs -y
 ```
 If you later need to revert your rig's NodeJS to the legacy version, follow the steps in the below section "Reverting NodeJS".

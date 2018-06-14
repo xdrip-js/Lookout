@@ -120,26 +120,26 @@ module.exports = async (io, extend_sensor_opt) => {
       console.log('Calibrated SGV: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered + ' slope: ' + lastCal.slope + ' intercept: ' + lastCal.intercept);
 
       sgv.g5calibrated = false;
+    }
 
-      if (sensorInsert && (sensorInsert.diff(moment(lastCal.date).subtract(6, 'minutes')) > 0)) {
-        console.log('Found sensor insert after latest calibration. Deleting calibration data.');
-        await storage.del('g5Calibration');
-        await storage.del('bgChecks');
-        await storage.del('glucoseHist');
+    if (sensorInsert && (sensorInsert.diff(moment(lastCal.date).subtract(6, 'minutes')) > 0)) {
+      console.log('Found sensor insert after latest calibration. Deleting calibration data.');
+      await storage.del('g5Calibration');
+      await storage.del('bgChecks');
+      await storage.del('glucoseHist');
 
-        newCal = {
-          date: Date.now(),
-          scale: 1,
-          intercept: 0,
-          slope: 1,
-          type: 'Unity'
-        };       
+      newCal = {
+        date: Date.now(),
+        scale: 1,
+        intercept: 0,
+        slope: 1,
+        type: 'Unity'
+      };       
 
-        // set the glucose value to null
-        // so it doesn't show up in the Lookout GUI
-        sgv.glucose = null;
-        sendSGV = false;
-      }
+      // set the glucose value to null
+      // so it doesn't show up in the Lookout GUI
+      sgv.glucose = null;
+      sendSGV = false;
     }
 
     if (newCal) {

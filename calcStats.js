@@ -70,7 +70,9 @@ exports.calcSensorNoise = (glucoseHist, lastCal) => {
   const MINRECORDS=4;
   let sgvArr = [];
 
-  for (let i = (glucoseHist.length-MAXRECORDS-1); i < glucoseHist.length; ++i) {
+  let numRecords = Math.max(glucoseHist.length-MAXRECORDS-1, 0);
+
+  for (let i = numRecords; i < glucoseHist.length; ++i) {
     // Only use values that are > 30 to filter out invalid values.
     if (glucoseHist[i].glucose > 30) {
       // use the unfiltered data with the most recent calculated calibration value

@@ -522,8 +522,8 @@ module.exports = async (io, extend_sensor_opt) => {
     });
     socket.on('backStartSensor', () => {
       console.log('received backStartSensor command');
-      pending.push({date: Date.now(), type: "BackStartSensor"});
-      io.emit('pending', pending)
+      pending.push({date: Date.now(), type: 'BackStartSensor'});
+      io.emit('pending', pending);
     });
     socket.on('stopSensor', () => {
       console.log('received stopSensor command');

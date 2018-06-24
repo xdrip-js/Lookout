@@ -36,7 +36,7 @@ module.exports = async (io, extend_sensor_opt) => {
 
     if (bgChecks) {
       for (let ii=(bgChecks.length-1); ii >= 0; --ii) {
-        if (bgChecks[ii].type == 'G5') {
+        if ((bgChecks[ii].type == 'G5') || (bgChecks[ii].type == 'Unity')) {
           lastG5Cal = bgChecks[ii];
           break;
         }

@@ -14,7 +14,9 @@ Lookout provides a rig-based interface to a Dexcom G5 CGM using Bluetooth Low En
 - calculate and report trend and noise values
 - calculate and report G5 calibration slope and offset values
 - report BG Check records to Nightscout obtained from transmitter's G5 calibration events
+- report sensor state changes to Nightscout as announcements
 - extend sensor operation beyond sensor expiration (limitations described below)
+- report raw unfiltered values to Nightscout during warmup for trend visibility
 
 Lookout is intended for use with the unexpired G5 transmitters and relies on the official G5 calibration built into the transmitter to calibrate the raw sensor values.  Lookout provides the user with the ability to reset expired transmitters allowing them to be used past their normal expiration dates.
 

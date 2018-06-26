@@ -36,7 +36,7 @@ module.exports = async (io, extend_sensor_opt) => {
 
     if (bgChecks) {
       for (let ii=(bgChecks.length-1); ii >= 0; --ii) {
-        if (bgChecks[ii].type == 'G5') {
+        if ((bgChecks[ii].type == 'G5') || (bgChecks[ii].type == 'Unity')) {
           lastG5Cal = bgChecks[ii];
           break;
         }
@@ -103,6 +103,10 @@ module.exports = async (io, extend_sensor_opt) => {
 
     if (glucoseHist.length > 0) {
       newCal = calibration.calculateG5Calibration(lastCal, lastG5CalTime, glucoseHist, sgv);
+
+      if (sgv.state != glucoseHist[glucoseHist.length-1].state) {
+        xDripAPS.postAnnouncement('Sensor: ' + sgv.stateString);
+      }
     }
 
     if (newCal) {
@@ -110,32 +114,32 @@ module.exports = async (io, extend_sensor_opt) => {
     }
 
     if (!sgv.glucose && extend_sensor && lastCal && (lastCal.type !== 'Unity')) {
-      sgv.glucose = Math.round((sgv.unfiltered-lastCal.intercept)/lastCal.slope);
+      sgv.glucose = calibration.calcGlucose(sgv, lastCal);
 
       console.log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value');
       console.log('Calibrated SGV: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered + ' slope: ' + lastCal.slope + ' intercept: ' + lastCal.intercept);
 
       sgv.g5calibrated = false;
+    }
 
-      if (sensorInsert && (sensorInsert.diff(moment(lastCal.date).subtract(6, 'minutes')) > 0)) {
-        console.log('Found sensor insert after latest calibration. Deleting calibration data.');
-        await storage.del('g5Calibration');
-        await storage.del('bgChecks');
-        await storage.del('glucoseHist');
+    if (sensorInsert && lastCal && (sensorInsert.diff(moment(lastCal.date).subtract(6, 'minutes')) > 0) && (lastCal.type !== 'Unity')) {
+      console.log('Found sensor insert after latest calibration. Deleting calibration data.');
+      await storage.del('g5Calibration');
+      await storage.del('bgChecks');
+      await storage.del('glucoseHist');
 
-        newCal = {
-          date: Date.now(),
-          scale: 1,
-          intercept: 0,
-          slope: 1,
-          type: 'Unity'
-        };       
+      newCal = {
+        date: Date.now(),
+        scale: 1,
+        intercept: 0,
+        slope: 1,
+        type: 'Unity'
+      };       
 
-        // set the glucose value to null
-        // so it doesn't show up in the Lookout GUI
-        sgv.glucose = null;
-        sendSGV = false;
-      }
+      // set the glucose value to null
+      // so it doesn't show up in the Lookout GUI
+      sgv.glucose = null;
+      sendSGV = false;
     }
 
     if (newCal) {
@@ -156,19 +160,25 @@ module.exports = async (io, extend_sensor_opt) => {
       sendSGV = false;
     }
 
-    if (sendSGV) {
-      // a valid SGV value is ready to store and send
-      glucoseHist.push(sgv);
+    // Store it regardless for state change history
+    glucoseHist.push(sgv);
 
-      sgv.trend = stats.calcTrend(glucoseHist);
+    if (lastCal) {
+      // a valid calibration is available to use
+      sgv.trend = stats.calcTrend(glucoseHist, lastCal);
 
-      sgv.noise = stats.calcSensorNoise(glucoseHist);
+      sgv.noise = stats.calcSensorNoise(glucoseHist, lastCal);
+    } else {
+      // No way to calculate a trend since we don't know the calibration slope
+      sgv.trend = 0;
 
-      sgv.nsNoise = stats.calcNSNoise(sgv.noise, glucoseHist);
-
-      console.log('Current sensor trend: ' + Math.round(sgv.trend*10)/10 + ' Sensor Noise: ' + Math.round(sgv.noise*1000)/1000 + ' NS Noise: ' + sgv.nsNoise);
-
+      // Put in light noise to account for uncertainty
+      sgv.noise = .4;
     }
+
+    sgv.nsNoise = stats.calcNSNoise(sgv.noise, glucoseHist);
+
+    console.log('Current sensor trend: ' + Math.round(sgv.trend*10)/10 + ' Sensor Noise: ' + Math.round(sgv.noise*1000)/1000 + ' NS Noise: ' + sgv.nsNoise);
 
     await storeNewGlucose(glucoseHist)
       .catch(() => {
@@ -208,9 +218,12 @@ module.exports = async (io, extend_sensor_opt) => {
   const sendNewGlucose = (sgv, sendSGV) => {
     io.emit('glucose', sgv);
 
-    if (sendSGV) {
-      xDripAPS.post(sgv, true);
+    if (!sgv.glucose) {
+      // Set to 5 so NS will plot the unfiltered glucose values
+      sgv.glucose = 5;
     }
+
+    xDripAPS.post(sgv, sendSGV);
   };
 
   const stateString = (state) => {

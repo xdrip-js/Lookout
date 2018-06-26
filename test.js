@@ -3,17 +3,13 @@
 require('should');
 
 var stats = require('./calcStats');
+var calibration = require('./calibration');
 
-describe('Stats', function() {
+describe('Test Stats', function() {
 
   it('should calculate Sensor Noise', function() {
 
-    var glucoseHist = [{
-      'i': 0,
-      'start': '00:00:00',
-      'rate': 1,
-      'minutes': 0
-    }, {
+    let glucoseHist = [{
       'inSession': true,
       'status': 0,
       'state': 7,
@@ -104,7 +100,9 @@ describe('Stats', function() {
       'rssi': -77,
       'g5calibrated': true,
       'stateString': 'Need calibration',
-    }, {
+    }];
+
+    let currSGV = {
       'inSession': true,
       'status': 0,
       'state': 7,
@@ -117,12 +115,69 @@ describe('Stats', function() {
       'rssi': -79,
       'g5calibrated': true,
       'stateString': 'Need calibration',
-    }];
+    };
 
-    var noise = stats.calcSensorNoise(glucoseHist);
+    let lastCal = calibration.calculateG5Calibration(null, 0, glucoseHist, currSGV);
+
+    glucoseHist.push(currSGV);
+
+    let noise = stats.calcSensorNoise(glucoseHist, lastCal);
 
     noise.should.be.greaterThan(0.02);
     noise.should.be.lessThan(0.03);
   });
 
+  it('should not calculate Sensor Noise if not enough records', function() {
+
+    let glucoseHist = [{
+      'inSession': true,
+      'status': 0,
+      'state': 7,
+      'readDate': 1528890389945,
+      'filtered': 161.056,
+      'unfiltered': 158.4,
+      'glucose': 155,
+      'trend': -3.9982585362819747,
+      'canBeCalibrated': true,
+      'rssi': -59,
+      'g5calibrated': true,
+      'stateString': 'Need calibration',
+    }, {
+      'inSession': true,
+      'status': 0,
+      'state': 7,
+      'readDate': 1528890689766,
+      'filtered': 159.36,
+      'unfiltered': 156.544,
+      'glucose': 153,
+      'trend': -3.9992534726850986,
+      'canBeCalibrated': true,
+      'rssi': -63,
+      'g5calibrated': true,
+      'stateString': 'Need calibration',
+    }];
+
+    let currSGV = {
+      'inSession': true,
+      'status': 0,
+      'state': 7,
+      'readDate': 1528892489488,
+      'filtered': 145.92,
+      'unfiltered': 141.632,
+      'glucose': 134,
+      'trend': -7.334767687903413,
+      'canBeCalibrated': true,
+      'rssi': -79,
+      'g5calibrated': true,
+      'stateString': 'Need calibration',
+    };
+
+    let lastCal = calibration.calculateG5Calibration(null, 0, glucoseHist, currSGV);
+
+    glucoseHist.push(currSGV);
+
+    let noise = stats.calcSensorNoise(glucoseHist, lastCal);
+
+    noise.should.equal(0);
+  });
 });

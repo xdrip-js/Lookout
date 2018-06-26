@@ -196,6 +196,11 @@ const syncSGVs = async () => {
     let rigSGV = rigSGVs[rigIndex];
     let nsSGV = null;
 
+    if (!rigSGV.glucose) {
+      // Do not attempt to send an invalid glucose to NS
+      continue;
+    }
+
     for (; nsIndex < nsSGVs.length; ++nsIndex) {
       let timeDiff = moment(nsSGVs[nsIndex].dateString).diff(moment(rigSGV.readDate));
 

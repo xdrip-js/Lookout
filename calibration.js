@@ -218,3 +218,7 @@ exports.calculateG5Calibration = (lastCal, lastG5CalTime, glucoseHist, currSGV) 
   }
 };
 
+exports.calcGlucose = (sgv, calibration) => {
+  return Math.round((sgv.unfiltered-calibration.intercept)/calibration.slope);
+};
+

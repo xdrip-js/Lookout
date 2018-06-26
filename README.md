@@ -4,6 +4,11 @@
 
 *Please note this project is neither created nor backed by Dexcom, Inc. This software is not intended for use in therapy.*
 
+## Overview
+Lookout provides a rig-based interface to a Dexcom G5 CGM using Bluetooth Low Energy (BLE).  Lookout connects to the G5 transmitter, and provides the capabilities for the user to start and stop sensor sessions, view reported glucose values, send the values to OpenAPS and Nightscout, provide calibration values to the transmitter, and reset a transmitter.  Lookout also calculates trend and noise values to include in glucose records sent to Nightscout and OpenAPS, calculates G5 calibration values and reports them to Nightscout, reports BG Check records to Nightscout obtained from the transmitter's reported G5 calibration events, and provides extended sensor operation beyond the sensor expiration.
+
+Lookout is intended for use with the unexpired G5 transmitters and relies on the official G5 calibration mechanisms to calibrated the raw sensor values.  Lookout provides the user with the ability to reset expired transmitters to allow them to be used past their factory expiration dates.
+
 ## Pre-installation
 You must update your rig's NodeJS based on https://github.com/xdrip-js/xdrip-js/wiki (only use the "Updating NodeJS" section of those instructions, you should not install xdrip-js manually, it will be installed in the next step as part of Lookout.)
 As of 13-Jun-2018, these steps are:
@@ -56,6 +61,12 @@ Once the browser is open to your Lookout page (see above steps), you can start t
 * after 5 minutes the state will change to "Second calibration" - enter the second calibration by clicking the "Calibration" button and entering the value from a finger stick.
 * after 5 minutes the state will change to "OK" and dexcom-calibrated BG values will be displayed.
 
+## Reset a Transmitter
+* Ensure the transmitter ID is entered as described above.
+* Click "Menu" on the Lookout page, then "CGM" and "Transmitter", then "Reset Transmitter", then "Reset"
+* wait 5 minutes and press the "Menu" button, then "CGM" and "Transmitter", the Age should show as less than a day.
+* After successfully resetting the transmitter, follow the instructions above to start a sensor session.
+
 ## Making it permanent
 So far in the above you've only run Lookout from the command line - the next time you close your terminal, or reboot your rig, it will only run if you add it to your crontab:
 ```
@@ -67,6 +78,11 @@ So far in the above you've only run Lookout from the command line - the next tim
 
 ## Debugging
 To look at the Lookout log, for debug purposes, type "cat /var/log/openaps/xdrip-js.log" or "tail -n 100 -F /var/log/openaps/xdrip-js.log" (without the quotes).
+
+## Options
+* `--extend_sensor`: Lookout uses the calibrated and unfiltered values reported by the G5 to calculate the running calibration slope and intercept values whenever the current calibration values it has produces a calibrated value that is more than 5 mg/dL away from the G5 reported calibrated value.  If the `--extend_sensor` option is enabled, Lookout will apply the most recent calculated calibration to the G5's unfiltered value if the transmitter does not report a calibrated SGV.  This enables Lookout to continue reporting SGV values to Nightscout and OpenAPS after the sensor session is ended, providing greater flexibility on when the user changes the site.  This is not intended to extend a sensor life past 24 hours due to the lack of an ongoing calibration update mechanism.
+
+** CAUTION ** If running in exended sensor mode, the user must enter a `Sensor Start` in Nightscout to notify Lookout to stop reporting glucose values.
 
 ## Reverting NodeJS
 

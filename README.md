@@ -8,17 +8,17 @@
 Lookout provides a rig-based interface to a Dexcom G5 CGM using Bluetooth Low Energy (BLE).  Lookout connects to the G5 transmitter and provides the following capabilities:
 - start and stop sensor sessions
 - view reported glucose values
-- send the values to OpenAPS and Nightscout
-- provide finger stick calibration values to the transmitter
-- reset an expired transmitter
-- calculates trend and noise values and reports them in glucose records sent to Nightscout and OpenAPS
-- calculates G5 calibration slope and offset values and reports them to Nightscout
-- reports BG Check records to Nightscout obtained from the transmitter's reported G5 calibration events
-- provides extended sensor operation beyond the sensor expiration.
+- send glucose values to OpenAPS and Nightscout
+- send finger stick calibration values to the transmitter
+- reset expired transmitters
+- calculate and report trend and noise values
+- calculate and report G5 calibration slope and offset values
+- report BG Check records to Nightscout obtained from transmitter's G5 calibration events
+- extend sensor operation beyond sensor expiration (limitations described below)
 
-Lookout is intended for use with the unexpired G5 transmitters and relies on the official G5 calibration mechanisms to calibrated the raw sensor values.  Lookout provides the user with the ability to reset expired transmitters to allow them to be used past their factory expiration dates.
+Lookout is intended for use with the unexpired G5 transmitters and relies on the official G5 calibration built into the transmitter to calibrate the raw sensor values.  Lookout provides the user with the ability to reset expired transmitters allowing them to be used past their normal expiration dates.
 
-Lookout can be run in parallel with a Dexcom receiver.  However, it cannot run in parallel with a Dexcom app on a phone as only one of the devices will connect to a transmitter at a time, and swapping devices requires approximately 15 minutes of the transmitter being unable to communicate with the device it was talking with.
+Lookout can be run in parallel with a Dexcom receiver.  However, it cannot run in parallel with a Dexcom or xDrip app on a phone as only one of the devices will connect to a transmitter at a time. Swapping devices requires approximately 15 minutes of the transmitter being unable to communicate with the device it was talking with before it will begin to talk to a new device.
 
 ## Pre-installation
 You must update your rig's NodeJS based on https://github.com/xdrip-js/xdrip-js/wiki (only use the "Updating NodeJS" section of those instructions, you should not install xdrip-js manually, it will be installed in the next step as part of Lookout.)

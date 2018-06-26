@@ -67,30 +67,30 @@ To view the app, open a browser and navigate to `http://<local IP address>:3000`
 ## Using the browser to control your G5
 Once the browser is open to your Lookout page (see above steps), you can start the sensor and calibrate through it. (Note that you can also continue using the Dexcom receiver alongside Lookout to do these things as well. Both the receiver and Lookout will get the latest updates from the G5 transmitter after a reading or two, provided they are in range and connected.)
 
-* click "Menu" (bottom right button) on the Lookout page, then "CGM" and "Transmitter", then "Pair new", and enter your transmitter ID (note it is case-sensitive), then "Save"
-* put the sensor/transmitter on your body, if you haven't already, and press the "Home"/person button at the bottom left of the lookout page, then click "Start sensor" (this part is identical to the receiver, which you can also use at the same time, alternatively, to start the sensor).
-* wait 5 minutes and press the "Menu" button, then "CGM" and "Sensor", the "State" should show as "Warmup". Press the "Home" screen (bottom left, person button), you will also see this state here after a while.
-* after 2 hours the state will change to "First calibration" - enter the first calibration by clicking the "Calibration" button and entering the value from a finger stick.
-* after 5 minutes the state will change to "Second calibration" - enter the second calibration by clicking the "Calibration" button and entering the value from a finger stick.
-* after 5 minutes the state will change to "OK" and dexcom-calibrated BG values will be displayed.
+* click "Menu" (bottom right button) on the Lookout page, then `CGM` and `Transmitter`, then `Pair new`, and enter your transmitter ID (note it is case-sensitive), then `Save`
+* put the sensor/transmitter on your body, if you haven't already, and press the `Home`/person button at the bottom left of the lookout page, then click `Start sensor` (this part is identical to the receiver, which you can also use at the same time, alternatively, to start the sensor).
+* wait 5 minutes and press the `Menu` button, then `CGM` and `Sensor`, the `State` should show as `Warmup`. Press the "Home" screen (bottom left, person button), you will also see this state here after a while.
+* after 2 hours the state will change to `First calibration` - enter the first calibration by clicking the `Calibration` button and entering the value from a finger stick.
+* after 5 minutes the state will change to `Second calibration` - enter the second calibration by clicking the `Calibration` button and entering the value from a finger stick.
+* after 5 minutes the state will change to `OK` and dexcom-calibrated BG values will be displayed.
 
 ## Reset a Transmitter
 * Ensure the transmitter ID is entered as described above.
-* Click "Menu" on the Lookout page, then "CGM" and "Transmitter", then "Reset Transmitter", then "Reset"
-* wait 5 minutes and press the "Menu" button, then "CGM" and "Transmitter", the Age should show as less than a day.
+* Click "Menu" on the Lookout page, then `CGM` and `Transmitter`, then `Reset Transmitter`, then `Reset`
+* wait 5 minutes and press the "Menu" button, then `CGM` and `Transmitter`, the Age should show as less than a day.
 * After successfully resetting the transmitter, follow the instructions above to start a sensor session.
 
 ## Making it permanent
 So far in the above you've only run Lookout from the command line - the next time you close your terminal, or reboot your rig, it will only run if you add it to your crontab:
 ```
-<type the command "crontab -e" (without quotes) and add this line:>
+<type the command `crontab -e` and add this line:>
 @reboot Lookout >> /var/log/openaps/xdrip-js.log
 <save and exit your editor>
-<reboot your rig with the command "reboot" (without quotes)>
+<reboot your rig with the command `reboot`>
 ```
 
 ## Debugging
-To look at the Lookout log, for debug purposes, type `cat /var/log/openaps/xdrip-js.log` or `tail -n 100 -F /var/log/openaps/xdrip-js.log` (without the quotes).
+To look at the Lookout log, for debug purposes, type `cat /var/log/openaps/xdrip-js.log` or `tail -n 100 -F /var/log/openaps/xdrip-js.log`.
 
 ## Options
 * `--extend_sensor`: Lookout uses the calibrated and unfiltered values reported by the G5 to calculate the running calibration slope and intercept values whenever the current calibration values it has produces a calibrated value that is more than 5 mg/dL away from the G5 reported calibrated value.  If the `--extend_sensor` option is enabled, Lookout will apply the most recent calculated calibration to the G5's unfiltered value if the transmitter does not report a calibrated SGV.  This enables Lookout to continue reporting SGV values to Nightscout and OpenAPS after the sensor session is ended, providing greater flexibility on when the user changes the site.  This is not intended to extend a sensor life past 24 hours due to the lack of an ongoing calibration update mechanism.

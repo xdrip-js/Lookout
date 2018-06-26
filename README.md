@@ -68,7 +68,7 @@ To view the app, open a browser and navigate to `http://<local IP address>:3000`
 Once the browser is open to your Lookout page (see above steps), you can start the sensor and calibrate through it. (Note that you can also continue using the Dexcom receiver alongside Lookout to do these things as well. Both the receiver and Lookout will get the latest updates from the G5 transmitter after a reading or two, provided they are in range and connected.)
 
 * click "Menu" (bottom right button) on the Lookout page, then `CGM` and `Transmitter`, then `Pair new`, and enter your transmitter ID (note it is case-sensitive), then `Save`
-* put the sensor/transmitter on your body, if you haven't already, and press the `Home`/person button at the bottom left of the lookout page, then click `Start sensor` (this part is identical to the receiver, which you can also use at the same time, alternatively, to start the sensor).
+* put the sensor/transmitter on your body, if you haven't already, and press the "Home"/person button at the bottom left of the lookout page, then click `Start sensor` (this part is identical to the receiver, which you can also use at the same time, alternatively, to start the sensor).
 * wait 5 minutes and press the `Menu` button, then `CGM` and `Sensor`, the `State` should show as `Warmup`. Press the "Home" screen (bottom left, person button), you will also see this state here after a while.
 * after 2 hours the state will change to `First calibration` - enter the first calibration by clicking the `Calibration` button and entering the value from a finger stick.
 * after 5 minutes the state will change to `Second calibration` - enter the second calibration by clicking the `Calibration` button and entering the value from a finger stick.
@@ -77,7 +77,7 @@ Once the browser is open to your Lookout page (see above steps), you can start t
 ## Reset a Transmitter
 * Ensure the transmitter ID is entered as described above.
 * Click "Menu" on the Lookout page, then `CGM` and `Transmitter`, then `Reset Transmitter`, then `Reset`
-* wait 5 minutes and press the "Menu" button, then `CGM` and `Transmitter`, the Age should show as less than a day.
+* wait 5 minutes and press the "Menu" button, then `CGM` and `Transmitter`, the `Age` should show as less than a day.
 * After successfully resetting the transmitter, follow the instructions above to start a sensor session.
 
 ## Making it permanent

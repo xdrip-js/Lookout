@@ -1,6 +1,6 @@
 {
   "name": "Lookout",
-  "version": "0.1.0",
+  "version": "1.0.1",
   "description": "A web app for communicating with an OpenAPS rig.",
   "main": "index.js",
   "scripts": {

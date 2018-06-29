@@ -112,6 +112,20 @@ angular.module('AngularOpenAPS.cgm', [
 
     socket.on('glucose', value => {
       glucose = value;
+
+      if (history.length > 0) {
+        let latestSGV = history[history.length-1];
+
+        if (glucose.readDate > latestSGV.readDate) {
+          history.push({
+            readDate: glucose.readDate,
+            glucose: glucose.glucose
+          });
+
+          // only hold enough for the last 24 hours.
+          history = history.slice(-12*24);
+        }
+      }
     });
 
     socket.on('calibration', calibration => {

@@ -494,6 +494,9 @@ module.exports = async (io, extend_sensor_opt) => {
 
     if (glucoseHist) {
       socket.emit('glucose', glucoseHist[glucoseHist.length - 1]);
+      socket.emit('glucoseHistory', glucoseHist.map((sgv) => {
+        return { readDate: sgv.readDate, glucose: sgv.glucose };
+      }));
     }
 
     let bgChecks = await storage.getItem('bgChecks')

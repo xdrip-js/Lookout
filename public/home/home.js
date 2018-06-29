@@ -95,8 +95,9 @@ angular.module('AngularOpenAPS.home', [
 
   }])
 
-  .directive('glucoseChart', ['$interval', function($interval) {
+  .directive('glucoseChart', ['$interval', 'G5', function($interval, G5) {
     return {
+      
       restrict: 'E',
       replace: true,
       scope: {
@@ -109,8 +110,12 @@ angular.module('AngularOpenAPS.home', [
         //      scope.data = [[{x: Date.now(), y: 100/18}]];
         let glucoseBaseTime = Date.now();
         scope.data = [
-          Array.apply(null, Array(36)).map((x, i) => ({x: 3 * (i - 35)/36, y: 6 + 3 * Math.sin(0.2 * (i - 35))})),
-          Array.apply(null, Array(36)).map((x, i) => ({x: 3 * i/36, y: 6 + 3 * Math.sin(0.2 * i)})),
+          G5.sensor.glucoseHistory.map((sgv) => {
+            return {
+              x: sgv.readDate,
+              y: sgv.glucose
+            };
+          })
         ];
         $interval(function() {
           const now = Date.now();

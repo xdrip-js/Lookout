@@ -44,58 +44,9 @@ angular.module('AngularOpenAPS.home', [
       }
     };
 
-
-    //   var chart = new Chart(ctx, {
-    //    type: 'line',
-    //    data: {
-    //       labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
-    //       datasets: [{
-    //          label: '# of votes',
-    //          data: [3, 4, 1, 5, 6],
-    //          pointBackgroundColor: 'black',
-    //          pointRadius: 5,
-    //          fill: false,
-    //          showLine: false //<- set this
-    //       }]
-    //    }
-    // });
-
-    // See: http://www.chartjs.org/docs/latest/axes/cartesian/time.html
-    // $scope.onClick = function (points, evt) {
-    //   console.log(points, evt);
-    // };
-    //     $scope.datasetOverride = [{
-    // //      yAxisID: 'y-axis-1',
-    //       pointRadius: 3,
-    //       fill: false,
-    //       showLine: false
-    //     }];
-
-    // $scope.data = [[{
-    //   x: Date.now() - 3*60*60*1000,
-    //   y: 6.0
-    // }, {
-    //   x: Date.now() - 2*60*60*1000,
-    //   y: 7.0
-    // }, {
-    //   x: Date.now() - 1*60*60*1000,
-    //   y: 10.1
-    // }, {
-    //   x: Date.now() - 0*60*60*1000,
-    //   y: 3.4
-    // }]];
-
-
-    //  var data = [G5.sensor.history.map(entry => ({x: entry.readDate, y: entry.glucose / 18}))];
-
-    //  $scope.data = [[{x: Date.now(), y: 100/18}]];
-
-
-
-
   }])
 
-  .directive('glucoseChart', ['$interval', 'G5', function($interval, G5) {
+  .directive('glucoseChart', ['$interval', 'SharedState', 'G5', function($interval, SharedState, G5) {
     return {
       
       restrict: 'E',
@@ -109,6 +60,18 @@ angular.module('AngularOpenAPS.home', [
       /*eslint-enable no-unused-vars*/
         //      scope.data = [[{x: Date.now(), y: 100/18}]];
         let glucoseBaseTime = Date.now();
+        let units = SharedState.get('glucoseUnits');
+        let factor;
+
+        switch (units) {
+        case 'mmol/L':
+          factor = 18;
+          break;
+        case 'mg/dL':
+        default:
+          factor = 1;
+        }
+
         scope.data = [ ];
         $interval(function() {
           const now = Date.now();
@@ -117,7 +80,7 @@ angular.module('AngularOpenAPS.home', [
             scope.data = [
               G5.sensor.history.map((sgv) => {
                 return {
-                  x: (sgv.readDate - glucoseBaseTime) / 1000 / 60 / 60.0,
+                  x: (sgv.readDate - glucoseBaseTime) / factor / 1000 / 60 / 60.0,
                   y: sgv.glucose
                 };
               })
@@ -160,7 +123,7 @@ angular.module('AngularOpenAPS.home', [
               position: 'bottom',
               ticks: {
                 min: -3,
-                max: +3,
+                max: 0,
                 stepSize: 1
               },
             // ticks: {

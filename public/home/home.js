@@ -113,9 +113,9 @@ angular.module('AngularOpenAPS.home', [
         $interval(function() {
           const now = Date.now();
 
-          if (G5.sensor.glucoseHistory) {
+          if (G5.sensor.history) {
             scope.data = [
-              G5.sensor.glucoseHistory.map((sgv) => {
+              G5.sensor.history.map((sgv) => {
                 return {
                   x: sgv.readDate,
                   y: sgv.glucose

@@ -121,6 +121,9 @@ angular.module('AngularOpenAPS.cgm', [
             readDate: glucose.readDate,
             glucose: glucose.glucose
           });
+
+          // only hold enough for the last 24 hours.
+          history = history.slice(-12*24);
         }
       }
     });

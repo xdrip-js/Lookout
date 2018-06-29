@@ -80,8 +80,8 @@ angular.module('AngularOpenAPS.home', [
             scope.data = [
               G5.sensor.history.map((sgv) => {
                 return {
-                  x: (sgv.readDate - glucoseBaseTime) / 1000 / 60 / 60.0,
-                  y: sgv.glucose / factor
+                  x: Math.round((sgv.readDate - glucoseBaseTime) / 1000 / 60 / 60.0 * 100) / 100.0,
+                  y: Math.round(sgv.glucose / factor * 10) / 10.0
                 };
               })
             ];

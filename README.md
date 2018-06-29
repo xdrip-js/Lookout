@@ -78,6 +78,7 @@ Once the browser is open to your Lookout page (see above steps), you can start t
 
 ## Reset a Transmitter
 * Ensure the transmitter ID is entered as described above.
+* Ensure the transmitter is not currently in a sensor session. Stop session if necessary.
 * Click "Menu" on the Lookout page, then `CGM` and `Transmitter`, then `Reset Transmitter`, then `Reset`
 * wait 5 minutes and press the "Menu" button, then `CGM` and `Transmitter`, the `Age` should show as less than a day.
 * After successfully resetting the transmitter, follow the instructions above to start a sensor session.

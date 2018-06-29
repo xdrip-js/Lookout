@@ -109,16 +109,21 @@ angular.module('AngularOpenAPS.home', [
       /*eslint-enable no-unused-vars*/
         //      scope.data = [[{x: Date.now(), y: 100/18}]];
         let glucoseBaseTime = Date.now();
-        scope.data = [
-          G5.sensor.glucoseHistory.map((sgv) => {
-            return {
-              x: sgv.readDate,
-              y: sgv.glucose
-            };
-          })
-        ];
+        scope.data = [ ];
         $interval(function() {
           const now = Date.now();
+
+          if (G5.sensor.glucoseHistory) {
+            scope.data = [
+              G5.sensor.glucoseHistory.map((sgv) => {
+                return {
+                  x: sgv.readDate,
+                  y: sgv.glucose
+                };
+              })
+            ];
+          }
+
           let timeInterval = (Date.now() - glucoseBaseTime) / 1000 / 60 / 60;
           console.log('shifting by ' + timeInterval);
           for (const dataset of scope.data) {

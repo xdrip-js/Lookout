@@ -66,6 +66,8 @@ module.exports = async (io, extend_sensor_opt) => {
     sgv.g5calibrated = true;
     sgv.stateString = stateString(sgv.state);
 
+    xDripAPS.postStatus(sgv.stateString);
+
     console.log('sensor state: ' + sgv.stateString);
 
     if (sgv.unfiltered > 10000) {
@@ -106,7 +108,6 @@ module.exports = async (io, extend_sensor_opt) => {
 
       if (sgv.state != glucoseHist[glucoseHist.length-1].state) {
         xDripAPS.postAnnouncement('Sensor: ' + sgv.stateString);
-        xDripAPS.postStatus(sgv.stateString);
       }
     }
 

@@ -106,6 +106,7 @@ module.exports = async (io, extend_sensor_opt) => {
 
       if (sgv.state != glucoseHist[glucoseHist.length-1].state) {
         xDripAPS.postAnnouncement('Sensor: ' + sgv.stateString);
+        xDripAPS.postStatus(sgv.stateString);
       }
     }
 

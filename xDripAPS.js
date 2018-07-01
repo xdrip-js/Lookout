@@ -413,6 +413,44 @@ module.exports = () => {
       });
     },
 
+    postStatus: (message) => {
+      const entry = [{
+        'created_at': moment().utc().format(),
+        'device': 'xdrip-js://' + os.hostname(),
+        'sensor': message
+      }];
+
+      const secret = process.env.API_SECRET;
+      let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/treatments.json';
+      let ns_headers = {
+        'Content-Type': 'application/json'
+      };
+
+      if (secret.startsWith('token=')) {
+        ns_url = ns_url + '?' + secret;
+      } else {
+        ns_headers['API-SECRET'] = secret;
+      }
+
+      const optionsNS = {
+        url: ns_url,
+        method: 'POST',
+        headers: ns_headers,
+        body: entry,
+        json: true
+      };
+
+      /*eslint-disable no-unused-vars*/
+      request(optionsNS, function (error, response, body) {
+      /*eslint-enable no-unused-vars*/
+        if (error) {
+          console.error('error posting json: ', error);
+        } else {
+          console.log('uploaded new Announcement to NS, statusCode = ' + response.statusCode);
+        }
+      });
+    },
+
     postBGCheck: (BGCheck) => {
       let entry = convertBGCheck(BGCheck);
 

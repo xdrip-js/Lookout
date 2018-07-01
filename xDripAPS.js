@@ -421,7 +421,7 @@ module.exports = () => {
       }];
 
       const secret = process.env.API_SECRET;
-      let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/treatments.json';
+      let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/devicestatus.json';
       let ns_headers = {
         'Content-Type': 'application/json'
       };
@@ -446,7 +446,7 @@ module.exports = () => {
         if (error) {
           console.error('error posting json: ', error);
         } else {
-          console.log('uploaded new Announcement to NS, statusCode = ' + response.statusCode);
+          console.log('uploaded new DeviceStatus to NS, statusCode = ' + response.statusCode);
         }
       });
     },

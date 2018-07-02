@@ -522,7 +522,7 @@ module.exports = async (io, extend_sensor_opt) => {
     });
     socket.on('backStartSensor', () => {
       console.log('received backStartSensor command');
-      pending.push({date: Date.now(), type: 'BackStartSensor'});
+      pending.push({date: Date.now() - 2*60*1000, type: 'StartSensor'});
       io.emit('pending', pending);
     });
     socket.on('stopSensor', () => {

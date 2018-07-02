@@ -415,9 +415,10 @@ module.exports = () => {
 
     postStatus: (message) => {
       const entry = [{
-        'created_at': moment().utc().format(),
         'device': 'xdrip-js://' + os.hostname(),
-        'sensor': message
+        'sensor': {
+          'status': message
+        }
       }];
 
       const secret = process.env.API_SECRET;

@@ -413,10 +413,14 @@ module.exports = () => {
       });
     },
 
-    postStatus: (message) => {
+    postStatus: (sgv) => {
       const entry = [{
         'device': 'xdrip-js://' + os.hostname(),
-        'sensor': message,
+        'sensor': {
+          'state': sgv.state,
+          'stateString': sgv.stateString,
+          'timestamp': sgv.readDate
+        },
         'created_at': moment().utc().format()
       }];
 

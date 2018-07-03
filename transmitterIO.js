@@ -66,7 +66,7 @@ module.exports = async (io, extend_sensor_opt) => {
     sgv.g5calibrated = true;
     sgv.stateString = stateString(sgv.state);
 
-    xDripAPS.postStatus(sgv.stateString);
+    xDripAPS.postStatus(sgv);
 
     console.log('sensor state: ' + sgv.stateString);
 

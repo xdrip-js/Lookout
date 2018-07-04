@@ -65,6 +65,7 @@ module.exports = async (io, extend_sensor_opt) => {
 
     sgv.g5calibrated = true;
     sgv.stateString = stateString(sgv.state);
+    sgv.stateStringShort = stateStringShort(sgv.state);
 
     xDripAPS.postStatus(sgv);
 
@@ -302,6 +303,85 @@ module.exports = async (io, extend_sensor_opt) => {
       return 'Calibration State - Linearity Fit Display';
     case 0x8f:
       return 'Calibration State - Session Not in Progress';
+    default:
+      return state ? 'Unknown: 0x' + state.toString(16) : '--';
+    }
+  };
+
+  const stateStringShort = (state) => {
+    switch (state) {
+    case 0x00:
+      return 'None';
+    case 0x01:
+      return 'Stopped';
+    case 0x02:
+      return 'Warmup';
+    case 0x03:
+      return 'Unused';
+    case 0x04:
+      return '1st Cal';
+    case 0x05:
+      return '2nd Cal';
+    case 0x06:
+      return 'OK';
+    case 0x07:
+      return 'Need Cal';
+    case 0x08:
+      return 'Cal Err 1';
+    case 0x09:
+      return 'Cal Err 0';
+    case 0x0a:
+      return 'Cal Lin Fit';
+    case 0x0b:
+      return 'Fail Counts';
+    case 0x0c:
+      return 'Fail Resid';
+    case 0x0d:
+      return 'Outlier';
+    case 0x0e:
+      return 'Cal NOW';
+    case 0x0f:
+      return 'Expired';
+    case 0x10:
+      return 'Unrecoverable';
+    case 0x11:
+      return 'Failed Tx';
+    case 0x12:
+      return 'Temp Fail';
+    case 0x13:
+      return 'Reserved';
+    case 0x80:
+      return 'Cal - Start';
+    case 0x81:
+      return 'Cal - Start Up';
+    case 0x82:
+      return '1 of 2 Cal';
+    case 0x83:
+      return 'Hi Wedge Display';
+    case 0x84:
+      return 'Unused Cal';
+    case 0x85:
+      return '2 of 2 Cal';
+    case 0x86:
+      return 'In Cal Tx';
+    case 0x87:
+      return 'In Cal Display';
+    case 0x88:
+      return 'Hi Wedge Tx';
+    case 0x89:
+      return 'Lo Wedge Tx';
+    case 0x8a:
+      return 'Lin Fit Tx';
+    case 0x8b:
+      return 'Outlier Cal Tx';
+    case 0x8c:
+      return 'Hi Wedge Display';
+    case 0x8d:
+      return 'Lo Wedge Display';
+    case 0x8e:
+      return 'Lin Fit Display';
+    case 0x8f:
+      return 'No Session';
     default:
       return state ? 'Unknown: 0x' + state.toString(16) : '--';
     }

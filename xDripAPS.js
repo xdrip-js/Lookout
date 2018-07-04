@@ -419,6 +419,7 @@ module.exports = () => {
         'sensor': {
           'state': sgv.state,
           'stateString': sgv.stateString,
+          'stateStringShort': sgv.stateStringShort,
           'timestamp': sgv.readDate
         },
         'created_at': moment().utc().format()

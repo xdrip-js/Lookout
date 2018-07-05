@@ -415,8 +415,8 @@ module.exports = () => {
 
     postStatus: (sgv) => {
       const entry = [{
-        'device': 'xdrip-js://' + os.hostname(),
-        'xdrip-js': {
+        'device': 'xdripjs://' + os.hostname(),
+        'xdripjs': {
           'state': sgv.state,
           'stateString': sgv.stateString,
           'stateStringShort': sgv.stateStringShort,

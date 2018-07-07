@@ -434,7 +434,7 @@ module.exports = () => {
           'noise': sgv.noise,
           'noiseString': stats.NSNoiseString(sgv.nsNoise),
           'slope': (cal && cal.slope) || 1,
-          'yintercept': (cal && cal.yIntercept) || 0,
+          'intercept': (cal && cal.intercept) || 0,
           'calType': (cal && cal.type) || 'None', // 'LeastSquaresRegression' or 'SinglePoint' or 'Unity'
           'lastCalibrationDate': lastG5CalTime,
           'voltagea': (txStatus && txStatus.voltagea) || null,

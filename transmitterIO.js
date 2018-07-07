@@ -545,7 +545,7 @@ module.exports = async (io, extend_sensor_opt) => {
 
     worker.on('message', m => {
       if (m.msg == 'getMessages') {
-        if (!txStatus || (txStatus.timestamp.diff(moment(), 'minutes') > 25)) {
+        if (!txStatus || (moment().diff(txStatus.timestamp, 'minutes') > 25)) {
           pending.push({type: 'BatteryStatus'});
         }
 

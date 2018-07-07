@@ -11,6 +11,7 @@ var _ = require('lodash');
 
 module.exports = async (io, extend_sensor_opt) => {
   let txId;
+  let txStatus = null;
   let pending = [];
   let extend_sensor = extend_sensor_opt;
   let worker = null;
@@ -67,7 +68,8 @@ module.exports = async (io, extend_sensor_opt) => {
     sgv.stateString = stateString(sgv.state);
     sgv.stateStringShort = stateStringShort(sgv.state);
 
-    xDripAPS.postStatus(sgv);
+    sgv.txStatusString = txStatusString(sgv.status);
+    sgv.txStatusStringShort = txStatusStringShort(sgv.status);
 
     console.log('sensor state: ' + sgv.stateString);
 
@@ -190,7 +192,23 @@ module.exports = async (io, extend_sensor_opt) => {
 
     storageLock.unlockStorage();
 
+    sendCGMStatus(sgv, lastCal);
+
     sendNewGlucose(sgv, sendSGV);
+  };
+
+  const sendCGMStatus = async (sgv, lastCal) => {
+
+    let bgChecks = await storage.getItem('bgChecks')
+      .catch(error => {
+        console.log('Unable to get bgChecks storage item: ' + error);
+      });
+
+    let lastG5Cal = getLastG5Cal(bgChecks);
+
+    let lastG5CalTime = (lastG5Cal && lastG5Cal.date) || null;
+
+    xDripAPS.postStatus(txId, sgv, txStatus, lastCal, lastG5CalTime);
   };
 
   // Store the last hour of glucose readings
@@ -227,6 +245,36 @@ module.exports = async (io, extend_sensor_opt) => {
     }
 
     xDripAPS.post(sgv, sendSGV);
+  };
+
+  const txStatusString = (state) => {
+    switch (state) {
+    case null:
+      return 'None';
+    case 0x00:
+      return 'OK';
+    case 0x81:
+      return 'Low battery';
+    case 0x83:
+      return 'Expired';
+    default:
+      return state ? 'Unknown: 0x' + state.toString(16) : '--';
+    }
+  };
+
+  const txStatusStringShort = (state) => {
+    switch (state) {
+    case null:
+      return '--';
+    case 0x00:
+      return 'OK';
+    case 0x81:
+      return 'Low bat';
+    case 0x83:
+      return 'Expired';
+    default:
+      return state ? 'Unknown: 0x' + state.toString(16) : '--';
+    }
   };
 
   const stateString = (state) => {
@@ -477,6 +525,12 @@ module.exports = async (io, extend_sensor_opt) => {
     io.emit('calibrationData', calData);
   };
 
+  const processBatteryStatus = async (batteryStatus) => {
+    txStatus = batteryStatus;
+
+    console.log('Got battery status message: ', txStatus);
+  };
+
   const listenToTransmitter = (id) => {
     // Remove the BT device so it starts from scratch
     removeBTDevice(id);
@@ -489,6 +543,10 @@ module.exports = async (io, extend_sensor_opt) => {
 
     worker.on('message', m => {
       if (m.msg == 'getMessages') {
+        if (!txStatus || (txStatus.timestamp.diff(moment(), 'minutes') > 25)) {
+          pending.push({type: 'BatteryStatus'});
+        }
+
         worker.send(pending);
         // NOTE: this will lead to missed messages if the rig
         // shuts down before acting on them, or in the
@@ -506,6 +564,8 @@ module.exports = async (io, extend_sensor_opt) => {
         io.emit('pending', pending);
       } else if (m.msg == 'calibrationData') {
         processG5CalData(m.data);
+      } else if (m.msg == 'batteryStatus') {
+        processBatteryStatus(m.data);
       }
     });
 

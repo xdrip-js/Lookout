@@ -3,6 +3,7 @@ const os = require('os');
 const request = require('request');
 const requestPromise = require('request-promise-native');
 const moment = require('moment');
+const stats = require('./calcStats');
 
 const convertEntry = (glucose) => {
   let direction;
@@ -34,7 +35,7 @@ const convertEntry = (glucose) => {
     'type': 'sgv',
     'filtered': glucose.filtered,
     'unfiltered': glucose.unfiltered,
-    'rssi': '100', // TODO: consider reading this on connection and reporting
+    'rssi': glucose.rssi,
     'noise': glucose.nsNoise,
     'trend': glucose.trend,
     'glucose': glucose.glucose
@@ -413,14 +414,33 @@ module.exports = () => {
       });
     },
 
-    postStatus: (sgv) => {
+    postStatus: (txId, sgv, txStatus, cal, lastG5CalTime) => {
       const entry = [{
         'device': 'xdripjs://' + os.hostname(),
         'xdripjs': {
           'state': sgv.state,
           'stateString': sgv.stateString,
           'stateStringShort': sgv.stateStringShort,
-          'timestamp': sgv.readDate
+          'txId': txId,
+          'txStatus': sgv.status,
+          'txStatusString': sgv.txStatusString,
+          'txStatusStringShort': sgv.txStatusStringShort,
+          'txActivation': sgv.transmitterStartDate,
+          'mode': 'not expired',  // 'expired' or 'not expired'
+          'timestamp': sgv.readDate,
+          'rssi': sgv.rssi,
+          'unfiltered': sgv.unfiltered,
+          'filtered': sgv.filtered,
+          'noise': sgv.noise,
+          'noiseString': stats.NSNoiseString(sgv.nsNoise),
+          'slope': (cal && cal.slope) || 1,
+          'yintercept': (cal && cal.yIntercept) || 0,
+          'calType': (cal && cal.type) || 'None', // 'LeastSquaresRegression' or 'SinglePoint' or 'Unity'
+          'lastCalibrationDate': lastG5CalTime,
+          'voltagea': (txStatus && txStatus.voltagea) || null,
+          'voltageb': (txStatus && txStatus.voltageb) || null,
+          'temperature': (txStatus && txStatus.temperature) || null,
+          'resistance': (txStatus && txStatus.resist) || null
         },
         'created_at': moment().utc().format()
       }];

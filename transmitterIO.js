@@ -525,7 +525,7 @@ module.exports = async (io, extend_sensor_opt) => {
     io.emit('calibrationData', calData);
   };
 
-  const processBatteryStatus = async (batteryStatus) => {
+  const processBatteryStatus = (batteryStatus) => {
     txStatus = batteryStatus;
 
     console.log('Got battery status message: ', txStatus);

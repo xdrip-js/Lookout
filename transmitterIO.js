@@ -528,6 +528,8 @@ module.exports = async (io, extend_sensor_opt) => {
   const processBatteryStatus = (batteryStatus) => {
     txStatus = batteryStatus;
 
+    txStatus.timestamp = moment();
+
     console.log('Got battery status message: ', txStatus);
   };
 

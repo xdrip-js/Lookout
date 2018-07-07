@@ -437,6 +437,7 @@ module.exports = () => {
           'intercept': (cal && cal.intercept) || 0,
           'calType': (cal && cal.type) || 'None', // 'LeastSquaresRegression' or 'SinglePoint' or 'Unity'
           'lastCalibrationDate': lastG5CalTime,
+          'sessionStart': sgv.sessionStartDate,
           'batteryTimestamp': (txStatus && txStatus.timestamp.valueOf()) || null,
           'voltagea': (txStatus && txStatus.voltagea) || null,
           'voltageb': (txStatus && txStatus.voltageb) || null,

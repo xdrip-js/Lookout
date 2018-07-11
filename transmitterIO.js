@@ -11,6 +11,7 @@ var _ = require('lodash');
 
 module.exports = async (io, extend_sensor_opt) => {
   let txId;
+  let txStatus = null;
   let pending = [];
   let extend_sensor = extend_sensor_opt;
   let worker = null;
@@ -65,6 +66,10 @@ module.exports = async (io, extend_sensor_opt) => {
 
     sgv.g5calibrated = true;
     sgv.stateString = stateString(sgv.state);
+    sgv.stateStringShort = stateStringShort(sgv.state);
+
+    sgv.txStatusString = txStatusString(sgv.status);
+    sgv.txStatusStringShort = txStatusStringShort(sgv.status);
 
     console.log('sensor state: ' + sgv.stateString);
 
@@ -187,7 +192,23 @@ module.exports = async (io, extend_sensor_opt) => {
 
     storageLock.unlockStorage();
 
+    sendCGMStatus(sgv, lastCal);
+
     sendNewGlucose(sgv, sendSGV);
+  };
+
+  const sendCGMStatus = async (sgv, lastCal) => {
+
+    let bgChecks = await storage.getItem('bgChecks')
+      .catch(error => {
+        console.log('Unable to get bgChecks storage item: ' + error);
+      });
+
+    let lastG5Cal = getLastG5Cal(bgChecks);
+
+    let lastG5CalTime = (lastG5Cal && lastG5Cal.date) || null;
+
+    xDripAPS.postStatus(txId, sgv, txStatus, lastCal, lastG5CalTime);
   };
 
   // Store the last hour of glucose readings
@@ -224,6 +245,36 @@ module.exports = async (io, extend_sensor_opt) => {
     }
 
     xDripAPS.post(sgv, sendSGV);
+  };
+
+  const txStatusString = (state) => {
+    switch (state) {
+    case null:
+      return 'None';
+    case 0x00:
+      return 'OK';
+    case 0x81:
+      return 'Low battery';
+    case 0x83:
+      return 'Expired';
+    default:
+      return state ? 'Unknown: 0x' + state.toString(16) : '--';
+    }
+  };
+
+  const txStatusStringShort = (state) => {
+    switch (state) {
+    case null:
+      return '--';
+    case 0x00:
+      return 'OK';
+    case 0x81:
+      return 'Low bat';
+    case 0x83:
+      return 'Expired';
+    default:
+      return state ? 'Unknown: 0x' + state.toString(16) : '--';
+    }
   };
 
   const stateString = (state) => {
@@ -300,6 +351,85 @@ module.exports = async (io, extend_sensor_opt) => {
       return 'Calibration State - Linearity Fit Display';
     case 0x8f:
       return 'Calibration State - Session Not in Progress';
+    default:
+      return state ? 'Unknown: 0x' + state.toString(16) : '--';
+    }
+  };
+
+  const stateStringShort = (state) => {
+    switch (state) {
+    case 0x00:
+      return 'None';
+    case 0x01:
+      return 'Stopped';
+    case 0x02:
+      return 'Warmup';
+    case 0x03:
+      return 'Unused';
+    case 0x04:
+      return '1st Cal';
+    case 0x05:
+      return '2nd Cal';
+    case 0x06:
+      return 'OK';
+    case 0x07:
+      return 'Need Cal';
+    case 0x08:
+      return 'Cal Err 1';
+    case 0x09:
+      return 'Cal Err 0';
+    case 0x0a:
+      return 'Cal Lin Fit';
+    case 0x0b:
+      return 'Fail Counts';
+    case 0x0c:
+      return 'Fail Resid';
+    case 0x0d:
+      return 'Outlier';
+    case 0x0e:
+      return 'Cal NOW';
+    case 0x0f:
+      return 'Expired';
+    case 0x10:
+      return 'Unrecoverable';
+    case 0x11:
+      return 'Failed Tx';
+    case 0x12:
+      return 'Temp Fail';
+    case 0x13:
+      return 'Reserved';
+    case 0x80:
+      return 'Cal - Start';
+    case 0x81:
+      return 'Cal - Start Up';
+    case 0x82:
+      return '1 of 2 Cal';
+    case 0x83:
+      return 'Hi Wedge Display';
+    case 0x84:
+      return 'Unused Cal';
+    case 0x85:
+      return '2 of 2 Cal';
+    case 0x86:
+      return 'In Cal Tx';
+    case 0x87:
+      return 'In Cal Display';
+    case 0x88:
+      return 'Hi Wedge Tx';
+    case 0x89:
+      return 'Lo Wedge Tx';
+    case 0x8a:
+      return 'Lin Fit Tx';
+    case 0x8b:
+      return 'Outlier Cal Tx';
+    case 0x8c:
+      return 'Hi Wedge Display';
+    case 0x8d:
+      return 'Lo Wedge Display';
+    case 0x8e:
+      return 'Lin Fit Display';
+    case 0x8f:
+      return 'No Session';
     default:
       return state ? 'Unknown: 0x' + state.toString(16) : '--';
     }
@@ -395,6 +525,14 @@ module.exports = async (io, extend_sensor_opt) => {
     io.emit('calibrationData', calData);
   };
 
+  const processBatteryStatus = (batteryStatus) => {
+    txStatus = batteryStatus;
+
+    txStatus.timestamp = moment();
+
+    console.log('Got battery status message: ', txStatus);
+  };
+
   const listenToTransmitter = (id) => {
     // Remove the BT device so it starts from scratch
     removeBTDevice(id);
@@ -407,6 +545,10 @@ module.exports = async (io, extend_sensor_opt) => {
 
     worker.on('message', m => {
       if (m.msg == 'getMessages') {
+        if (!txStatus || (moment().diff(txStatus.timestamp, 'minutes') > 25)) {
+          pending.push({type: 'BatteryStatus'});
+        }
+
         worker.send(pending);
         // NOTE: this will lead to missed messages if the rig
         // shuts down before acting on them, or in the
@@ -424,6 +566,8 @@ module.exports = async (io, extend_sensor_opt) => {
         io.emit('pending', pending);
       } else if (m.msg == 'calibrationData') {
         processG5CalData(m.data);
+      } else if (m.msg == 'batteryStatus') {
+        processBatteryStatus(m.data);
       }
     });
 

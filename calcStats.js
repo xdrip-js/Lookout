@@ -172,3 +172,20 @@ exports.calcNSNoise = (noise, glucoseHist) => {
   return nsNoise;
 };
 
+exports.NSNoiseString = (nsNoise) => {
+
+  switch (nsNoise) {
+  case 1:
+    return 'Clean';
+  case 2:
+    return 'Light';
+  case 3:
+    return 'Medium';
+  case 4:
+    return 'Heavy';
+  case 0:
+  default:
+    return 'Unknown';
+  }
+};
+

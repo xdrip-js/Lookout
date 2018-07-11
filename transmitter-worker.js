@@ -29,4 +29,8 @@ transmitter.on('calibrationData', data => {
   process.send({msg: 'calibrationData', data});
 });
 
+transmitter.on('batteryStatus', data => {
+  process.send({msg: 'batteryStatus', data});
+});
+
 transmitter.on('disconnect', process.exit);

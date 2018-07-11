@@ -78,6 +78,9 @@ Once the browser is open to your Lookout page (see above steps), you can start t
 
 **NOTE** There is a second button on the "Home" screen, Start sensor 2 hours ago, that can be used to send a start message backdated by 2 hours.  This allows the user to pre-soak a sensor while the ongoing session continues.  When the ongoing session ends, move the transmitter to the new sensor and use the "Start sensor 2 hours ago" button to start the new session.  This will normally provide the user with a First calibration request within 5 to 10 minutes instead of 2 hours of down time.
 
+## Nightscout CGM Status Pill
+This feature requires Nightscout 0.10.3 or later. Lookout provides devicestatus records to Nightscout which will display the CGM status in a CGM pill if the Nightscout xdrip-js plugin is enabled. See the Nightscout README for details on enabling the plugin and settings.
+
 ## Reset a Transmitter
 * Ensure the transmitter ID is entered as described above.
 * Ensure the transmitter is not currently in a sensor session. Stop session if necessary.

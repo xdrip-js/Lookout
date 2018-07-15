@@ -1,14 +1,13 @@
 'use strict';
 
 const xDripAPS = require('./xDripAPS')();
-const storage = require('node-persist');
 const moment = require('moment');
 const timeLimitedPromise = require('./timeLimitedPromise');
 const storageLock = require('./storageLock');
 
 var _ = require('lodash');
 
-const syncCal = async (sensorInsert) => {
+const syncCal = async (storage, sensorInsert) => {
   let rigCal = null;
   let NSCal = null;
   let nsQueryError = false;
@@ -80,7 +79,7 @@ const syncCal = async (sensorInsert) => {
   console.log('syncCal complete');
 };
 
-const syncSGVs = async () => {
+const syncSGVs = async (storage) => {
   let timeSince = null;
 
   let rigSGVs = null;
@@ -235,7 +234,7 @@ const syncSGVs = async () => {
   console.log('syncSGVs complete');
 };
 
-const syncBGChecks = async (sensorInsert) => {
+const syncBGChecks = async (storage, sensorInsert) => {
   let NSBGChecks = null;
   let nsQueryError = false;
 
@@ -408,7 +407,7 @@ const syncBGChecks = async (sensorInsert) => {
   console.log('syncBGChecks complete');
 };
 
-const syncNS = async () => {
+const syncNS = async (storage) => {
   let sensorInsert = null;
   let nsQueryError = false;
 
@@ -438,17 +437,17 @@ const syncNS = async () => {
   // call resolve so the Promise.all works as it
   // should and doesn't trigger early because of an error
   var syncCalPromise = new timeLimitedPromise(4*60*1000, async (resolve) => {
-    await syncCal(sensorInsert);
+    await syncCal(storage, sensorInsert);
     resolve();
   });
 
   let syncSGVsPromise = new timeLimitedPromise(4*60*1000, async (resolve) => {
-    await syncSGVs();
+    await syncSGVs(storage);
     resolve();
   });
 
   let syncBGChecksPromise = new timeLimitedPromise(4*60*1000, async (resolve) => {
-    await syncBGChecks(sensorInsert);
+    await syncBGChecks(storage, sensorInsert);
     resolve();
   });
 

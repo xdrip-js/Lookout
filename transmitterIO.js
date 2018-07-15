@@ -644,7 +644,7 @@ module.exports = async (io, extend_sensor_opt) => {
 
   txId = value || '500000';
 
-  syncNS();
+  syncNS(storage);
 
   listenToTransmitter(txId);
 

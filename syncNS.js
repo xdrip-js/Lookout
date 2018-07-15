@@ -375,22 +375,24 @@ const syncBGChecks = async (storage, sensorInsert) => {
         // and the current SGV is before valueTime
         SGVBeforeTime = NSSGVs[i].dateMills;
         SGVAfterTime = NSSGVs[i+1].dateMills;
-        if ((SGVBeforeTime <= valueTime) && (SGVAfterTime >= valueTime)) {
+        if (((valueTime - SGVBeforeTime) >= 0) && ((SGVAfterTime - valueTime) >= 0)) {
           SGVBefore = NSSGVs[i];
           SGVAfter = NSSGVs[i+1];
+          break;
         }
       }
 
       if (SGVBefore && SGVAfter) {
-        let totalTime = SGVAfterTime.diff(SGVBeforeTime);
+        let totalTime = SGVAfter.date - SGVBefore.date;
         let totalDelta = SGVAfter.unfiltered - SGVBefore.unfiltered;
-        let fractionTime = valueTime.diff(SGVBeforeTime) / totalTime;
+        let fractionTime = (valueTime.valueOf() - SGVBeforeTime) / totalTime;
 
         rigValue.unfiltered = totalDelta * fractionTime + SGVBefore.unfiltered;
 
-        console.log('Adding unfiltered value, ' + rigValue.unfiltered + ', to BGCheck at ' + valueTime.utc().format());
-        console.log('SGVBefore: \n', SGVBefore);
-        console.log('SGVAfter: \n', SGVAfter);
+        console.log('  BGCheck Time: ' + valueTime.valueOf() + '   Added Filter Value: ' + (Math.round(rigValue.unfiltered*1000)/1000));
+        console.log('SGVBefore Time: ' + SGVBeforeTime + ' SGVBefore Unfiltered: ' + SGVBefore.unfiltered);
+        console.log(' SGVAfter Time: ' + SGVAfterTime + '  SGVAfter Unfiltered: ' + SGVAfter.unfiltered);
+        console.log('     totalTime: ' + totalTime + ' totalDelta: ' + (Math.round(totalDelta*1000) / 1000) + ' fractionTime: ' + (Math.round(fractionTime*100)/100));
       } else {
         console.log('Unable to find bounding SGVs for BG Check at ' + valueTime.format());
       }

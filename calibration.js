@@ -230,3 +230,55 @@ exports.calcGlucose = (sgv, calibration) => {
   return glucose;
 };
 
+exports.calculateExpiredCalibration = (bgChecks) => {
+  let calPairs = [];
+  let calReturn = null;
+
+  for (let i=0; i < bgChecks.length; ++i) {
+    if (bgChecks[i].type !== 'Unity') {
+      calPairs.push({
+        unfiltered: bgChecks[i].unfiltered,
+        glucose: bgChecks[i].glucose,
+        readDate: bgChecks[i].date
+      });
+    }
+  }
+
+  // If we have at least 3 good pairs, use LSR
+  if (calPairs.length > 3) {
+    let calResult = lsrCalibration(calPairs);
+
+    if ((calResult.slope > 12.5) || (calResult.slope < 0.45)) {
+      // wait until the next opportunity
+      console.log('Slope out of range to calibrate: ' + calResult.slope);
+      return null;
+    }
+
+    calReturn = {
+      date: Date.now(),
+      scale: 1,
+      intercept: calResult.yIntercept,
+      slope: calResult.slope,
+      type: calResult.calibrationType
+    };
+
+    console.log('Expired calibration with LSR:\n', calReturn);
+  } else if (calPairs.length > 0) {
+    let calResult = singlePointCalibration(calPairs);
+
+    calReturn = {
+      date: Date.now(),
+      scale: 1,
+      intercept: calResult.yIntercept,
+      slope: calResult.slope,
+      type: calResult.calibrationType
+    };
+
+    console.log('Expired calibration with Single Point:\n', calReturn);
+  } else {
+    console.log('No suitable glucose pairs found for expired calibration.');
+  }
+
+  return calReturn;
+};
+

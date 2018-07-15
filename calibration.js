@@ -230,7 +230,7 @@ exports.calcGlucose = (sgv, calibration) => {
   return glucose;
 };
 
-exports.calculateExpiredCalibration = (bgChecks) => {
+exports.expiredCalibration = (bgChecks) => {
   let calPairs = [];
   let calReturn = null;
 

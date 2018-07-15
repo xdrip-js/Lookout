@@ -346,8 +346,12 @@ const syncBGChecks = async (storage, sensorInsert) => {
     if (!('unfiltered' in rigValue) || !rigValue.unfiltered) {
       let NSSGVs = null;
       let valueTime = rigValue.dateMills;
-      let timeStart = moment(rigValue.dateMills).subtract(6, 'minutes');
-      let timeEnd = moment(rigValue.dateMills).add(6, 'minutes');
+      let timeStart = moment(rigValue.dateMills).subtract(11, 'minutes');
+      let timeEnd = moment(rigValue.dateMills).add(11, 'minutes');
+      let SGVBefore = null;
+      let SGVBeforeTime = null;
+      let SGVAfter = null;
+      let SGVAfterTime = null;
 
       // Get NS SGV immediately before BG Check
       NSSGVs = await xDripAPS.SGVsBetween(timeStart, timeEnd, 5)
@@ -364,12 +368,31 @@ const syncBGChecks = async (storage, sensorInsert) => {
         return sgv;
       });
 
-      for (let i=0; i < NSSGVs.length; ++i) {
-        if (Math.abs(NSSGVs[i].dateMills - valueTime) < 5*60*1000) {
-          rigValue.unfiltered = NSSGVs[i].unfiltered;
-          console.log('Adding unfiltered value to BGCheck at ' + moment(valueTime).utc().format() + ': id = ' + NSSGVs[i]._id + ' time = ' + NSSGVs[i].date);
-          break;
+      NSSGVs = _.sortBy(NSSGVs, ['dateMills']);
+
+      for (let i=0; i < (NSSGVs.length-1); ++i) {
+        // Is the next SGV after valueTime
+        // and the current SGV is before valueTime
+        SGVBeforeTime = NSSGVs[i].dateMills;
+        SGVAfterTime = NSSGVs[i+1].dateMills;
+        if ((SGVBeforeTime <= valueTime) && (SGVAfterTime >= valueTime)) {
+          SGVBefore = NSSGVs[i];
+          SGVAfter = NSSGVs[i+1];
         }
+      }
+
+      if (SGVBefore && SGVAfter) {
+        let totalTime = SGVAfterTime.diff(SGVBeforeTime);
+        let totalDelta = SGVAfter.unfiltered - SGVBefore.unfiltered;
+        let fractionTime = valueTime.diff(SGVBeforeTime) / totalTime;
+
+        rigValue.unfiltered = totalDelta * fractionTime + SGVBefore.unfiltered;
+
+        console.log('Adding unfiltered value, ' + rigValue.unfiltered + ', to BGCheck at ' + valueTime.utc().format());
+        console.log('SGVBefore: \n', SGVBefore);
+        console.log('SGVAfter: \n', SGVAfter);
+      } else {
+        console.log('Unable to find bounding SGVs for BG Check at ' + valueTime.format());
       }
     }
   }

@@ -67,8 +67,9 @@ git push
 sudo npm install
 sudo npm link
 ```
+If your upstream is already set to the xdrip-js repository, you can skip the `git remote` commands.  The current git remote repositories can be displayed with the `git remote -v` command.
 
-If you want to run the dev branch, replace `master` in the commands above with `dev`.  If your upstream is already set to the xdrip-js repository, you can skip the `git remote` commands.  The current git remote repositories can be displayed with the `git remote -v` command.
+If you want to run the dev branch, replace `master` in the commands above with `dev`.
 
 ## Example usage
 Just type `Lookout`. The app will run on port 3000.

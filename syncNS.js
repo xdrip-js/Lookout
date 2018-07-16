@@ -476,17 +476,17 @@ const syncNS = async (storage) => {
     resolve();
   });
 
-  Promise.all([syncCalPromise, syncSGVsPromise, syncBGChecksPromise])
+  await Promise.all([syncCalPromise, syncSGVsPromise, syncBGChecksPromise])
     .catch(error => {
       console.log('syncNS error: ' + error);
-    }).then( () => {
-      console.log('syncNS complete - setting 5 minute timer');
-
-      setTimeout(() => {
-        // Restart the syncNS after 5 minute
-        syncNS(storage);
-      }, 5 * 60000);
     });
+
+  console.log('syncNS complete - setting 5 minute timer');
+
+  setTimeout(() => {
+    // Restart the syncNS after 5 minute
+    syncNS(storage);
+  }, 5 * 60000);
 };
 
 module.exports = syncNS;

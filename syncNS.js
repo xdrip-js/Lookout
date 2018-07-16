@@ -484,7 +484,7 @@ const syncNS = async (storage) => {
 
       setTimeout(() => {
         // Restart the syncNS after 5 minute
-        syncNS();
+        syncNS(storage);
       }, 5 * 60000);
     });
 };

@@ -9,7 +9,7 @@ const stats = require('./calcStats');
 
 var _ = require('lodash');
 
-module.exports = async (io, extend_sensor_opt) => {
+module.exports = async (io, extend_sensor_opt, expired_cal_opt) => {
   let txId;
   let txFailedReads = 0;
   let txStatus = null;
@@ -166,7 +166,9 @@ module.exports = async (io, extend_sensor_opt) => {
           console.log('Unable to store new NS Calibration');
         });
 
-      xDripAPS.postCalibration(newCal);
+      if (!expired_cal_opt) {
+        xDripAPS.postCalibration(newCal);
+      }
     }
 
 
@@ -644,7 +646,7 @@ module.exports = async (io, extend_sensor_opt) => {
 
   txId = value || '500000';
 
-  syncNS(storage);
+  syncNS(storage, expired_cal_opt);
 
   listenToTransmitter(txId);
 

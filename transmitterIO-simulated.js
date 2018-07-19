@@ -1,6 +1,6 @@
 
 /*eslint-disable no-unused-vars*/
-module.exports = (io, extend_sensor) => {
+module.exports = (io, extend_sensor, expired_cal_opt) => {
 /*eslint-enable no-unused-vars*/
   let id = 'ABCDEF';
   const version = '1.2.3.4';

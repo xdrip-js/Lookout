@@ -4,6 +4,7 @@ const xDripAPS = require('./xDripAPS')();
 const moment = require('moment');
 const timeLimitedPromise = require('./timeLimitedPromise');
 const storageLock = require('./storageLock');
+const calibration = require('./calibration');
 
 var _ = require('lodash');
 
@@ -234,9 +235,10 @@ const syncSGVs = async (storage) => {
   console.log('syncSGVs complete');
 };
 
-const syncBGChecks = async (storage, sensorInsert) => {
+const syncBGChecks = async (storage, sensorInsert, expiredCal) => {
   let NSBGChecks = null;
   let nsQueryError = false;
+  let calculateExpiredCal = false;
 
   NSBGChecks = await xDripAPS.BGChecksSince(sensorInsert)
     .catch(error => {
@@ -322,6 +324,7 @@ const syncBGChecks = async (storage, sensorInsert) => {
       };
 
       rigBGChecks.push(rigValue);
+      calculateExpiredCal = true;
     }
   }
 
@@ -429,10 +432,27 @@ const syncBGChecks = async (storage, sensorInsert) => {
     }
   }
 
+  if (calculateExpiredCal) {
+    let newCal = calibration.expiredCalibration(rigBGChecks);
+
+    await storageLock.lockStorage();
+
+    await storage.setItem('expiredCal', newCal)
+      .catch((err) => {
+        console.log('Unable to store expiredCal: ' + err);
+      });
+
+    storageLock.unlockStorage();
+
+    if (expiredCal) {
+      xDripAPS.postCalibration(newCal);
+    }
+  }
+
   console.log('syncBGChecks complete');
 };
 
-const syncNS = async (storage) => {
+const syncNS = async (storage, expiredCal) => {
   let sensorInsert = null;
   let nsQueryError = false;
 
@@ -472,7 +492,7 @@ const syncNS = async (storage) => {
   });
 
   let syncBGChecksPromise = new timeLimitedPromise(4*60*1000, async (resolve) => {
-    await syncBGChecks(storage, sensorInsert);
+    await syncBGChecks(storage, sensorInsert, expiredCal);
     resolve();
   });
 

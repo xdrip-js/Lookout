@@ -11,6 +11,7 @@ var _ = require('lodash');
 
 module.exports = async (io, extend_sensor_opt) => {
   let txId;
+  let txFailedReads = 0;
   let txStatus = null;
   let pending = [];
   let extend_sensor = extend_sensor_opt;
@@ -27,6 +28,19 @@ module.exports = async (io, extend_sensor_opt) => {
       }
 
       console.log('Removed BT Device: '+btName);
+      console.log(`stdout: ${stdout}`);
+      console.log(`stderr: ${stderr}`);
+    });
+  };
+
+  const rebootRig = () => {
+    cp.exec('reboot', (err, stdout, stderr) => {
+      if (err) {
+        console.log('Unable to reboot rig: - ' + err);
+        return;
+      }
+
+      console.log('Rebooting rig due to too man failures to read glucose from transmitter: ' + txFailedReads + ' failures.');
       console.log(`stdout: ${stdout}`);
       console.log(`stderr: ${stderr}`);
     });
@@ -559,6 +573,8 @@ module.exports = async (io, extend_sensor_opt) => {
         const glucose = m.data;
         console.log('got glucose: ' + glucose.glucose + ' unfiltered: ' + glucose.unfiltered);
 
+        --txFailedReads;
+
         processNewGlucose(glucose);
       } else if (m.msg == 'messageProcessed') {
         // TODO: check that dates match
@@ -568,6 +584,8 @@ module.exports = async (io, extend_sensor_opt) => {
         processG5CalData(m.data);
       } else if (m.msg == 'batteryStatus') {
         processBatteryStatus(m.data);
+      } else if (m.msg == 'sawTransmitter') {
+        ++txFailedReads;
       }
     });
 
@@ -586,6 +604,11 @@ module.exports = async (io, extend_sensor_opt) => {
 
       if (id !== txId) {
         removeBTDevice(id);
+      }
+
+      if (txFailedReads >= 2) {
+        // Automatically reboot on the 2nd failed read
+        rebootRig();
       }
 
       timerObj = setTimeout(() => {

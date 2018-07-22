@@ -5,7 +5,7 @@ const requestPromise = require('request-promise-native');
 const moment = require('moment');
 const stats = require('./calcStats');
 
-const convertEntry = (glucose) => {
+const _convertEntryToNS = (glucose) => {
   let direction;
 
   if (glucose.trend <= -30) {
@@ -37,6 +37,18 @@ const convertEntry = (glucose) => {
     'unfiltered': glucose.unfiltered,
     'rssi': glucose.rssi,
     'noise': glucose.nsNoise,
+    'trend': glucose.trend,
+    'glucose': glucose.glucose
+  }];
+};
+
+const _convertEntryToxDrip = (glucose) => {
+  return [{
+    'readDate': glucose.date,
+    'filtered': glucose.filtered,
+    'unfiltered': glucose.unfiltered,
+    'rssi': glucose.rssi,
+    'nsNoise': glucose.noise,
     'trend': glucose.trend,
     'glucose': glucose.glucose
   }];
@@ -329,7 +341,7 @@ module.exports = () => {
   return {
     // API (public) functions
     post: (glucose, sendToXdrip) => {
-      let entry = convertEntry(glucose);
+      let entry = _convertEntryToNS(glucose);
 
       if (sendToXdrip) {
         postToXdrip(entry);
@@ -609,6 +621,14 @@ module.exports = () => {
       }
 
       return insertTime;
+    },
+
+    convertEntryToNS: (glucose) => {
+      return _convertEntryToNS(glucose);
+    },
+
+    convertEntryToxDrip: (glucose) => {
+      return _convertEntryToxDrip(glucose);
     }
   };
 };

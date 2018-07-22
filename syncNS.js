@@ -386,16 +386,7 @@ const syncBGChecks = async (storage, sensorInsert, expiredCal) => {
       }
 
       if (SGVBefore && SGVAfter) {
-        let totalTime = SGVAfter.date - SGVBefore.date;
-        let totalDelta = SGVAfter.unfiltered - SGVBefore.unfiltered;
-        let fractionTime = (valueTime.valueOf() - SGVBeforeTime) / totalTime;
-
-        rigValue.unfiltered = totalDelta * fractionTime + SGVBefore.unfiltered;
-
-        console.log('  BGCheck Time: ' + valueTime.valueOf() + '   Added Filter Value: ' + (Math.round(rigValue.unfiltered*1000)/1000));
-        console.log('SGVBefore Time: ' + SGVBeforeTime + ' SGVBefore Unfiltered: ' + SGVBefore.unfiltered);
-        console.log(' SGVAfter Time: ' + SGVAfterTime + '  SGVAfter Unfiltered: ' + SGVAfter.unfiltered);
-        console.log('     totalTime: ' + totalTime + ' totalDelta: ' + (Math.round(totalDelta*1000) / 1000) + ' fractionTime: ' + (Math.round(fractionTime*100)/100));
+        rigValue.unfiltered = calibration.interpolateUnfiltered(xDripAPS.convertEntryToxDrip(SGVBefore), xDripAPS.convertEntryToxDrip(SGVAfter), valueTime);
       } else {
         console.log('Unable to find bounding SGVs for BG Check at ' + valueTime.format());
       }

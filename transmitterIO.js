@@ -450,7 +450,6 @@ module.exports = async (io, extend_sensor_opt, expired_cal_opt) => {
 
   const processG5CalData = async (calData) => {
     let rigSGVs = null;
-    let matchingSGV = null;
     let bgChecks = null;
 
     calData.dateMills = moment(calData.date).valueOf();
@@ -475,6 +474,8 @@ module.exports = async (io, extend_sensor_opt, expired_cal_opt) => {
       bgChecks = [];
     }
 
+    // Look through the BG Checks we have to see if we already
+    // have this BG Check
     for (let i = (bgChecks.length-1); i >= 0; --i) {
       if (Math.abs(bgChecks[i].dateMills - calData.dateMills) < 2*60*1000) {
         // The G5 transmitter report varies the time around
@@ -495,32 +496,48 @@ module.exports = async (io, extend_sensor_opt, expired_cal_opt) => {
 
     calData.unfiltered = 0;
 
-    if (rigSGVs && (rigSGVs.length > 0)) {
-      // check the sensor state
-      // don't use this cal message data
-      // if sensor state isn't OK
-      // In stopped state and maybe other states,
-      // the last calibration data is not valid
+    if (rigSGVs && (rigSGVs.length > 1)) {
+      let SGVBefore = null;
+      let SGVBeforeTime = null;
+      let SGVAfter = null;
+      let SGVAfterTime = null;
+
       let latestSGV = rigSGVs[rigSGVs.length-1];
 
+      // check the sensor state
+      // don't use this cal message data
+      // if sensor state isn't OK or Need Calibration
+      // In stopped state and maybe other states,
+      // the last calibration data is not valid
       if ((latestSGV.state != 0x06) && (latestSGV.state != 0x07)) {
         console.log('Sensor state not "OK" or "Need Calibration" - not using latest calibration message data.');
         storageLock.unlockStorage();
         return;
       }
 
+      let valueTime = moment(calData.date);
+
       // we can assume they are already sorted
       // since we sort before storing them
+      // Search from the end since in the normal case
+      // the G5 cal is processed within 2 readings
+      // of the event.
+      for (let i=(rigSGVs.length-1); i >= 0; --i) {
+        // Is the next SGV after valueTime
+        // and the current SGV is before valueTime
+        SGVBeforeTime = rigSGVs[i].readDate;
+        SGVAfterTime = rigSGVs[i+1].readDate;
+        if (((valueTime.valueOf() - SGVBeforeTime) >= 0) && ((SGVAfterTime - valueTime.valueOf()) >= 0)) {
+          SGVBefore = rigSGVs[i];
+          SGVAfter = rigSGVs[i+1];
+          break;
+        }
+      }
 
-      matchingSGV = _.find(rigSGVs, (o) => {
-        return o.readDateMills > calData.dateMills;
-      });
-
-      if (matchingSGV) {
-        console.log('Matching SGV Unfiltered: ' + matchingSGV.unfiltered);
-        console.log('Matching Cal SGV: ' + calData.glucose);
-
-        calData.unfiltered = matchingSGV.unfiltered;
+      if (SGVBefore && SGVAfter) {
+        calData.unfiltered = calibration.interpolateUnfiltered(SGVBefore, SGVAfter, valueTime);
+      } else {
+        console.log('Unable to find bounding SGVs for calibration at ' + valueTime.format());
       }
     }
 
@@ -533,11 +550,22 @@ module.exports = async (io, extend_sensor_opt, expired_cal_opt) => {
         console.log('Error saving bgChecks: ' + error);
       });
 
+    let newCal = calibration.expiredCalibration(bgChecks);
+
+    await storage.setItem('expiredCal', newCal)
+      .catch((err) => {
+        console.log('Unable to store expiredCal: ' + err);
+      });
+
     storageLock.unlockStorage();
 
     xDripAPS.postBGCheck(calData);
 
     io.emit('calibrationData', calData);
+
+    if (expired_cal_opt) {
+      xDripAPS.postCalibration(newCal);
+    }
   };
 
   const processBatteryStatus = (batteryStatus) => {

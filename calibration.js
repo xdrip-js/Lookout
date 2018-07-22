@@ -282,3 +282,26 @@ exports.expiredCalibration = (bgChecks) => {
   return calReturn;
 };
 
+exports.interpolateUnfiltered = (SGVBefore, SGVAfter, valueTime) => {
+  let totalTime = SGVAfter.readDate - SGVBefore.readDate;
+  let totalDelta = SGVAfter.unfiltered - SGVBefore.unfiltered;
+  let fractionTime = (valueTime.valueOf() - SGVBefore.readDate) / totalTime;
+
+  console.log('SGVBefore Time: ' + SGVBefore.readDate + ' SGVBefore Unfiltered: ' + SGVBefore.unfiltered);
+  console.log(' SGVAfter Time: ' + SGVAfter.readDate + '  SGVAfter Unfiltered: ' + SGVAfter.unfiltered);
+
+  if (totalTime > 10*60000) {
+    console.log('Total time exceeds 10 minutes: ' + totalTime + 'ms');
+    console.log('Not interpolating unfiltered values.');
+
+    return null;
+  }
+
+  let returnVal = totalDelta * fractionTime + SGVBefore.unfiltered;
+
+  console.log('  BGCheck Time: ' + valueTime.valueOf() + '       Unfilter Value: ' + (Math.round(returnVal*1000)/1000));
+  console.log('     totalTime: ' + totalTime + ' totalDelta: ' + (Math.round(totalDelta*1000) / 1000) + ' fractionTime: ' + (Math.round(fractionTime*100)/100));
+
+  return returnVal;
+};
+

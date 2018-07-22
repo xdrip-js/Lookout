@@ -463,7 +463,7 @@ const syncNS = async (storage, expiredCal) => {
 
     setTimeout(() => {
       // Restart the syncNS after 5 minute
-      syncNS();
+      syncNS(storage, expiredCal);
     }, 5 * 60000);
 
     return;
@@ -496,7 +496,7 @@ const syncNS = async (storage, expiredCal) => {
 
   setTimeout(() => {
     // Restart the syncNS after 5 minute
-    syncNS(storage);
+    syncNS(storage, expiredCal);
   }, 5 * 60000);
 };
 

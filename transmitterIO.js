@@ -522,7 +522,7 @@ module.exports = async (io, extend_sensor_opt, expired_cal_opt) => {
       // Search from the end since in the normal case
       // the G5 cal is processed within 2 readings
       // of the event.
-      for (let i=(rigSGVs.length-1); i >= 0; --i) {
+      for (let i=(rigSGVs.length-2); i >= 0; --i) {
         // Is the next SGV after valueTime
         // and the current SGV is before valueTime
         SGVBeforeTime = rigSGVs[i].readDate;

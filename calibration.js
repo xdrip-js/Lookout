@@ -135,7 +135,7 @@ const singlePointCalibration = (calibrationPairs) => {
   return returnVal;
 };
 
-exports.calculateG5Calibration = (lastCal, lastG5CalTime, glucoseHist, currSGV) => {
+exports.calculateG5Calibration = (lastCal, lastG5CalTime, sensorInsert, glucoseHist, currSGV) => {
   // set it to a high number so we upload a new cal
   // if we don't have a previous calibration
 
@@ -168,11 +168,12 @@ exports.calculateG5Calibration = (lastCal, lastG5CalTime, glucoseHist, currSGV) 
     //   greater than 80 mg/dl
     //   calibrated via G5, not Lookout
     //   12 minutes after the last G5 calibration time (it takes up to 2 readings to reflect calibration updates)
+    //   After the latest sensorInsert (ignore sensorInsert if we didn't get one)
     for (i=(glucoseHist.length-1); ((i >= 0) && (calPairs.length < 10)); --i) {
       // Only use up to 10 of the most recent suitable readings
       let sgv = glucoseHist[i];
 
-      if ((sgv.readDateMills > (lastG5CalTime + 12*60*1000)) && (sgv.glucose < 300) && (sgv.glucose > 80) && sgv.g5calibrated) {
+      if ((sgv.readDateMills > (lastG5CalTime + 12*60*1000)) && (!sensorInsert || (sgv.readDateMills > sensorInsert.valueof())) && (sgv.glucose < 300) && (sgv.glucose > 80) && sgv.g5calibrated) {
         calPairs.unshift(sgv);
       }
     }
@@ -248,7 +249,7 @@ exports.expiredCalibration = (bgChecks, sensorInsert) => {
   // remove calPairs that are less than 12 hours from the sensor insert
   if (calPairs.length > 0) {
     for (let i=0; i < calPairs.length; ++i) {
-      if ((calPairs[i].readDate - sensorInsert.valueOf()) < 12*60*60000) {
+      if (!sensorInsert || ((calPairs[i].readDate - sensorInsert.valueOf()) < 12*60*60000)) {
         calPairsStart = i+1;
       }
     }

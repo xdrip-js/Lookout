@@ -123,7 +123,7 @@ module.exports = async (io, extend_sensor, expired_cal) => {
     }
 
     if (glucoseHist.length > 0) {
-      newCal = calibration.calculateG5Calibration(lastCal, lastG5CalTime, glucoseHist, sgv);
+      newCal = calibration.calculateG5Calibration(lastCal, lastG5CalTime, sensorInsert, glucoseHist, sgv);
 
       if (sgv.state != glucoseHist[glucoseHist.length-1].state) {
         xDripAPS.postAnnouncement('Sensor: ' + sgv.stateString);

@@ -433,11 +433,6 @@ const syncBGChecks = async (storage, sensorInsert, expiredCal) => {
   }
 
   if (calculateExpiredCal) {
-    let sensorInsert = await xDripAPS.latestSensorInserted()
-      .catch(error => {
-        console.log('Unable to get latest sensor inserted record from NS: ' + error);
-      });
-
     let newCal = calibration.expiredCalibration(rigBGChecks, sensorInsert);
 
     await storageLock.lockStorage();

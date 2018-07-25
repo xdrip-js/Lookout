@@ -550,7 +550,12 @@ module.exports = async (io, extend_sensor_opt, expired_cal_opt) => {
         console.log('Error saving bgChecks: ' + error);
       });
 
-    let newCal = calibration.expiredCalibration(bgChecks);
+    let sensorInsert = await xDripAPS.latestSensorInserted()
+      .catch(error => {
+        console.log('Unable to get latest sensor inserted record from NS: ' + error);
+      });
+
+    let newCal = calibration.expiredCalibration(bgChecks, sensorInsert);
 
     await storage.setItem('expiredCal', newCal)
       .catch((err) => {
@@ -563,7 +568,7 @@ module.exports = async (io, extend_sensor_opt, expired_cal_opt) => {
 
     io.emit('calibrationData', calData);
 
-    if (expired_cal_opt) {
+    if (expired_cal_opt && newCal) {
       xDripAPS.postCalibration(newCal);
     }
   };

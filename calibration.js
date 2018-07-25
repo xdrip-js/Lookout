@@ -230,18 +230,35 @@ exports.calcGlucose = (sgv, calibration) => {
   return glucose;
 };
 
-exports.expiredCalibration = (bgChecks) => {
+exports.expiredCalibration = (bgChecks, sensorInsert) => {
   let calPairs = [];
   let calReturn = null;
+  let calPairsStart = 0;
 
   for (let i=0; i < bgChecks.length; ++i) {
-    if (bgChecks[i].type !== 'Unity') {
+    if ((bgChecks[i].type !== 'Unity') && (bgChecks[i].unfiltered)) {
       calPairs.push({
         unfiltered: bgChecks[i].unfiltered,
         glucose: bgChecks[i].glucose,
         readDate: bgChecks[i].date
       });
     }
+  }
+
+  // remove calPairs that are less than 12 hours from the sensor insert
+  if (calPairs.length > 0) {
+    for (let i=0; i < calPairs.length; ++i) {
+      if ((calPairs[i].readDate - sensorInsert.valueOf()) < 12*60*60000) {
+        calPairsStart = i+1;
+      }
+    }
+
+    // If they are all less than 12 hours from the sensor insert, save the latest one
+    if (calPairsStart >= calPairs.length) {
+      calPairsStart = calPairs.length - 1;
+    }
+
+    calPairs = calPairs.slice(calPairsStart);
   }
 
   // If we have at least 3 good pairs, use LSR

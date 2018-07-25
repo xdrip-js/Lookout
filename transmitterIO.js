@@ -9,12 +9,11 @@ const stats = require('./calcStats');
 
 var _ = require('lodash');
 
-module.exports = async (io, extend_sensor_opt, expired_cal_opt) => {
+module.exports = async (io, extend_sensor, expired_cal) => {
   let txId;
   let txFailedReads = 0;
   let txStatus = null;
   let pending = [];
-  let extend_sensor = extend_sensor_opt;
   let worker = null;
   let timerObj = null;
 
@@ -64,6 +63,7 @@ module.exports = async (io, extend_sensor_opt, expired_cal_opt) => {
 
   const processNewGlucose = async (sgv) => {
     let lastCal = null;
+    let lastExpiredCal = null;
     let glucoseHist = null;
     let sensorInsert = null;
     let sendSGV = true;
@@ -92,6 +92,11 @@ module.exports = async (io, extend_sensor_opt, expired_cal_opt) => {
     lastCal = await storage.getItem('g5Calibration')
       .catch(error => {
         console.log('Unable to obtain current NS Calibration' + error);
+      });
+
+    lastExpiredCal = await storage.getItem('expiredCal')
+      .catch(error => {
+        console.log('Unable to obtain current Expired Calibration' + error);
       });
 
     glucoseHist = await storage.getItem('glucoseHist')
@@ -132,7 +137,16 @@ module.exports = async (io, extend_sensor_opt, expired_cal_opt) => {
     if (!sgv.glucose && extend_sensor && lastCal && (lastCal.type !== 'Unity')) {
       sgv.glucose = calibration.calcGlucose(sgv, lastCal);
 
-      console.log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value');
+      console.log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value from G5 calibration algorithm');
+      console.log('Calibrated SGV: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered + ' slope: ' + lastCal.slope + ' intercept: ' + lastCal.intercept);
+
+      sgv.g5calibrated = false;
+    }
+
+    if (!sgv.glucose && expired_cal && lastExpiredCal) {
+      sgv.glucose = calibration.calcGlucose(sgv, lastExpiredCal);
+
+      console.log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value from expired calibration algorithm');
       console.log('Calibrated SGV: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered + ' slope: ' + lastCal.slope + ' intercept: ' + lastCal.intercept);
 
       sgv.g5calibrated = false;
@@ -167,7 +181,7 @@ module.exports = async (io, extend_sensor_opt, expired_cal_opt) => {
           console.log('Unable to store new NS Calibration');
         });
 
-      if (!expired_cal_opt) {
+      if (!expired_cal) {
         xDripAPS.postCalibration(newCal);
       }
     }
@@ -569,7 +583,7 @@ module.exports = async (io, extend_sensor_opt, expired_cal_opt) => {
 
     io.emit('calibrationData', calData);
 
-    if (expired_cal_opt && newCal) {
+    if (expired_cal && newCal) {
       xDripAPS.postCalibration(newCal);
     }
   };
@@ -680,7 +694,7 @@ module.exports = async (io, extend_sensor_opt, expired_cal_opt) => {
 
   txId = value || '500000';
 
-  syncNS(storage, expired_cal_opt);
+  syncNS(storage, expired_cal);
 
   listenToTransmitter(txId);
 

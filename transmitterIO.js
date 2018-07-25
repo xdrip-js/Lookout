@@ -141,6 +141,7 @@ module.exports = async (io, extend_sensor_opt, expired_cal_opt) => {
     if (sensorInsert && lastCal && (sensorInsert.diff(moment(lastCal.date).subtract(6, 'minutes')) > 0) && (lastCal.type !== 'Unity')) {
       console.log('Found sensor insert after latest calibration. Deleting calibration data.');
       await storage.del('g5Calibration');
+      await storage.del('expiredCal');
       await storage.del('bgChecks');
       await storage.del('glucoseHist');
 

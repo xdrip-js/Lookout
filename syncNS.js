@@ -169,8 +169,8 @@ const syncSGVs = async (storage) => {
     console.log('Most recent rig SGV - date: ' + moment(sgv.readDate).format() + ' sgv: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered);
   }
 
-  for (let nsIndex = 0; nsIndex < nsSGVs.length; ++nsIndex) {
-    let nsSGV = nsSGVs[nsIndex];
+  for (let i = 0; i < nsSGVs.length; ++i) {
+    let nsSGV = nsSGVs[i];
     let rigSGV = null;
 
     for (; rigIndex < rigSGVsLength; ++rigIndex) {
@@ -246,6 +246,7 @@ const syncBGChecks = async (storage, sensorInsert, expiredCal) => {
   let NSBGChecks = null;
   let nsQueryError = false;
   let calculateExpiredCal = false;
+  let sliceStart = 0;
 
   NSBGChecks = await xDripAPS.BGChecksSince(sensorInsert)
     .catch(error => {
@@ -275,6 +276,16 @@ const syncBGChecks = async (storage, sensorInsert, expiredCal) => {
   });
 
   NSBGChecks = _.sortBy(NSBGChecks, ['dateMills']);
+
+  sliceStart = 0;
+
+  for (let i = 0; i < NSBGChecks.length; ++i) {
+    if (moment(NSBGChecks[i].created_at).diff(sensorInsert) < 0) {
+      sliceStart = i+1;
+    }
+  }
+
+  NSBGChecks = NSBGChecks.slice(sliceStart);
 
   if (NSBGChecks.length > 0) {
     let bgCheck = NSBGChecks[NSBGChecks.length-1];
@@ -306,8 +317,8 @@ const syncBGChecks = async (storage, sensorInsert, expiredCal) => {
     console.log('Most recent Rig BG Check - date: ' + moment(bgCheck.date).format() + ' glucose: ' + bgCheck.glucose + ' unfiltered: ' + bgCheck.unfiltered);
   }
 
-  for (let nsIndex = 0; nsIndex < NSBGChecks.length; ++nsIndex) {
-    let nsValue = NSBGChecks[nsIndex];
+  for (let i = 0; i < NSBGChecks.length; ++i) {
+    let nsValue = NSBGChecks[i];
     let rigValue = null;
 
     for (; rigIndex < rigDataLength; ++rigIndex) {
@@ -339,7 +350,7 @@ const syncBGChecks = async (storage, sensorInsert, expiredCal) => {
 
   rigBGChecks = _.sortBy(rigBGChecks, ['dateMills']);
 
-  let sliceStart = 0;
+  sliceStart = 0;
 
   // Remove any cal data we have
   // that predates the last sensor insert

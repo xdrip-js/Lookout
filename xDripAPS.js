@@ -26,7 +26,7 @@ const _convertEntryToNS = (glucose) => {
 
   console.log('Glucose: ' + glucose.glucose + ' Trend: ' + Math.round(glucose.trend*10)/10 + ' direction: ' + direction);
 
-  return [{
+  return {
     'device': 'xdripjs://' + os.hostname(),
     'date': glucose.readDateMills,
     'dateString': new Date(glucose.readDateMills).toISOString(),
@@ -39,11 +39,11 @@ const _convertEntryToNS = (glucose) => {
     'noise': glucose.nsNoise,
     'trend': glucose.trend,
     'glucose': glucose.glucose
-  }];
+  };
 };
 
 const _convertEntryToxDrip = (glucose) => {
-  return [{
+  return {
     'readDate': glucose.date,
     'filtered': glucose.filtered,
     'unfiltered': glucose.unfiltered,
@@ -51,7 +51,7 @@ const _convertEntryToxDrip = (glucose) => {
     'nsNoise': glucose.noise,
     'trend': glucose.trend,
     'glucose': glucose.glucose
-  }];
+  };
 };
 
 
@@ -341,7 +341,7 @@ module.exports = () => {
   return {
     // API (public) functions
     post: (glucose, sendToXdrip) => {
-      let entry = _convertEntryToNS(glucose);
+      let entry = [ _convertEntryToNS(glucose) ];
 
       if (sendToXdrip) {
         postToXdrip(entry);
@@ -624,11 +624,15 @@ module.exports = () => {
     },
 
     convertEntryToNS: (glucose) => {
-      return _convertEntryToNS(glucose);
+      let retVal = _convertEntryToNS(glucose);
+
+      return retVal;
     },
 
     convertEntryToxDrip: (glucose) => {
-      return _convertEntryToxDrip(glucose);
+      let retVal = _convertEntryToxDrip(glucose);
+
+      return retVal;
     }
   };
 };

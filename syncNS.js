@@ -324,6 +324,8 @@ const syncBGChecks = async (storage, sensorInsert, expiredCal) => {
       };
 
       rigBGChecks.push(rigValue);
+
+      // we found a new BG check, trigger calculating new calibration
       calculateExpiredCal = true;
     }
   }

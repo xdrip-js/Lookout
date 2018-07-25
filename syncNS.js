@@ -8,10 +8,11 @@ const calibration = require('./calibration');
 
 var _ = require('lodash');
 
-const syncCal = async (storage, sensorInsert) => {
+const syncCal = async (storage, sensorInsert, expiredCal) => {
   let rigCal = null;
   let NSCal = null;
   let nsQueryError = false;
+  let rigCalStr = null;
 
   NSCal = await xDripAPS.latestCal()
     .catch(error => {
@@ -30,7 +31,13 @@ const syncCal = async (storage, sensorInsert) => {
 
   await storageLock.lockStorage();
 
-  rigCal = await storage.getItem('g5Calibration')
+  if (expiredCal) {
+    rigCalStr = 'expiredCal';
+  } else {
+    rigCalStr = 'g5Calibration';
+  }
+
+  rigCal = await storage.getItem(rigCalStr)
     .catch(error => {
       console.log('Error getting rig calibration: ' + error);
     });
@@ -46,7 +53,7 @@ const syncCal = async (storage, sensorInsert) => {
       if (sensorInsert.diff(moment(NSCal.date)) > 0) {
         console.log('Found sensor insert after latest NS calibration. Not updating local rig calibration');
       } else {
-        await storage.setItem('g5Calibration', NSCal)
+        await storage.setItem(rigCalStr, NSCal)
           .catch(() => {
             console.log('Unable to store NS Calibration');
           });
@@ -54,7 +61,7 @@ const syncCal = async (storage, sensorInsert) => {
     } else if (rigCal.date < NSCal.date) {
       console.log('NS calibration more recent than rig calibration NS Cal Date: ' + NSCal.date + ' Rig Cal Date: ' + rigCal.date);
 
-      storage.setItem('g5Calibration', NSCal)
+      storage.setItem(rigCalStr, NSCal)
         .catch(() => {
           console.log('Unable to store NS Calibration');
         });
@@ -480,7 +487,7 @@ const syncNS = async (storage, expiredCal) => {
   // call resolve so the Promise.all works as it
   // should and doesn't trigger early because of an error
   var syncCalPromise = new timeLimitedPromise(4*60*1000, async (resolve) => {
-    await syncCal(storage, sensorInsert);
+    await syncCal(storage, sensorInsert, expiredCal);
     resolve();
   });
 

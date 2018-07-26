@@ -47,7 +47,8 @@ const syncCal = async (storage, sensorInsert, expiredCal) => {
   }
 
   if (NSCal) {
-    if (!rigCal) {
+    // don't use NS cal if in expiredCal mode
+    if (!rigCal && (rigCalStr !== 'expiredCal')) {
       console.log('No rig calibration, storing NS calibration');
 
       if (sensorInsert.diff(moment(NSCal.date)) > 0) {
@@ -59,12 +60,25 @@ const syncCal = async (storage, sensorInsert, expiredCal) => {
           });
       }
     } else if (rigCal.date < NSCal.date) {
-      console.log('NS calibration more recent than rig calibration NS Cal Date: ' + NSCal.date + ' Rig Cal Date: ' + rigCal.date);
+      if (rigCalStr !== 'expiredCal') {
+        console.log('NS calibration more recent than rig calibration NS Cal Date: ' + NSCal.date + ' Rig Cal Date: ' + rigCal.date);
 
-      storage.setItem(rigCalStr, NSCal)
-        .catch(() => {
-          console.log('Unable to store NS Calibration');
-        });
+        storage.setItem(rigCalStr, NSCal)
+          .catch(() => {
+            console.log('Unable to store NS Calibration');
+          });
+      } else if ((Math.abs(rigCal.slope - NSCal.slope) > 0.001) || (Math.abs(rigCal.intercept - NSCal.intercept) > 0.001)) {
+        console.log('NS calibration more recent than rig calibration NS Cal Date: ' + NSCal.date + ' Rig Cal Date: ' + rigCal.date);
+        console.log('Currently operating in expired calibration mode - uploading expired cal record.');
+
+        // Upload a new calibration to NS to match the expiredCal we have
+        // Add 1 to the date so it becomes effective
+        rigCal.date = NSCal.date + 1;
+        xDripAPS.postCalibration(rigCal);
+      } else {
+        console.log('NS calibration more recent than rig calibration NS Cal Date: ' + NSCal.date + ' Rig Cal Date: ' + rigCal.date);
+        console.log('Currently operating in expired calibration mode - NS Cal matches expired cal.');
+      }
     } else if (rigCal.date > NSCal.date) {
       console.log('Rig calibration more recent than NS calibration NS Cal Date: ' + NSCal.date + ' Rig Cal Date: ' + rigCal.date);
       console.log('Upoading rig calibration');

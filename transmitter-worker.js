@@ -34,7 +34,7 @@ transmitter.on('batteryStatus', data => {
 });
 
 transmitter.on('sawTransmitter', data => {
-  process.send({msg: 'batteryStatus', data});
+  process.send({msg: 'sawTransmitter', data});
 });
 
 transmitter.on('disconnect', process.exit);

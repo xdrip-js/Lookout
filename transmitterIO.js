@@ -34,13 +34,14 @@ module.exports = async (io, extend_sensor_opt) => {
   };
 
   const rebootRig = () => {
+    console.log('============================\nRebooting rig due to too many read failures: ' + txFailedReads + ' failures.\n============================');
+
     cp.exec('reboot', (err, stdout, stderr) => {
       if (err) {
         console.log('Unable to reboot rig: - ' + err);
         return;
       }
 
-      console.log('Rebooting rig due to too man failures to read glucose from transmitter: ' + txFailedReads + ' failures.');
       console.log(`stdout: ${stdout}`);
       console.log(`stderr: ${stderr}`);
     });

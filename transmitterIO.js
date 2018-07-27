@@ -574,7 +574,7 @@ module.exports = async (io, extend_sensor_opt) => {
         const glucose = m.data;
         console.log('got glucose: ' + glucose.glucose + ' unfiltered: ' + glucose.unfiltered);
 
-        --txFailedReads;
+        txFailedReads = 0;
 
         processNewGlucose(glucose);
       } else if (m.msg == 'messageProcessed') {

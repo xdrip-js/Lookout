@@ -17,10 +17,13 @@ Lookout provides a rig-based interface to a Dexcom G5 CGM using Bluetooth Low En
 - report sensor state changes to Nightscout as announcements
 - extend sensor operation beyond sensor expiration (limitations described below)
 - report raw unfiltered values to Nightscout during warmup for trend visibility
+- report detail transmitter and device status to Nightscout (requires Nightscout xdrip-js plugin to be enabled)
 
 Lookout is intended for use with the unexpired G5 transmitters and relies on the official G5 calibration built into the transmitter to calibrate the raw sensor values.  Lookout provides the user with the ability to reset expired transmitters allowing them to be used past their normal expiration dates.
 
-Lookout can be run in parallel with a Dexcom receiver.  However, it cannot run in parallel with a Dexcom or xDrip app on a phone as only one of the devices will connect to a transmitter at a time. Swapping devices requires approximately 15 minutes of the transmitter being unable to communicate with the device it was talking with before it will begin to talk to a new device.
+Typically, Lookout can be run in parallel with a Dexcom receiver.  There are reported cases where Lookout did not interact well with a Dexcom receiver so YMMV.  It cannot run in parallel with a Dexcom or xDrip app on a phone as only one of the devices will connect to a transmitter at a time. Swapping devices requires approximately 15 minutes of the transmitter being unable to communicate with the device it was talking with before it will begin to talk to a new device.
+
+A failure mode on the rig can prevent Lookout from completing the interaction with the transmitter to successfully read glucose values.  Lookout will automatically reboot the rig if it connects to the transmitter, but is unable to successfully retrieve a glucose value 2 times in a row.
 
 ## Pre-installation
 You must update your rig's NodeJS based on https://github.com/xdrip-js/xdrip-js/wiki (only use the "Updating NodeJS" section of those instructions, you should not install xdrip-js manually, it will be installed in the next step as part of Lookout.)
@@ -133,4 +136,4 @@ sudo aptitude install nodejs-legacy
 ```
 
 ## Interaction with Dexcom Receiver
-YDMV, so test it until you are comfortable. A few people have run Lookout concurrently with their Dexcom receiver without perceiving negative impacts to either.
+YDMV, so test it until you are comfortable. A few people have run Lookout concurrently with their Dexcom receiver without perceiving negative impacts to either. Others have been succesfull.

@@ -125,7 +125,7 @@ describe('Test Calibration', function() {
       'stateString': 'Need calibration',
     };
 
-    let lastCal = calibration.calculateG5Calibration(null, 0, glucoseHist, currSGV);
+    let lastCal = calibration.calculateG5Calibration(null, 0, null, glucoseHist, currSGV);
 
     lastCal.slope.should.be.greaterThan(800);
     lastCal.slope.should.be.lessThan(900);
@@ -182,7 +182,7 @@ describe('Test Calibration', function() {
       'stateString': 'Need calibration',
     };
 
-    let lastCal = calibration.calculateG5Calibration(null, 0, glucoseHist, currSGV);
+    let lastCal = calibration.calculateG5Calibration(null, 0, null, glucoseHist, currSGV);
 
     lastCal.slope.should.be.greaterThan(1050);
     lastCal.slope.should.be.lessThan(1060);

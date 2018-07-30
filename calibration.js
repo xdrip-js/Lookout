@@ -173,7 +173,7 @@ exports.calculateG5Calibration = (lastCal, lastG5CalTime, sensorInsert, glucoseH
       // Only use up to 10 of the most recent suitable readings
       let sgv = glucoseHist[i];
 
-      if ((sgv.readDateMills > (lastG5CalTime + 12*60*1000)) && (!sensorInsert || (sgv.readDateMills > sensorInsert.valueof())) && (sgv.glucose < 300) && (sgv.glucose > 80) && sgv.g5calibrated) {
+      if ((sgv.readDateMills > (lastG5CalTime + 12*60*1000)) && (sgv.glucose < 300) && (sgv.glucose > 80) && sgv.g5calibrated && (!sensorInsert || (sgv.readDateMills > sensorInsert.valueof()))) {
         calPairs.unshift(sgv);
       }
     }

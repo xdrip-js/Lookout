@@ -27,7 +27,7 @@ const convertEntry = (glucose) => {
   console.log('Glucose: ' + glucose.glucose + ' Trend: ' + Math.round(glucose.trend*10)/10 + ' direction: ' + direction);
 
   return [{
-    'device': 'openaps://' + os.hostname(),
+    'device': 'xdripjs://' + os.hostname(),
     'date': glucose.readDate,
     'dateString': new Date(glucose.readDate).toISOString(),
     'sgv': glucose.glucose,
@@ -314,7 +314,7 @@ const queryBGChecksSince = (startTime) => {
 
 const convertBGCheck = (BGCheck) => {
   return [{
-    'enteredBy': 'openaps://' + os.hostname(),
+    'enteredBy': 'xdripjs://' + os.hostname(),
     'eventType': 'BG Check',
     'glucose': BGCheck.glucose,
     'glucoseType': 'Finger',
@@ -378,7 +378,7 @@ module.exports = () => {
     postAnnouncement: (message) => {
       const entry = [{
         'created_at': moment().format(),
-        'enteredBy': 'openaps://' + os.hostname(),
+        'enteredBy': 'xdripjs://' + os.hostname(),
         'eventType': 'Announcement',
         'notes': message
       }];
@@ -516,7 +516,7 @@ module.exports = () => {
     postCalibration: (calData) => {
 
       const entry = [{
-        'device': 'openaps://' + os.hostname(),
+        'device': 'xdripjs://' + os.hostname(),
         'type': 'cal',
         'date': calData.date,
         'dateString': new Date(calData.date).toISOString(),

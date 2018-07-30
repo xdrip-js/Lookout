@@ -170,7 +170,7 @@ exports.calculateG5Calibration = (lastCal, lastG5CalTime, glucoseHist, currSGV) 
     //   12 minutes after the last G5 calibration time (it takes up to 2 readings to reflect calibration updates)
     for (i=(glucoseHist.length-1); ((i >= 0) && (calPairs.length < 10)); --i) {
       // Only use up to 10 of the most recent suitable readings
-      let sgv = glucoseHist[glucoseHist.length-i-1];
+      let sgv = glucoseHist[i];
 
       if ((sgv.readDate > (lastG5CalTime + 12*60*1000)) && (sgv.glucose < 300) && (sgv.glucose > 80) && sgv.g5calibrated) {
         calPairs.unshift(sgv);

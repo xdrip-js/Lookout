@@ -59,7 +59,7 @@ const syncCal = async (storage, sensorInsert, expiredCal) => {
             console.log('Unable to store NS Calibration');
           });
       }
-    } else if (rigCal.date < NSCal.date) {
+    } else if (rigCal && (rigCal.date < NSCal.date)) {
       if (rigCalStr !== 'expiredCal') {
         console.log('NS calibration more recent than rig calibration NS Cal Date: ' + NSCal.date + ' Rig Cal Date: ' + rigCal.date);
 
@@ -79,7 +79,7 @@ const syncCal = async (storage, sensorInsert, expiredCal) => {
         console.log('NS calibration more recent than rig calibration NS Cal Date: ' + NSCal.date + ' Rig Cal Date: ' + rigCal.date);
         console.log('Currently operating in expired calibration mode - NS Cal matches expired cal.');
       }
-    } else if (rigCal.date > NSCal.date) {
+    } else if (rigCal && (rigCal.date > NSCal.date)) {
       console.log('Rig calibration more recent than NS calibration NS Cal Date: ' + NSCal.date + ' Rig Cal Date: ' + rigCal.date);
       console.log('Upoading rig calibration');
 

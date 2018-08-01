@@ -630,7 +630,9 @@ module.exports = async (io, extend_sensor, expired_cal) => {
       } else if (m.msg == 'glucose') {
         const glucose = m.data;
 
-        console.log('got glucose: ' + glucose.glucose + ' unfiltered: ' + glucose.unfiltered/1000);
+        glucose.readDateMills = moment(glucose.readDate).valueOf();
+
+        console.log('got glucose: ' + glucose.glucose + ' unfiltered: ' + (glucose.unfiltered/1000));
 
         // restart txFailedReads counter since we were successfull
         txFailedReads = 0;

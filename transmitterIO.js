@@ -504,6 +504,22 @@ module.exports = async (io, extend_sensor, expired_cal) => {
       }
     }
 
+    let sensorInsert = await xDripAPS.latestSensorInserted()
+      .catch(error => {
+        console.log('Unable to get latest sensor inserted record from NS: ' + error);
+      });
+
+    let valueTime = moment(calData.date);
+
+    if (sensorInsert && (sensorInsert.diff(valueTime) > 0)) {
+      // The calibration value pre-dates the NS sensorInsert record
+      // Bail out.
+
+      storageLock.unlockStorage();
+
+      return;
+    }
+
     rigSGVs = await storage.getItem('glucoseHist')
       .catch(error => {
         console.log('Error getting rig SGVs: ' + error);
@@ -529,8 +545,6 @@ module.exports = async (io, extend_sensor, expired_cal) => {
         storageLock.unlockStorage();
         return;
       }
-
-      let valueTime = moment(calData.date);
 
       // we can assume they are already sorted
       // since we sort before storing them
@@ -563,11 +577,6 @@ module.exports = async (io, extend_sensor, expired_cal) => {
     storage.setItem('bgChecks', bgChecks)
       .catch(error => {
         console.log('Error saving bgChecks: ' + error);
-      });
-
-    let sensorInsert = await xDripAPS.latestSensorInserted()
-      .catch(error => {
-        console.log('Unable to get latest sensor inserted record from NS: ' + error);
       });
 
     let newCal = calibration.expiredCalibration(bgChecks, sensorInsert);

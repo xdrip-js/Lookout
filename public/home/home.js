@@ -88,7 +88,7 @@ angular.module('AngularOpenAPS.home', [
           }
 
           let timeInterval = (Date.now() - glucoseBaseTime) / 1000 / 60 / 60;
-          console.log('shifting by ' + timeInterval);
+          //console.log('shifting by ' + timeInterval);
           for (const dataset of scope.data) {
             for (const point of dataset) {
               point.x -= timeInterval;

@@ -154,7 +154,7 @@ const syncSGVs = async () => {
     let rigSGV = null;
 
     for (; rigIndex < rigSGVsLength; ++rigIndex) {
-      let timeDiff = moment(nsSGV.dateString).diff(moment(rigSGVs[rigIndex].readDate));
+      let timeDiff = moment(nsSGV.date).diff(moment(rigSGVs[rigIndex].readDate));
 
       if (Math.abs(timeDiff) < 60*1000) {
         rigSGV = rigSGVs[rigIndex];
@@ -167,7 +167,7 @@ const syncSGVs = async () => {
 
     if (!rigSGV) {
       rigSGV = {
-        'readDate': moment(nsSGV.dateString).valueOf(),
+        'readDate': moment(nsSGV.date).valueOf(),
         'filtered': nsSGV.filtered,
         'unfiltered': nsSGV.unfiltered,
         'glucose': nsSGV.sgv,
@@ -202,7 +202,7 @@ const syncSGVs = async () => {
     }
 
     for (; nsIndex < nsSGVs.length; ++nsIndex) {
-      let timeDiff = moment(nsSGVs[nsIndex].dateString).diff(moment(rigSGV.readDate));
+      let timeDiff = moment(nsSGVs[nsIndex].date).diff(moment(rigSGV.readDate));
 
       if (Math.abs(timeDiff) < 60*1000) {
         nsSGV = nsSGVs[nsIndex];
@@ -335,9 +335,9 @@ const syncBGChecks = async (sensorInsert) => {
       }
 
       for (let i=0; i < NSSGVs.length; ++i) {
-        if (Math.abs(moment(NSSGVs[i].dateString).diff(valueTime)) < 5*60*1000) {
+        if (Math.abs(moment(NSSGVs[i].date).diff(valueTime)) < 5*60*1000) {
           rigValue.unfiltered = NSSGVs[i].unfiltered;
-          console.log('Adding unfiltered value to BGCheck at ' + valueTime.utc().format() + ': id = ' + NSSGVs[i]._id + ' time = ' + NSSGVs[i].dateString);
+          console.log('Adding unfiltered value to BGCheck at ' + valueTime.utc().format() + ': id = ' + NSSGVs[i]._id + ' time = ' + NSSGVs[i].date);
           break;
         }
       }

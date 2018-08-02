@@ -700,7 +700,7 @@ module.exports = async (io, extend_sensor_opt) => {
       pending.push({date: Date.now() - 3*60*60*1000, type: 'StopSensor'});
       io.emit('pending', pending);
     });
-    socket.on('calibration', glucose => {
+    socket.on('calibrate', glucose => {
       console.log('received calibration of ' + glucose);
       pending.push({date: Date.now(), type: 'CalibrateSensor', glucose});
       io.emit('pending', pending);

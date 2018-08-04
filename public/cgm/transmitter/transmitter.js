@@ -27,7 +27,7 @@ angular.module('AngularOpenAPS.cgm.transmitter', [
 
     const tick = function() {
       const activationDate = G5.transmitter.activationDate;
-      $scope.age = activationDate ? (Date.now() - activationDate) / 1000 : null;
+      $scope.age = activationDate ? (Date.now() - activationDate.valueOf()) / 1000 : null;
     };
     tick();
     $interval(tick, 1000);

@@ -15,8 +15,8 @@ describe('Test Calibration', function() {
       'state': 7,
       'readDate': 1528890389945,
       'readDateMills': 1528890389945,
-      'filtered': 161.056,
-      'unfiltered': 158.4,
+      'filtered': 161056,
+      'unfiltered': 158400,
       'glucose': 155,
       'trend': -3.9982585362819747,
       'canBeCalibrated': true,
@@ -29,8 +29,8 @@ describe('Test Calibration', function() {
       'state': 7,
       'readDate': 1528890689766,
       'readDateMills': 1528890689766,
-      'filtered': 159.36,
-      'unfiltered': 156.544,
+      'filtered': 159360,
+      'unfiltered': 156544,
       'glucose': 153,
       'trend': -3.9992534726850986,
       'canBeCalibrated': true,
@@ -43,8 +43,8 @@ describe('Test Calibration', function() {
       'state': 7,
       'readDate': 1528890989467,
       'readDateMills': 1528890989467,
-      'filtered': 157.504,
-      'unfiltered': 154.432,
+      'filtered': 157504,
+      'unfiltered': 154432,
       'glucose': 150,
       'trend': -4.667973699302471,
       'canBeCalibrated': true,
@@ -57,8 +57,8 @@ describe('Test Calibration', function() {
       'state': 7,
       'readDate': 1528891289963,
       'readDateMills': 1528891289963,
-      'filtered': 155.488,
-      'unfiltered': 151.872,
+      'filtered': 155488,
+      'unfiltered': 151872,
       'glucose': 147,
       'trend': -5.3332266687999565,
       'canBeCalibrated': true,
@@ -71,8 +71,8 @@ describe('Test Calibration', function() {
       'state': 7,
       'readDate': 1528891589664,
       'readDateMills': 1528891589664,
-      'filtered': 153.312,
-      'unfiltered': 149.984,
+      'filtered': 153312,
+      'unfiltered': 149984,
       'glucose': 145,
       'trend': -5.333937846289246,
       'canBeCalibrated': true,
@@ -85,8 +85,8 @@ describe('Test Calibration', function() {
       'state': 7,
       'readDate': 1528891889576,
       'readDateMills': 1528891889576,
-      'filtered': 151.008,
-      'unfiltered': 147.264,
+      'filtered': 151008,
+      'unfiltered': 147264,
       'glucose': 141,
       'trend': -5.999273421330083,
       'canBeCalibrated': true,
@@ -99,8 +99,8 @@ describe('Test Calibration', function() {
       'state': 7,
       'readDate': 1528892189592,
       'readDateMills': 1528892189592,
-      'filtered': 148.544,
-      'unfiltered': 144.256,
+      'filtered': 148544,
+      'unfiltered': 144256,
       'glucose': 138,
       'trend': -6.002474353316756,
       'canBeCalibrated': true,
@@ -115,8 +115,8 @@ describe('Test Calibration', function() {
       'state': 7,
       'readDate': 1528892489488,
       'readDateMills': 1528892489488,
-      'filtered': 145.92,
-      'unfiltered': 141.632,
+      'filtered': 145920,
+      'unfiltered': 141632,
       'glucose': 134,
       'trend': -7.334767687903413,
       'canBeCalibrated': true,
@@ -127,10 +127,10 @@ describe('Test Calibration', function() {
 
     let lastCal = calibration.calculateG5Calibration(null, 0, glucoseHist, currSGV);
 
-    lastCal.slope.should.be.greaterThan(.8);
-    lastCal.slope.should.be.lessThan(.9);
-    lastCal.intercept.should.be.greaterThan(33);
-    lastCal.intercept.should.be.lessThan(34);
+    lastCal.slope.should.be.greaterThan(800);
+    lastCal.slope.should.be.lessThan(900);
+    lastCal.intercept.should.be.greaterThan(33500);
+    lastCal.intercept.should.be.lessThan(33600);
     lastCal.type.should.equal('LeastSquaresRegression');
   });
 
@@ -142,8 +142,8 @@ describe('Test Calibration', function() {
       'state': 7,
       'readDate': 1528890389945,
       'readDateMills': 1528890389945,
-      'filtered': 161.056,
-      'unfiltered': 158.4,
+      'filtered': 161056,
+      'unfiltered': 158400,
       'glucose': 155,
       'trend': -3.9982585362819747,
       'canBeCalibrated': true,
@@ -156,8 +156,8 @@ describe('Test Calibration', function() {
       'state': 7,
       'readDate': 1528890689766,
       'readDateMills': 1528890689766,
-      'filtered': 159.36,
-      'unfiltered': 156.544,
+      'filtered': 159360,
+      'unfiltered': 156544,
       'glucose': 153,
       'trend': -3.9992534726850986,
       'canBeCalibrated': true,
@@ -172,8 +172,8 @@ describe('Test Calibration', function() {
       'state': 7,
       'readDate': 1528892489488,
       'readDateMills': 1528892489488,
-      'filtered': 145.92,
-      'unfiltered': 141.632,
+      'filtered': 145920,
+      'unfiltered': 141632,
       'glucose': 134,
       'trend': -7.334767687903413,
       'canBeCalibrated': true,
@@ -184,8 +184,8 @@ describe('Test Calibration', function() {
 
     let lastCal = calibration.calculateG5Calibration(null, 0, glucoseHist, currSGV);
 
-    lastCal.slope.should.be.greaterThan(1.05);
-    lastCal.slope.should.be.lessThan(1.06);
+    lastCal.slope.should.be.greaterThan(1050);
+    lastCal.slope.should.be.lessThan(1060);
     lastCal.intercept.should.equal(0);
     lastCal.type.should.equal('SinglePoint');
   });
@@ -201,8 +201,8 @@ describe('Test Stats', function() {
       'state': 7,
       'readDate': 1528890389945,
       'readDateMills': 1528890389945,
-      'filtered': 161.056,
-      'unfiltered': 158.4,
+      'filtered': 161056,
+      'unfiltered': 158400,
       'glucose': 155,
       'trend': -3.9982585362819747,
       'canBeCalibrated': true,
@@ -215,8 +215,8 @@ describe('Test Stats', function() {
       'state': 7,
       'readDate': 1528890689766,
       'readDateMills': 1528890689766,
-      'filtered': 159.36,
-      'unfiltered': 156.544,
+      'filtered': 159360,
+      'unfiltered': 156544,
       'glucose': 153,
       'trend': -3.9992534726850986,
       'canBeCalibrated': true,
@@ -229,8 +229,8 @@ describe('Test Stats', function() {
       'state': 7,
       'readDate': 1528890989467,
       'readDateMills': 1528890989467,
-      'filtered': 157.504,
-      'unfiltered': 154.432,
+      'filtered': 157504,
+      'unfiltered': 154432,
       'glucose': 150,
       'trend': -4.667973699302471,
       'canBeCalibrated': true,
@@ -243,8 +243,8 @@ describe('Test Stats', function() {
       'state': 7,
       'readDate': 1528891289963,
       'readDateMills': 1528891289963,
-      'filtered': 155.488,
-      'unfiltered': 151.872,
+      'filtered': 155488,
+      'unfiltered': 151872,
       'glucose': 147,
       'trend': -5.3332266687999565,
       'canBeCalibrated': true,
@@ -257,8 +257,8 @@ describe('Test Stats', function() {
       'state': 7,
       'readDate': 1528891589664,
       'readDateMills': 1528891589664,
-      'filtered': 153.312,
-      'unfiltered': 149.984,
+      'filtered': 153312,
+      'unfiltered': 149984,
       'glucose': 145,
       'trend': -5.333937846289246,
       'canBeCalibrated': true,
@@ -271,8 +271,8 @@ describe('Test Stats', function() {
       'state': 7,
       'readDate': 1528891889576,
       'readDateMills': 1528891889576,
-      'filtered': 151.008,
-      'unfiltered': 147.264,
+      'filtered': 151008,
+      'unfiltered': 147264,
       'glucose': 141,
       'trend': -5.999273421330083,
       'canBeCalibrated': true,
@@ -285,8 +285,8 @@ describe('Test Stats', function() {
       'state': 7,
       'readDate': 1528892189592,
       'readDateMills': 1528892189592,
-      'filtered': 148.544,
-      'unfiltered': 144.256,
+      'filtered': 148544,
+      'unfiltered': 144256,
       'glucose': 138,
       'trend': -6.002474353316756,
       'canBeCalibrated': true,
@@ -301,8 +301,8 @@ describe('Test Stats', function() {
       'state': 7,
       'readDate': 1528892489488,
       'readDateMills': 1528892489488,
-      'filtered': 145.92,
-      'unfiltered': 141.632,
+      'filtered': 145920,
+      'unfiltered': 141632,
       'glucose': 134,
       'trend': -7.334767687903413,
       'canBeCalibrated': true,
@@ -320,8 +320,8 @@ describe('Test Stats', function() {
 
     let noise = stats.calcSensorNoise(glucoseHist, lastCal);
 
-    noise.should.be.greaterThan(0.02);
-    noise.should.be.lessThan(0.03);
+    noise.should.be.greaterThan(0.15);
+    noise.should.be.lessThan(0.16);
   });
 
   it('should not calculate Sensor Noise if not enough records', function() {
@@ -332,8 +332,8 @@ describe('Test Stats', function() {
       'state': 7,
       'readDate': 1528890389945,
       'readDateMills': 1528890389945,
-      'filtered': 161.056,
-      'unfiltered': 158.4,
+      'filtered': 161056,
+      'unfiltered': 158400,
       'glucose': 155,
       'trend': -3.9982585362819747,
       'canBeCalibrated': true,
@@ -346,8 +346,8 @@ describe('Test Stats', function() {
       'state': 7,
       'readDate': 1528890689766,
       'readDateMills': 1528890689766,
-      'filtered': 159.36,
-      'unfiltered': 156.544,
+      'filtered': 159360,
+      'unfiltered': 156544,
       'glucose': 153,
       'trend': -3.9992534726850986,
       'canBeCalibrated': true,
@@ -362,8 +362,8 @@ describe('Test Stats', function() {
       'state': 7,
       'readDate': 1528892489488,
       'readDateMills': 1528892489488,
-      'filtered': 145.92,
-      'unfiltered': 141.632,
+      'filtered': 145920,
+      'unfiltered': 141632,
       'glucose': 134,
       'trend': -7.334767687903413,
       'canBeCalibrated': true,

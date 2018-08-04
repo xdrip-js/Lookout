@@ -30,7 +30,7 @@ angular.module('AngularOpenAPS.cgm.sensor', [
 
     const tick = function() {
       const sessionStartDate = G5.sensor.sessionStartDate;
-      $scope.age = sessionStartDate ? (Date.now() - sessionStartDate) / 1000 : null;
+      $scope.age = sessionStartDate ? (Date.now() - sessionStartDate.valueOf()) / 1000 : null;
     };
     tick();
     $interval(tick, 1000);

@@ -43,7 +43,7 @@ angular.module('AngularOpenAPS.cgm', [
         return version;
       },
       get activationDate() {
-        return glucose ? glucose.transmitterStartDate : null;
+        return glucose ? moment(glucose.transmitterStartDate) : null;
       },
       get status() {
         return glucose ? glucose.status : null;
@@ -57,7 +57,7 @@ angular.module('AngularOpenAPS.cgm', [
     this.sensor = {
     // properties
       get sessionStartDate() {
-        return glucose ? glucose.sessionStartDate : null;
+        return glucose ? moment(glucose.sessionStartDate) : null;
       },
       get glucose() {
       // only return the properties glucose, filtered, readDate and trend

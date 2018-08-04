@@ -556,7 +556,7 @@ module.exports = async (io, extend_sensor, expired_cal) => {
         // and the current SGV is before valueTime
         SGVBeforeTime = rigSGVs[i].readDate;
         SGVAfterTime = rigSGVs[i+1].readDate;
-        if (((valueTime.valueOf() - SGVBeforeTime) >= 0) && ((SGVAfterTime - valueTime.valueOf()) >= 0)) {
+        if ((valueTime.valueOf() > SGVBeforeTime) && (SGVAfterTime > valueTime.valueOf())) {
           SGVBefore = rigSGVs[i];
           SGVAfter = rigSGVs[i+1];
           break;

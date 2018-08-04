@@ -412,7 +412,7 @@ const syncBGChecks = async (storage, sensorInsert, expiredCal) => {
         // and the current SGV is before valueTime
         SGVBeforeTime = NSSGVs[i].dateMills;
         SGVAfterTime = NSSGVs[i+1].dateMills;
-        if (((valueTime - SGVBeforeTime) >= 0) && ((SGVAfterTime - valueTime) >= 0)) {
+        if ((SGVBeforeTime < valueTime) && (SGVAfterTime > valueTime)) {
           SGVBefore = NSSGVs[i];
           SGVAfter = NSSGVs[i+1];
           break;
@@ -420,9 +420,9 @@ const syncBGChecks = async (storage, sensorInsert, expiredCal) => {
       }
 
       if (SGVBefore && SGVAfter) {
-        rigValue.unfiltered = calibration.interpolateUnfiltered(xDripAPS.convertEntryToxDrip(SGVBefore), xDripAPS.convertEntryToxDrip(SGVAfter), valueTime);
+        rigValue.unfiltered = calibration.interpolateUnfiltered(xDripAPS.convertEntryToxDrip(SGVBefore), xDripAPS.convertEntryToxDrip(SGVAfter), moment(valueTime));
       } else {
-        console.log('Unable to find bounding SGVs for BG Check at ' + valueTime.format());
+        console.log('Unable to find bounding SGVs for BG Check at ' + moment(valueTime).format());
       }
     }
   }

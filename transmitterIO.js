@@ -82,6 +82,7 @@ module.exports = async (io, extend_sensor_opt) => {
     sgv.g5calibrated = true;
     sgv.stateString = stateString(sgv.state);
     sgv.stateStringShort = stateStringShort(sgv.state);
+    sgv.readDateMills = moment(sgv.readDate).valueOf();
 
     sgv.txStatusString = txStatusString(sgv.status);
     sgv.txStatusStringShort = txStatusStringShort(sgv.status);
@@ -109,7 +110,7 @@ module.exports = async (io, extend_sensor_opt) => {
     let lastG5Cal = getLastG5Cal(bgChecks);
 
     if (lastG5Cal) {
-      lastG5CalTime = lastG5Cal.date;
+      lastG5CalTime = lastG5Cal.dateMills;
     }
 
     if (!glucoseHist) {
@@ -216,7 +217,7 @@ module.exports = async (io, extend_sensor_opt) => {
 
     let lastG5Cal = getLastG5Cal(bgChecks);
 
-    let lastG5CalTime = (lastG5Cal && lastG5Cal.date) || null;
+    let lastG5CalTime = (lastG5Cal && lastG5Cal.dateMills) || null;
 
     xDripAPS.postStatus(txId, sgv, txStatus, lastCal, lastG5CalTime);
   };
@@ -450,7 +451,9 @@ module.exports = async (io, extend_sensor_opt) => {
     let matchingSGV = null;
     let bgChecks = null;
 
-    console.log('Last calibration: ' + Math.round((Date.now() - calData.date)/1000/60/60*10)/10 + ' hours ago');
+    calData.dateMills = moment(calData.date).valueOf();
+
+    console.log('Last calibration: ' + Math.round((Date.now() - calData.dateMills)/1000/60/60*10)/10 + ' hours ago');
 
     if (calData.glucose > 400 || calData.glucose < 20) {
       console.log('G5 Last Calibration Data glucose out of range - ignoring');
@@ -471,7 +474,7 @@ module.exports = async (io, extend_sensor_opt) => {
     }
 
     for (let i = (bgChecks.length-1); i >= 0; --i) {
-      if (Math.abs(bgChecks[i].date - calData.date) < 2*60*1000) {
+      if (Math.abs(bgChecks[i].dateMills - calData.dateMills) < 2*60*1000) {
         // The G5 transmitter report varies the time around
         // the real time a little between read events.
         // If they are within two minutes, assume it's the same
@@ -508,7 +511,7 @@ module.exports = async (io, extend_sensor_opt) => {
       // since we sort before storing them
 
       matchingSGV = _.find(rigSGVs, (o) => {
-        return o.readDateMills > calData.date;
+        return o.readDateMills > calData.dateMills;
       });
 
       if (matchingSGV) {
@@ -521,7 +524,7 @@ module.exports = async (io, extend_sensor_opt) => {
 
     bgChecks.push(calData);
 
-    bgChecks = _.sortBy(bgChecks, ['date']);
+    bgChecks = _.sortBy(bgChecks, ['dateMills']);
 
     storage.setItem('bgChecks', bgChecks)
       .catch(error => {
@@ -567,8 +570,6 @@ module.exports = async (io, extend_sensor_opt) => {
         io.emit('pending', pending);
       } else if (m.msg == 'glucose') {
         const glucose = m.data;
-
-        glucose.readDateMills = moment(glucose.readDate).valueOf();
 
         console.log('got glucose: ' + glucose.glucose + ' unfiltered: ' + glucose.unfiltered/1000);
 

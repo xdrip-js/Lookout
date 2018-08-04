@@ -257,15 +257,20 @@ const syncBGChecks = async (sensorInsert) => {
 
   console.log('SyncNS NS BG Checks: ' + NSBGChecks.length);
 
-  for (let nsIndex = 0; nsIndex < NSBGChecks.length; ++nsIndex) {
-    NSBGChecks[nsIndex].created_at = moment(NSBGChecks[nsIndex].created_at).format();
-  }
+  NSBGChecks = NSBGChecks.map((bgCheck) => {
+    let timeVal = moment(bgCheck.created_at);
 
-  NSBGChecks = _.sortBy(NSBGChecks, ['created_at']);
+    bgCheck.created_at = timeVal.format();
+    bgCheck.dateMills = timeVal.valueOf();
+
+    return bgCheck;
+  });
+
+  NSBGChecks = _.sortBy(NSBGChecks, ['dateMills']);
 
   if (NSBGChecks.length > 0) {
     let bgCheck = NSBGChecks[NSBGChecks.length-1];
-    console.log('Most recent NS BG Check - date: ' + moment(bgCheck.create_at).format() + ' type: ' + bgCheck.glucoseType + ' glucose: ' + bgCheck.glucose);
+    console.log('Most recent NS BG Check - date: ' + bgCheck.created_at + ' type: ' + bgCheck.glucoseType + ' glucose: ' + bgCheck.glucose);
   }
 
   await storageLock.lockStorage();
@@ -278,6 +283,12 @@ const syncBGChecks = async (sensorInsert) => {
   if (!rigBGChecks || !Array.isArray(rigBGChecks)) {
     rigBGChecks = [];
   }
+
+  rigBGChecks = rigBGChecks.map((bgCheck) => {
+    bgCheck.dateMills = moment(bgCheck.date).valueOf();
+
+    return bgCheck;
+  });
 
   let rigDataLength = rigBGChecks.length;
   let rigIndex = 0;
@@ -292,7 +303,7 @@ const syncBGChecks = async (sensorInsert) => {
     let rigValue = null;
 
     for (; rigIndex < rigDataLength; ++rigIndex) {
-      let timeDiff = moment(nsValue.created_at).diff(moment(rigBGChecks[rigIndex].date));
+      let timeDiff = nsValue.dateMills - rigBGChecks[rigIndex].dateMills;
 
       if (Math.abs(timeDiff) < 60*1000) {
         rigValue = rigBGChecks[rigIndex];
@@ -306,6 +317,7 @@ const syncBGChecks = async (sensorInsert) => {
     if (!rigValue) {
       rigValue = {
         'date': moment(nsValue.created_at).valueOf(),
+        'dateMills': nsValue.dateMills,
         'glucose': nsValue.glucose,
         'type': 'NS'
       };
@@ -314,14 +326,14 @@ const syncBGChecks = async (sensorInsert) => {
     }
   }
 
-  rigBGChecks = _.sortBy(rigBGChecks, ['date']);
+  rigBGChecks = _.sortBy(rigBGChecks, ['dateMills']);
 
   let sliceStart = 0;
 
   // Remove any cal data we have
   // that predates the last sensor insert
   for (let i=0; i < rigBGChecks.length; ++i) {
-    if (moment(rigBGChecks[i].date).diff(sensorInsert) < 0) {
+    if (rigBGChecks[i].dateMills < sensorInsert.valueOf()) {
       sliceStart = i+1;
     }
   }
@@ -334,9 +346,9 @@ const syncBGChecks = async (sensorInsert) => {
 
     if (!('unfiltered' in rigValue) || !rigValue.unfiltered) {
       let NSSGVs = null;
-      let valueTime = moment(rigValue.date);
-      let timeStart = moment(rigValue.date).subtract(6, 'minutes');
-      let timeEnd = moment(rigValue.date).add(6, 'minutes');
+      let valueTime = rigValue.dateMills;
+      let timeStart = moment(rigValue.dateMills).subtract(6, 'minutes');
+      let timeEnd = moment(rigValue.dateMills).add(6, 'minutes');
 
       // Get NS SGV immediately before BG Check
       NSSGVs = await xDripAPS.SGVsBetween(timeStart, timeEnd, 5)
@@ -349,9 +361,9 @@ const syncBGChecks = async (sensorInsert) => {
       }
 
       for (let i=0; i < NSSGVs.length; ++i) {
-        if (Math.abs(moment(NSSGVs[i].date).diff(valueTime)) < 5*60*1000) {
+        if (Math.abs(NSSGVs[i].dateMills - valueTime) < 5*60*1000) {
           rigValue.unfiltered = NSSGVs[i].unfiltered;
-          console.log('Adding unfiltered value to BGCheck at ' + valueTime.utc().format() + ': id = ' + NSSGVs[i]._id + ' time = ' + NSSGVs[i].date);
+          console.log('Adding unfiltered value to BGCheck at ' + moment(valueTime).utc().format() + ': id = ' + NSSGVs[i]._id + ' time = ' + NSSGVs[i].date);
           break;
         }
       }
@@ -372,7 +384,7 @@ const syncBGChecks = async (sensorInsert) => {
     let nsValue = null;
  
     for (; nsIndex < NSBGChecks.length; ++nsIndex) {
-      let timeDiff = moment(NSBGChecks[nsIndex].created_at).diff(moment(rigValue.date));
+      let timeDiff = NSBGChecks[nsIndex].dateMills - rigValue.dateMills;
 
       if (Math.abs(timeDiff) < 60*1000) {
         nsValue = NSBGChecks[nsIndex];

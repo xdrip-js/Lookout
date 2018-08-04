@@ -88,11 +88,6 @@ module.exports = async (io, extend_sensor_opt) => {
 
     console.log('sensor state: ' + sgv.stateString);
 
-    if (sgv.unfiltered > 10000) {
-      sgv.unfiltered = sgv.unfiltered / 1000.0;
-      sgv.filtered = sgv.filtered / 1000.0;
-    }
-
     lastCal = await storage.getItem('g5Calibration')
       .catch(error => {
         console.log('Unable to obtain current NS Calibration' + error);
@@ -152,7 +147,7 @@ module.exports = async (io, extend_sensor_opt) => {
         date: Date.now(),
         scale: 1,
         intercept: 0,
-        slope: 1,
+        slope: 1000,
         type: 'Unity'
       };       
 
@@ -575,7 +570,7 @@ module.exports = async (io, extend_sensor_opt) => {
 
         glucose.readDateMills = moment(glucose.readDate).valueOf();
 
-        console.log('got glucose: ' + glucose.glucose + ' unfiltered: ' + glucose.unfiltered);
+        console.log('got glucose: ' + glucose.glucose + ' unfiltered: ' + glucose.unfiltered/1000);
 
         // restart txFailedReads counter since we were successfull
         txFailedReads = 0;

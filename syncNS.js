@@ -360,6 +360,11 @@ const syncBGChecks = async (sensorInsert) => {
         NSSGVs = [];
       }
 
+      NSSGVs = NSSGVs.map((sgv) => {
+        sgv.dateMills = moment(sgv.date).valueOf();
+        return sgv;
+      });
+
       for (let i=0; i < NSSGVs.length; ++i) {
         if (Math.abs(NSSGVs[i].dateMills - valueTime) < 5*60*1000) {
           rigValue.unfiltered = NSSGVs[i].unfiltered;

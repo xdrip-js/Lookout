@@ -106,7 +106,12 @@ const syncSGVs = async () => {
 
   console.log('SyncNS NS SGVs: ' + nsSGVs.length);
 
-  nsSGVs = _.sortBy(nsSGVs, ['date']);
+  nsSGVs = nsSGVs.map((sgv) => {
+    sgv.dateMills = moment(sgv.date).valueOf();
+    return sgv;
+  });
+
+  nsSGVs = _.sortBy(nsSGVs, ['dateMills']);
 
   if (nsSGVs.length > 0) {
     let sgv = nsSGVs[nsSGVs.length-1];
@@ -123,6 +128,14 @@ const syncSGVs = async () => {
   if (!rigSGVs) {
     rigSGVs = [];
   }
+
+  rigSGVs = rigSGVs.map((sgv) => {
+    if (!sgv.hasOwnProperty('readDateMills')) {
+      sgv.readDateMills = moment(sgv.readDate).valueOf();
+    }
+
+    return sgv;
+  });
 
   let minDate = moment().subtract(24, 'hours').valueOf();
   let sliceStart = 0;
@@ -154,7 +167,7 @@ const syncSGVs = async () => {
     let rigSGV = null;
 
     for (; rigIndex < rigSGVsLength; ++rigIndex) {
-      let timeDiff = moment(nsSGV.date).valueOf() - rigSGVs[rigIndex].readDateMills;
+      let timeDiff = nsSGV.dateMills - rigSGVs[rigIndex].readDateMills;
 
       if (Math.abs(timeDiff) < 60*1000) {
         rigSGV = rigSGVs[rigIndex];
@@ -168,7 +181,7 @@ const syncSGVs = async () => {
     if (!rigSGV) {
       rigSGV = {
         'readDate': nsSGV.dateString,
-        'readDateMills': moment(nsSGV.date).valueOf(),
+        'readDateMills': nsSGV.dateMills,
         'filtered': nsSGV.filtered,
         'unfiltered': nsSGV.unfiltered,
         'glucose': nsSGV.sgv,
@@ -203,7 +216,7 @@ const syncSGVs = async () => {
     }
 
     for (; nsIndex < nsSGVs.length; ++nsIndex) {
-      let timeDiff = moment(nsSGVs[nsIndex].date) - rigSGV.readDateMills;
+      let timeDiff = nsSGVs[nsIndex].dateMills - rigSGV.readDateMills;
 
       if (Math.abs(timeDiff) < 60*1000) {
         nsSGV = nsSGVs[nsIndex];

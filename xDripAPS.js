@@ -28,8 +28,8 @@ const convertEntry = (glucose) => {
 
   return [{
     'device': 'xdripjs://' + os.hostname(),
-    'date': glucose.readDate,
-    'dateString': new Date(glucose.readDate).toISOString(),
+    'date': glucose.readDateMills,
+    'dateString': new Date(glucose.readDateMills).toISOString(),
     'sgv': glucose.glucose,
     'direction': direction,
     'type': 'sgv',
@@ -427,7 +427,7 @@ module.exports = () => {
           'txStatusStringShort': sgv.txStatusStringShort,
           'txActivation': sgv.transmitterStartDate,
           'mode': 'not expired',  // 'expired' or 'not expired'
-          'timestamp': sgv.readDate,
+          'timestamp': sgv.readDateMills,
           'rssi': sgv.rssi,
           'unfiltered': sgv.unfiltered,
           'filtered': sgv.filtered,

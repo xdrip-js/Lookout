@@ -124,12 +124,12 @@ const syncSGVs = async () => {
     rigSGVs = [];
   }
 
-  let minDate = moment().subtract(24, 'hours');
+  let minDate = moment().subtract(24, 'hours').valueOf();
   let sliceStart = 0;
 
   // only review the last 24 hours of glucose
   for (let i=0; i < rigSGVs.length; ++i) {
-    if (moment(rigSGVs[i].readDate).diff(minDate) < 0) {
+    if (rigSGVs[i].readDateMills < minDate) {
       sliceStart = i+1;
     }
   }
@@ -154,7 +154,7 @@ const syncSGVs = async () => {
     let rigSGV = null;
 
     for (; rigIndex < rigSGVsLength; ++rigIndex) {
-      let timeDiff = moment(nsSGV.date).diff(moment(rigSGVs[rigIndex].readDate));
+      let timeDiff = moment(nsSGV.date).valueOf() - rigSGVs[rigIndex].readDateMills;
 
       if (Math.abs(timeDiff) < 60*1000) {
         rigSGV = rigSGVs[rigIndex];
@@ -167,7 +167,8 @@ const syncSGVs = async () => {
 
     if (!rigSGV) {
       rigSGV = {
-        'readDate': moment(nsSGV.date).valueOf(),
+        'readDate': nsSGV.dateString,
+        'readDateMills': moment(nsSGV.date).valueOf(),
         'filtered': nsSGV.filtered,
         'unfiltered': nsSGV.unfiltered,
         'glucose': nsSGV.sgv,
@@ -181,7 +182,7 @@ const syncSGVs = async () => {
     }
   }
 
-  rigSGVs = _.sortBy(rigSGVs, ['readDate']);
+  rigSGVs = _.sortBy(rigSGVs, ['readDateMills']);
 
   await storage.setItem('glucoseHist', rigSGVs)
     .catch((err) => {
@@ -202,7 +203,7 @@ const syncSGVs = async () => {
     }
 
     for (; nsIndex < nsSGVs.length; ++nsIndex) {
-      let timeDiff = moment(nsSGVs[nsIndex].date).diff(moment(rigSGV.readDate));
+      let timeDiff = moment(nsSGVs[nsIndex].date) - rigSGV.readDateMills;
 
       if (Math.abs(timeDiff) < 60*1000) {
         nsSGV = nsSGVs[nsIndex];

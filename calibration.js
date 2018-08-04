@@ -19,7 +19,7 @@ var exports = module.exports = {};
 // calibrationPairs has three values for each array element:
 //   glucose => the "true" glucose value for the pair
 //   unfiltered => the sensor's unfiltered glucose value for the pair
-//   readDate => the sensor's read date for the pair in ms since 1/1/1970 00:00
+//   readDateMills => the sensor's read date for the pair in ms since 1/1/1970 00:00
 const lsrCalibration = (calibrationPairs) => {
   var sumX=0;
   var sumY=0;
@@ -66,10 +66,10 @@ const lsrCalibration = (calibrationPairs) => {
   stddevY = Math.sqrt(sumSqDiffY / (n-1));
 
 
-  var firstDate=calibrationPairs[0].readDate;
+  var firstDate=calibrationPairs[0].readDateMills;
 
   for (let i=0; i<n; i++) {
-    tarr.push(calibrationPairs[i].readDate - firstDate); 
+    tarr.push(calibrationPairs[i].readDateMills - firstDate); 
   }
 
   var multiplier=1;
@@ -84,7 +84,7 @@ const lsrCalibration = (calibrationPairs) => {
       }
     }
 
-    console.log('Calibration - record ' + i + ', ' + new Date(calibrationPairs[i].readDate) + ', weighted multiplier=' + multiplier);
+    console.log('Calibration - record ' + i + ', ' + new Date(calibrationPairs[i].readDateMills) + ', weighted multiplier=' + multiplier);
  
     sumXY=(sumXY + calibrationPairs[i].glucose * calibrationPairs[i].unfiltered) * multiplier;
     sumXSq=(sumXSq + calibrationPairs[i].glucose * calibrationPairs[i].glucose) * multiplier;
@@ -172,7 +172,7 @@ exports.calculateG5Calibration = (lastCal, lastG5CalTime, glucoseHist, currSGV) 
       // Only use up to 10 of the most recent suitable readings
       let sgv = glucoseHist[i];
 
-      if ((sgv.readDate > (lastG5CalTime + 12*60*1000)) && (sgv.glucose < 300) && (sgv.glucose > 80) && sgv.g5calibrated) {
+      if ((sgv.readDateMills > (lastG5CalTime + 12*60*1000)) && (sgv.glucose < 300) && (sgv.glucose > 80) && sgv.g5calibrated) {
         calPairs.unshift(sgv);
       }
     }

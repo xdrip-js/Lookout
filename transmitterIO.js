@@ -229,16 +229,16 @@ module.exports = async (io, extend_sensor_opt) => {
   // Store the last hour of glucose readings
   const storeNewGlucose = async (glucoseHist) => {
 
-    glucoseHist = _.sortBy(glucoseHist, ['readDate']);
+    glucoseHist = _.sortBy(glucoseHist, ['readDateMills']);
 
-    var minDate = moment().subtract(24, 'hours');
+    var minDate = moment().subtract(24, 'hours').valueOf();
     var sliceStart = 0;
 
     // store the last 24 hours of glucose
     // history is used to determine trend and noise values
     // and back fill nightscout.
     for (var i=0; i < glucoseHist.length; ++i) {
-      if (moment(glucoseHist[i].readDate).diff(minDate) < 0) {
+      if (glucoseHist[i].readDateMills < minDate) {
         sliceStart = i+1;
       }
     }
@@ -513,7 +513,7 @@ module.exports = async (io, extend_sensor_opt) => {
       // since we sort before storing them
 
       matchingSGV = _.find(rigSGVs, (o) => {
-        return o.readDate > calData.date;
+        return o.readDateMills > calData.date;
       });
 
       if (matchingSGV) {
@@ -572,8 +572,12 @@ module.exports = async (io, extend_sensor_opt) => {
         io.emit('pending', pending);
       } else if (m.msg == 'glucose') {
         const glucose = m.data;
+
+        glucose.readDateMills = moment(glucose.readDate).valueOf();
+
         console.log('got glucose: ' + glucose.glucose + ' unfiltered: ' + glucose.unfiltered);
 
+        // restart txFailedReads counter since we were successfull
         txFailedReads = 0;
 
         processNewGlucose(glucose);
@@ -586,6 +590,8 @@ module.exports = async (io, extend_sensor_opt) => {
       } else if (m.msg == 'batteryStatus') {
         processBatteryStatus(m.data);
       } else if (m.msg == 'sawTransmitter') {
+        // increment failed reads counter so we know how many
+        // times we saw the transmitter
         ++txFailedReads;
       }
     });
@@ -663,7 +669,7 @@ module.exports = async (io, extend_sensor_opt) => {
     if (glucoseHist) {
       socket.emit('glucose', glucoseHist[glucoseHist.length - 1]);
       socket.emit('glucoseHistory', glucoseHist.map((sgv) => {
-        return { readDate: sgv.readDate, glucose: sgv.glucose };
+        return { readDate: sgv.readDateMills, glucose: sgv.glucose };
       }));
     }
 

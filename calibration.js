@@ -183,7 +183,7 @@ exports.calculateG5Calibration = (lastCal, lastG5CalTime, glucoseHist, currSGV) 
     if (((calErr > 5) && calPairs.length > 3) || (calPairs.length > 8)) {
       let calResult = lsrCalibration(calPairs);
 
-      if ((calResult.slope > 12.5) || (calResult.slope < 0.45)) {
+      if ((calResult.slope > 12500) || (calResult.slope < 450)) {
         // wait until the next opportunity
         console.log('Slope out of range to calibrate: ' + calResult.slope);
         return null;

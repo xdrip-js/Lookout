@@ -11,7 +11,7 @@ angular.module('AngularOpenAPS', [
   'mobile-angular-ui.core.sharedState',
   'btford.socket-io',
   'chart.js',
-  'angularMoment.js'
+  'angularMoment'
 ])
 
   .config(function($locationProvider) {

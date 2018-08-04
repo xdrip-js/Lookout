@@ -79,7 +79,7 @@ exports.calcSensorNoise = (glucoseHist, lastCal) => {
       // this will provide a noise calculation that is independent of calibration jumps
       sgvArr.push({
         'glucose': calibration.calcGlucose(glucoseHist[i], lastCal),
-        'readDate': glucoseHist[i].readDate
+        'readDate': glucoseHist[i].readDateMills
       });
     }
   }
@@ -99,15 +99,15 @@ exports.calcTrend = (glucoseHist, lastCal) => {
 
 
   if (glucoseHist.length > 1) {
-    let minDate = moment().subtract(16, 'minutes');
     let maxDate = null;
     let sliceStart = 0;
     let timeSpan = 0;
     let totalDelta = 0;
 
     // delete any deltas > 16 minutes
+    let minDate = moment().subtract(16, 'minutes').valueOf();
     for (var i=0; i < glucoseHist.length; ++i) {
-      if (moment(glucoseHist[i].readDate).diff(minDate) < 0) {
+      if (glucoseHist[i].readDateMills < minDate) {
         sliceStart = i+1;
       }
     }
@@ -115,8 +115,8 @@ exports.calcTrend = (glucoseHist, lastCal) => {
     sgvHist = glucoseHist.slice(sliceStart);
 
     if (sgvHist.length > 1) {
-      minDate = sgvHist[0].readDate;
-      maxDate = sgvHist[sgvHist.length-1].readDate;
+      minDate = sgvHist[0].readDateMills;
+      maxDate = sgvHist[sgvHist.length-1].readDateMills;
 
       // Use the current calibration value to calculate the glucose from the
       // unfiltered data. This allows the trend calculation to be independent

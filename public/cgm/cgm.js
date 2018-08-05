@@ -63,7 +63,7 @@ angular.module('AngularOpenAPS.cgm', [
       // only return the properties glucose, filtered, readDate and trend
       // - we don't need the rest
         return glucose ?
-          (({ glucose, filtered, unfiltered, readDate, trend }) => ({ glucose, filtered, unfiltered, readDate, trend }))(glucose) :
+          (({ glucose, filtered, unfiltered, readDate, readDateMills, trend }) => ({ glucose, filtered, unfiltered, readDate, readDateMills, trend }))(glucose) :
           null;
       },
       get state() {

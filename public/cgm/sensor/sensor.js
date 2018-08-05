@@ -25,8 +25,22 @@ angular.module('AngularOpenAPS.cgm.sensor', [
     });
   })
 
-  .controller('SensorController', ['$scope', '$interval', '$location', 'G5', function ($scope, $interval, $location, G5) {
+  .controller('SensorController', ['$scope', 'SharedState', '$interval', '$location', 'G5', function ($scope, SharedState, $interval, $location, G5) {
     $scope.sensor = G5.sensor;
+
+    let units = SharedState.get('glucoseUnits');
+    let factor;
+
+    switch (units) {
+    case 'mmol/L':
+      $scope.calMin = 2.2;
+      $scope.calMax = 22; 
+      break;
+    case 'mg/dL':
+    default:
+      $scope.calMin = 40;
+      $scope.calMax = 400; 
+    }
 
     const tick = function() {
       const sessionStartDate = G5.sensor.sessionStartDate;
@@ -36,8 +50,11 @@ angular.module('AngularOpenAPS.cgm.sensor', [
     $interval(tick, 1000);
 
     $scope.calibrate = function(value) {
-      G5.sensor.calibrate(value);
-      $location.path('/cgm/sensor/pending');
+      // TODO: show validation error if we didn't receive a valid value.
+      if (value) {
+        G5.sensor.calibrate(value);
+        $location.path('/cgm/sensor/pending');
+      }
     };
 
     $scope.stopSensor = function() {

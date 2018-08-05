@@ -29,7 +29,6 @@ angular.module('AngularOpenAPS.cgm.sensor', [
     $scope.sensor = G5.sensor;
 
     let units = SharedState.get('glucoseUnits');
-    let factor;
 
     switch (units) {
     case 'mmol/L':

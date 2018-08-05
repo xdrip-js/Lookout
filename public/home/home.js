@@ -16,7 +16,7 @@ angular.module('AngularOpenAPS.home', [
 
     const tick = function() {
       const glucose = G5.sensor.glucose;
-      $scope.glucoseAge = glucose ? (Date.now() - glucose.readDate) / 1000 : null;
+      $scope.glucoseAge = glucose ? (Date.now() - glucose.readDateMills) / 1000 : null;
       const enacted = OpenAPS.loop.enacted;
       $scope.enactedAge = enacted ? (Date.now() - enacted.date) / 1000 : null;
     };

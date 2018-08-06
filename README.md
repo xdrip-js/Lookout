@@ -45,6 +45,7 @@ Lookout uses the bluez-tools software. Here are the instructions for installing 
 sudo apt-get install bluez-tools
 ```
 
+Lookout requires the openaps cgm type to be ```xdrip```. If you are not running xdrip as the openaps cgm type, then offline looping will not work. To change cgm type, re-run oref0-setup and choose xdrip as the cgm type.
 
 ## Installation
 ```

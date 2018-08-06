@@ -8,7 +8,7 @@
 
 <div class="scrollable">
   <div class="scrollable-content section">
-    <form role="form" ng-submit="calibrate(value)">
+    <form role="form" name=calibrateform novalidate ng-submit="calibrateform.$valid && calibrate(value)">
       <fieldset>
         <legend>Enter BG meter value</legend>
         <div class="form-group has-success has-feedback">

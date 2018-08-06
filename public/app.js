@@ -90,10 +90,22 @@ angular.module('AngularOpenAPS', [
     return {
       restrict: 'A',
       require: 'ngModel',
-      link: function (scope, element, attrs, ngModel) {
+      link: function (scope, element, attrs, ctrl) {
+        var minValidator = ctrl.$validators.min;
+        var maxValidator = ctrl.$validators.max;
 
-      // convert value going to user (model to view)
-        ngModel.$formatters.push(function(value) {
+        ctrl.$validators.min = function(modelValue, viewValue) {
+          console.log(`in min validator: model = ${modelValue}, view = ${viewValue}`);
+          return minValidator(modelValue, modelValue);
+        };
+
+        ctrl.$validators.max = function(modelValue) {
+          console.log('in max validator');
+          return maxValidator(modelValue, modelValue);
+        };
+
+        // convert value going to user (model to view)
+        ctrl.$formatters.push(function(value) {
           const units = SharedState.get('glucoseUnits');
           let factor;
 
@@ -109,7 +121,7 @@ angular.module('AngularOpenAPS', [
         });
 
         // value from the user (view to model)
-        ngModel.$parsers.push(function(value) {
+        ctrl.$parsers.push(function(value) {
           const units = SharedState.get('glucoseUnits');
           let factor;
 

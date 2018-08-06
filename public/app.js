@@ -94,13 +94,11 @@ angular.module('AngularOpenAPS', [
         var minValidator = ctrl.$validators.min;
         var maxValidator = ctrl.$validators.max;
 
-        ctrl.$validators.min = function(modelValue, viewValue) {
-          console.log(`in min validator: model = ${modelValue}, view = ${viewValue}`);
+        ctrl.$validators.min = function(modelValue) {
           return minValidator(modelValue, modelValue);
         };
 
         ctrl.$validators.max = function(modelValue) {
-          console.log('in max validator');
           return maxValidator(modelValue, modelValue);
         };
 

@@ -11,7 +11,7 @@
     "license": "MIT",
     "bin": "./index.js",
     "dependencies": {
-        "angular": "^1.6.4",
+        "angular": "^1.7.0",
         "angular-chart.js": "^1.1.1",
         "angular-moment": "^1.2.0",
         "angular-route": "^1.6.4",

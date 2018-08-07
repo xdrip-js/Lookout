@@ -59,7 +59,6 @@ angular.module('AngularOpenAPS.home', [
       link: function(scope, element, attrs) {
       /*eslint-enable no-unused-vars*/
         //      scope.data = [[{x: Date.now(), y: 100/18}]];
-        let glucoseBaseTime = Date.now();
         let units = SharedState.get('glucoseUnits');
         let factor;
 
@@ -72,29 +71,29 @@ angular.module('AngularOpenAPS.home', [
           factor = 1;
         }
 
-        scope.data = [ ];
+        scope.data = [ [ ] ];
         $interval(function() {
           const now = Date.now();
+          const latestSGV = scope.data[0][scope.data[0].length - 1];
+          const latestSGVReadDate = latestSGV && latestSGV.readDate || null;
+          const hist = G5.sensor.history;
 
-          if (G5.sensor.history) {
-            scope.data = [
-              G5.sensor.history.map((sgv) => {
-                return {
-                  x: Math.round((sgv.readDate - glucoseBaseTime) / 1000 / 60 / 60.0 * 100) / 100.0,
-                  y: Math.round(sgv.glucose / factor * 10) / 10.0
-                };
-              })
-            ];
-          }
+          if (hist) {
+            for (let i=0; i < hist.length; ++i) {
+              let readDate = hist[i].readDate;
+              let y = Math.round(hist[i].glucose / factor * 10) / 10.0;
 
-          let timeInterval = (Date.now() - glucoseBaseTime) / 1000 / 60 / 60;
-          //console.log('shifting by ' + timeInterval);
-          for (const dataset of scope.data) {
-            for (const point of dataset) {
-              point.x -= timeInterval;
+              if (!latestSGVReadDate || ((readDate - latestSGVReadDate) > 2*60*1000)) {
+                scope.data[0].push( { readDate, y } );
+              }
             }
           }
-          glucoseBaseTime = now;
+
+          for (const dataset of scope.data) {
+            for (const point of dataset) {
+              point.x = (point.readDate - now) / 1000 / 60 / 60.0;
+            }
+          }
         }, 1000);
         scope.datasetOverride = [
           {

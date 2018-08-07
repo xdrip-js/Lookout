@@ -120,9 +120,9 @@ angular.module('AngularOpenAPS.cgm', [
       if (history.length > 0) {
         let latestSGV = history[history.length-1];
 
-        if (glucose.readDate > latestSGV.readDate) {
+        if (glucose.readDateMills > latestSGV.readDate) {
           history.push({
-            readDate: glucose.readDate,
+            readDate: glucose.readDateMills,
             glucose: glucose.glucose
           });
 

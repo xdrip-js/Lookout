@@ -6,6 +6,7 @@ angular.module('AngularOpenAPS', [
   'AngularOpenAPS.pump',
   'ngRoute',
   'ngStorage',
+  'ngSanitize',
   // 'ngTouch',
   'mobile-angular-ui',
   'mobile-angular-ui.core.sharedState',

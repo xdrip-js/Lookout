@@ -112,7 +112,7 @@ This feature requires Nightscout 0.10.3 or later. Lookout provides devicestatus 
 So far in the above you've only run Lookout from the command line - the next time you close your terminal, or reboot your rig, it will only run if you add it to your crontab:
 ```
 <type the command `crontab -e` and add this line:>
-@reboot Lookout >> /var/log/openaps/xdrip-js.log
+@reboot Lookout >> /var/log/openaps/lookout.log 2>&1
 <save and exit your editor>
 <reboot your rig with the command `reboot`>
 ```

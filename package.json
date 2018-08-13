@@ -1,6 +1,6 @@
 {
   "name": "Lookout",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A web app for communicating with an OpenAPS rig.",
   "main": "index.js",
   "scripts": {
@@ -27,7 +27,7 @@
     "request": "^2.83.0",
     "request-promise-native": "^1.0.5",
     "socket.io": "^1.7.3",
-    "xdrip-js": "xdrip-js/xdrip-js",
+    "xdrip-js": "xdrip-js/xdrip-js#v1.2.0",
     "yargs": "^10.0.3"
   },
   "devDependencies": {

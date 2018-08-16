@@ -501,7 +501,7 @@ module.exports = async (io, extend_sensor_opt) => {
       // the last calibration data is not valid
       let latestSGV = rigSGVs[rigSGVs.length-1];
 
-      if ((latestSGV.state != 0x06) || (latestSGV.state != 0x07)) {
+      if ((latestSGV.state != 0x06) && (latestSGV.state != 0x07)) {
         console.log('Sensor state not "OK" or "Need Calibration" - not using latest calibration message data.');
         storageLock.unlockStorage();
         return;

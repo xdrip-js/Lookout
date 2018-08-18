@@ -4,17 +4,20 @@
 //Rule 3 - Only use Single Point Calibration for 1st 12 hours since Sensor insert
 //Rule 4 - Do not store calibration records within 12 hours since Sensor insert. 
 //         Use for SinglePoint calibration, but then discard them
-//Rule 5 - Do not use LSR until we have 4 or more calibration points. 
-//         Use SinglePoint calibration only for less than 4 calibration points. 
+//Rule 5 - Do not use LSR until we have 3 or more calibration points. 
+//         Use SinglePoint calibration only for less than 3 calibration points. 
 //         SinglePoint simply uses the latest calibration record and assumes 
 //         the yIntercept is 0.
-//Rule 6 - Drop back to SinglePoint calibration if slope is out of bounds 
+//Rule 6 - TODO: Drop back to SinglePoint calibration if slope is out of bounds 
 //         (>MAXSLOPE or <MINSLOPE)
-//Rule 7 - Drop back to SinglePoint calibration if yIntercept is out of bounds 
-//        (> minimum unfiltered value in calibration record set or 
-//         < - minimum unfiltered value in calibration record set)
+//Rule 7 - TODO: Drop back to SinglePoint calibration if yIntercept is out of bounds 
+//         (> minimum unfiltered value in calibration record set or 
+//          < - minimum unfiltered value in calibration record set)
 
 var exports = module.exports = {};
+
+const MAXSLOPE = 12500;
+const MINSLOPE = 450;
 
 // calibrationPairs has three values for each array element:
 //   glucose => the "true" glucose value for the pair
@@ -184,7 +187,7 @@ exports.calculateG5Calibration = (lastCal, lastG5CalTime, sensorInsert, glucoseH
     if (((calErr > 5) && calPairs.length > 3) || (calPairs.length > 8)) {
       let calResult = lsrCalibration(calPairs);
 
-      if ((calResult.slope > 12500) || (calResult.slope < 450)) {
+      if ((calResult.slope > MAXSLOPE) || (calResult.slope < MINSLOPE)) {
         // wait until the next opportunity
         console.log('Slope out of range to calibrate: ' + calResult.slope);
         return null;
@@ -249,7 +252,7 @@ exports.expiredCalibration = (bgChecks, sensorInsert) => {
   // remove calPairs that are less than 12 hours from the sensor insert
   if (calPairs.length > 0) {
     for (let i=0; i < calPairs.length; ++i) {
-      if (!sensorInsert || ((calPairs[i].readDate - sensorInsert.valueOf()) < 12*60*60000)) {
+      if (!sensorInsert || ((calPairs[i].readDate - sensorInsert.valueOf()) < 15*60*60000)) {
         calPairsStart = i+1;
       }
     }

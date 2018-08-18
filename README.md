@@ -125,6 +125,10 @@ To look at the Lookout log, for debug purposes, type `cat /var/log/openaps/xdrip
 
 **WARNING** If running in extended sensor mode, the user must enter a `Sensor Start` in Nightscout to notify Lookout to stop reporting glucose values.
 
+* `--expired_cal`: Lookout uses user entered BG Check and Sensor Start records to calibrate raw unfiltered values reported by the CGM transmitter. Lookout does not perform calibration for 15 minutes after a Sensor Start. During the first 12 hours after a Sensor Start, Lookout only uses a Single Point calibration algorithm that assumes a y axis intercept of 0.  After the first 12 hours, Lookout will switch to using a Least Squares Regression algorithm to calculate the y axis intercept and slope to convert the raw unfiltered values to calibrated glucose values.
+
+**WARNING** Expired calibration mode is in testing phase only and is NOT recommended. It is included in the code at this time so the user can monitor in the log file the delta between the official calibration values and the expired mode calculated calibration values.
+
 ## Reverting NodeJS
 
 in the future if you decide you do not want to use xdrip-js, or you are having trouble updating OpenAPS with the nodejs update, you can revert the nodejs install with:

@@ -149,6 +149,9 @@ module.exports = async (io, extend_sensor, expired_cal) => {
       console.log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value from expired calibration algorithm');
       console.log('Calibrated SGV: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered + ' slope: ' + lastCal.slope + ' intercept: ' + lastCal.intercept);
 
+      console.log('Expired calibration would be utilized, but is disabled');
+      sgv.glucose = null;
+
       sgv.g5calibrated = false;
     }
 

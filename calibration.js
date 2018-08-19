@@ -244,7 +244,7 @@ exports.expiredCalibration = (bgChecks, sensorInsert) => {
       calPairs.push({
         unfiltered: bgChecks[i].unfiltered,
         glucose: bgChecks[i].glucose,
-        readDate: bgChecks[i].date
+        readDateMills: bgChecks[i].date
       });
     }
   }
@@ -252,7 +252,7 @@ exports.expiredCalibration = (bgChecks, sensorInsert) => {
   // remove calPairs that are less than 12 hours from the sensor insert
   if (calPairs.length > 0) {
     for (let i=0; i < calPairs.length; ++i) {
-      if (!sensorInsert || ((calPairs[i].readDate - sensorInsert.valueOf()) < 15*60*60000)) {
+      if (!sensorInsert || ((calPairs[i].readDateMills - sensorInsert.valueOf()) < 15*60*60000)) {
         calPairsStart = i+1;
       }
     }
@@ -304,12 +304,12 @@ exports.expiredCalibration = (bgChecks, sensorInsert) => {
 };
 
 exports.interpolateUnfiltered = (SGVBefore, SGVAfter, valueTime) => {
-  let totalTime = SGVAfter.readDate - SGVBefore.readDate;
+  let totalTime = SGVAfter.readDateMills - SGVBefore.readDateMills;
   let totalDelta = SGVAfter.unfiltered - SGVBefore.unfiltered;
-  let fractionTime = (valueTime.valueOf() - SGVBefore.readDate) / totalTime;
+  let fractionTime = (valueTime.valueOf() - SGVBefore.readDateMills) / totalTime;
 
-  console.log('SGVBefore Time: ' + SGVBefore.readDate + ' SGVBefore Unfiltered: ' + SGVBefore.unfiltered);
-  console.log(' SGVAfter Time: ' + SGVAfter.readDate + '  SGVAfter Unfiltered: ' + SGVAfter.unfiltered);
+  console.log('SGVBefore Time: ' + SGVBefore.readDateMills + ' SGVBefore Unfiltered: ' + SGVBefore.unfiltered);
+  console.log(' SGVAfter Time: ' + SGVAfter.readDateMills + '  SGVAfter Unfiltered: ' + SGVAfter.unfiltered);
 
   if (totalTime > 10*60000) {
     console.log('Total time exceeds 10 minutes: ' + totalTime + 'ms');

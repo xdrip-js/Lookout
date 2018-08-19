@@ -269,7 +269,7 @@ exports.expiredCalibration = (bgChecks, sensorInsert) => {
   if (calPairs.length > 3) {
     let calResult = lsrCalibration(calPairs);
 
-    if ((calResult.slope > 12.5) || (calResult.slope < 0.45)) {
+    if ((calResult.slope > MAXSLOPE) || (calResult.slope < MINSLOPE)) {
       // wait until the next opportunity
       console.log('Slope out of range to calibrate: ' + calResult.slope);
       return null;

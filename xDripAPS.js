@@ -44,7 +44,8 @@ const _convertEntryToNS = (glucose) => {
 
 const _convertEntryToxDrip = (glucose) => {
   return {
-    'readDate': glucose.date,
+    'readDateMills': glucose.date,
+    'readDate': glucose.dateString,
     'filtered': glucose.filtered,
     'unfiltered': glucose.unfiltered,
     'rssi': glucose.rssi,

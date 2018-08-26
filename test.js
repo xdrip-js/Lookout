@@ -312,16 +312,16 @@ describe('Test Stats', function() {
     };
 
     let lastCal = {
-      intercept: 33.03,
-      slope: 0.8
+      intercept: 33550,
+      slope: 1055
     };
 
     glucoseHist.push(currSGV);
 
     let noise = stats.calcSensorNoise(glucoseHist, lastCal);
 
-    noise.should.be.greaterThan(0.15);
-    noise.should.be.lessThan(0.16);
+    noise.should.be.greaterThan(0.016);
+    noise.should.be.lessThan(0.017);
   });
 
   it('should not calculate Sensor Noise if not enough records', function() {
@@ -374,7 +374,7 @@ describe('Test Stats', function() {
 
     let lastCal = {
       intercept: 0,
-      slope: 1.06
+      slope: 1060
     };
 
     glucoseHist.push(currSGV);
@@ -383,4 +383,43 @@ describe('Test Stats', function() {
 
     noise.should.equal(0);
   });
+
+  it('should calculate glucose from calibration record', function() {
+
+    let currSGV = {
+      'readDate': 1528892489488,
+      'readDateMills': 1528892489488,
+      'filtered': 135920,
+      'unfiltered': 131632,
+    };
+
+    let lastCal = {
+      intercept: 30000,
+      slope: 1060
+    };
+
+    let glucose = calibration.calcGlucose(currSGV, lastCal);
+
+    glucose.should.equal(96);
+  });
+
+  it('should set glucose to 39 if calculated glucose is below 40', function() {
+
+    let currSGV = {
+      'readDate': 1528892489488,
+      'readDateMills': 1528892489488,
+      'filtered': 45920,
+      'unfiltered': 31632,
+    };
+
+    let lastCal = {
+      intercept: 0,
+      slope: 1060
+    };
+
+    let glucose = calibration.calcGlucose(currSGV, lastCal);
+
+    glucose.should.equal(39);
+  });
+
 });

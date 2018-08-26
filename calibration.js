@@ -222,6 +222,11 @@ exports.calculateG5Calibration = (lastCal, lastG5CalTime, glucoseHist, currSGV) 
 };
 
 exports.calcGlucose = (sgv, calibration) => {
-  return Math.round((sgv.unfiltered-calibration.intercept)/calibration.slope);
+  let glucose = Math.round((sgv.unfiltered-calibration.intercept)/calibration.slope);
+
+  // If BG is below 40, set it to 39 so it's displayed correctly in NS
+  glucose = glucose < 40 ? 39 : glucose;
+
+  return glucose;
 };
 

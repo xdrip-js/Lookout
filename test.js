@@ -384,6 +384,25 @@ describe('Test Stats', function() {
     noise.should.equal(0);
   });
 
+  it('should calculate glucose from calibration record', function() {
+
+    let currSGV = {
+      'readDate': 1528892489488,
+      'readDateMills': 1528892489488,
+      'filtered': 135920,
+      'unfiltered': 131632,
+    };
+
+    let lastCal = {
+      intercept: 30000,
+      slope: 1060
+    };
+
+    let glucose = calibration.calcGlucose(currSGV, lastCal);
+
+    glucose.should.equal(96);
+  });
+
   it('should set glucose to 39 if calculated glucose is below 40', function() {
 
     let currSGV = {

@@ -387,19 +387,10 @@ describe('Test Stats', function() {
   it('should set glucose to 39 if calculated glucose is below 40', function() {
 
     let currSGV = {
-      'inSession': true,
-      'status': 0,
-      'state': 7,
       'readDate': 1528892489488,
       'readDateMills': 1528892489488,
-      'filtered': 145920,
+      'filtered': 45920,
       'unfiltered': 31632,
-      'glucose': 134,
-      'trend': -7.334767687903413,
-      'canBeCalibrated': true,
-      'rssi': -79,
-      'g5calibrated': true,
-      'stateString': 'Need calibration',
     };
 
     let lastCal = {

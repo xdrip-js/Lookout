@@ -244,7 +244,7 @@ exports.expiredCalibration = (bgChecks, sensorInsert) => {
       calPairs.push({
         unfiltered: bgChecks[i].unfiltered,
         glucose: bgChecks[i].glucose,
-        readDateMills: bgChecks[i].date
+        readDateMills: bgChecks[i].dateMills
       });
     }
   }

@@ -143,16 +143,23 @@ module.exports = async (io, extend_sensor, expired_cal) => {
       sgv.g5calibrated = false;
     }
 
-    if (!sgv.glucose && expired_cal && lastExpiredCal) {
-      sgv.glucose = calibration.calcGlucose(sgv, lastExpiredCal);
+    if (expired_cal && lastExpiredCal) {
+      let expiredCalGlucose = calibration.calcGlucose(sgv, lastExpiredCal);
 
-      console.log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value from expired calibration algorithm');
-      console.log('Calibrated SGV: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered + ' slope: ' + lastCal.slope + ' intercept: ' + lastCal.intercept);
+      if (!sgv.glucose) {
+        sgv.glucose = expiredCalGlucose;
 
-      console.log('Expired calibration would be utilized, but is disabled');
-      sgv.glucose = null;
+        console.log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value from expired calibration algorithm');
+        console.log('Calibrated SGV: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered + ' slope: ' + lastCal.slope + ' intercept: ' + lastCal.intercept);
 
-      sgv.g5calibrated = false;
+        console.log('Expired calibration would be utilized, but is disabled');
+        sgv.glucose = null;
+
+        sgv.g5calibrated = false;
+      } else {
+        let calErr = expiredCalGlucose - sgv.glucose;
+        console.log('Current expired calibration error: ' + Math.round(calErr*10)/10 + ' calibrated value: ' + Math.round(expiredCalGlucose*10)/10 + ' slope: ' + Math.round(lastExpiredCal.slope*10)/10 + ' intercept: ' + Math.round(lastExpiredCal.intercept*10)/10);
+      }
     }
 
     if (sensorInsert && (lastCal.type !== 'Unity') && 

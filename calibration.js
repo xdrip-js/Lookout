@@ -154,7 +154,7 @@ exports.calculateG5Calibration = (lastCal, lastG5CalTime, sensorInsert, glucoseH
   var i;
 
   if (lastCal) {
-    calValue = (currSGV.unfiltered-lastCal.intercept)/lastCal.slope;
+    calValue = calcGlucose(currSGV, lastCal);
     calErr = Math.abs(calValue - currSGV.glucose);
 
     console.log('Current calibration error: ' + Math.round(calErr*10)/10 + ' calibrated value: ' + Math.round(calValue*10)/10 + ' slope: ' + Math.round(lastCal.slope*10)/10 + ' intercept: ' + Math.round(lastCal.intercept*10)/10);
@@ -225,7 +225,7 @@ exports.calculateG5Calibration = (lastCal, lastG5CalTime, sensorInsert, glucoseH
   return null;
 };
 
-exports.calcGlucose = (sgv, calibration) => {
+const calcGlucose = (sgv, calibration) => {
   let glucose = Math.round((sgv.unfiltered-calibration.intercept)/calibration.slope);
 
   // If BG is below 40, set it to 39 so it's displayed correctly in NS
@@ -233,6 +233,8 @@ exports.calcGlucose = (sgv, calibration) => {
 
   return glucose;
 };
+
+exports.calcGlucose = calcGlucose;
 
 exports.expiredCalibration = (bgChecks, sensorInsert) => {
   let calPairs = [];

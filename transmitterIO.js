@@ -155,7 +155,9 @@ module.exports = async (io, extend_sensor, expired_cal) => {
       sgv.g5calibrated = false;
     }
 
-    if (sensorInsert && lastCal && (sensorInsert.diff(moment(lastCal.date).subtract(6, 'minutes')) > 0) && (lastCal.type !== 'Unity')) {
+    if (sensorInsert && (lastCal.type !== 'Unity') && 
+      ((lastCal && (sensorInsert.diff(moment(lastCal.date).subtract(6, 'minutes')) > 0))
+      || (lastExpiredCal && (sensorInsert.diff(moment(lastExpiredCal.date).subtract(6, 'minutes')) > 0)))) {
       console.log('Found sensor insert after latest calibration. Deleting calibration data.');
       await storage.del('g5Calibration');
       await storage.del('expiredCal');

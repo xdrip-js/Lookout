@@ -152,7 +152,7 @@ module.exports = async (io, extend_sensor, expired_cal) => {
         console.log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value from expired calibration algorithm');
         console.log('Calibrated SGV: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered + ' slope: ' + lastCal.slope + ' intercept: ' + lastCal.intercept);
 
-        console.log('Expired calibration would be utilized, but is disabled');
+        console.log('Expired calibration use disabled - not replacing invalid glucose');
         sgv.glucose = null;
 
         sgv.g5calibrated = false;
@@ -194,6 +194,9 @@ module.exports = async (io, extend_sensor, expired_cal) => {
         });
 
       if (!expired_cal) {
+        xDripAPS.postCalibration(newCal);
+      } else {
+        console.log('Expired calibration use disabled - sending new G5 calibration to NS');
         xDripAPS.postCalibration(newCal);
       }
     }
@@ -605,7 +608,8 @@ module.exports = async (io, extend_sensor, expired_cal) => {
     io.emit('calibrationData', calData);
 
     if (expired_cal && newCal) {
-      xDripAPS.postCalibration(newCal);
+      console.log('Expired calibration use disabled - not sending it to NS');
+      // xDripAPS.postCalibration(newCal);
     }
   };
 

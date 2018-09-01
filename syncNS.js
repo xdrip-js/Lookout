@@ -33,6 +33,8 @@ const syncCal = async (storage, sensorInsert, expiredCal) => {
 
   if (expiredCal) {
     rigCalStr = 'expiredCal';
+    console.log('Expired calibration use disabled - synchronized g5 calibration with NS");
+    rigCalStr = 'g5Calibration';
   } else {
     rigCalStr = 'g5Calibration';
   }
@@ -470,7 +472,8 @@ const syncBGChecks = async (storage, sensorInsert, expiredCal) => {
     storageLock.unlockStorage();
 
     if (expiredCal && newCal) {
-      xDripAPS.postCalibration(newCal);
+      console.log('Expired calibration use disabled - not sending it to NS');
+      // xDripAPS.postCalibration(newCal);
     }
   }
 

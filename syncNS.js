@@ -33,7 +33,7 @@ const syncCal = async (storage, sensorInsert, expiredCal) => {
 
   if (expiredCal) {
     rigCalStr = 'expiredCal';
-    console.log('Expired calibration use disabled - synchronized g5 calibration with NS");
+    console.log('Expired calibration use disabled - synchronized g5 calibration with NS');
     rigCalStr = 'g5Calibration';
   } else {
     rigCalStr = 'g5Calibration';

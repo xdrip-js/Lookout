@@ -10,7 +10,7 @@ angular.module('AngularOpenAPS.home', [
     });
   })
 
-  .controller('HomeController', ['$scope', '$interval', '$document', 'G5', 'OpenAPS', function ($scope, $interval, $document, G5, OpenAPS) {
+  .controller('HomeController', ['$scope', '$interval', '$document', '$location', 'G5', 'OpenAPS', function ($scope, $interval, $document, $location, G5, OpenAPS) {
     $scope.sensor = G5.sensor;
     $scope.loop = OpenAPS.loop;
 
@@ -44,6 +44,15 @@ angular.module('AngularOpenAPS.home', [
       }
     };
 
+    $scope.start = function () {
+      G5.sensor.start();
+      $location.path('/cgm/sensor/pending');
+    };
+
+    $scope.backstart = function () {
+      G5.sensor.backstart();
+      $location.path('/cgm/sensor/pending');
+    };
   }])
 
   .directive('glucoseChart', ['$interval', 'SharedState', 'G5', function($interval, SharedState, G5) {

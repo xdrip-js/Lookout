@@ -254,7 +254,7 @@ exports.expiredCalibration = (bgChecks, sensorInsert) => {
   // remove calPairs that are less than 12 hours from the sensor insert
   if (calPairs.length > 0) {
     for (let i=0; i < calPairs.length; ++i) {
-      if (!sensorInsert || ((calPairs[i].readDateMills - sensorInsert.valueOf()) < 15*60*60000)) {
+      if (!sensorInsert || ((calPairs[i].readDateMills - sensorInsert.valueOf()) < 12*60*60000)) {
         calPairsStart = i+1;
       }
     }
@@ -268,7 +268,7 @@ exports.expiredCalibration = (bgChecks, sensorInsert) => {
   }
 
   // If we have at least 3 good pairs, use LSR
-  if (calPairs.length > 3) {
+  if (calPairs.length >= 3) {
     let calResult = lsrCalibration(calPairs);
 
     if ((calResult.slope > MAXSLOPE) || (calResult.slope < MINSLOPE)) {
@@ -285,7 +285,7 @@ exports.expiredCalibration = (bgChecks, sensorInsert) => {
       type: calResult.calibrationType
     };
 
-    console.log('Expired calibration with LSR:\n', calReturn);
+    console.log('Expired calibration with LSR using ' + calPairs.length + ' calibration pairs:\n', calReturn);
   } else if (calPairs.length > 0) {
     let calResult = singlePointCalibration(calPairs);
 
@@ -297,7 +297,7 @@ exports.expiredCalibration = (bgChecks, sensorInsert) => {
       type: calResult.calibrationType
     };
 
-    console.log('Expired calibration with Single Point:\n', calReturn);
+    console.log('Expired calibration with Single Point due to ' + calPairs.length + ' calibration pairs:\n', calReturn);
   } else {
     console.log('No suitable glucose pairs found for expired calibration.');
   }

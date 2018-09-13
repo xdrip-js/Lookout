@@ -119,6 +119,7 @@ So far in the above you've only run Lookout from the command line - the next tim
 
 ## Debugging
 To look at the Lookout log, for debug purposes, type `cat /var/log/openaps/xdrip-js.log` or `tail -n 100 -F /var/log/openaps/xdrip-js.log`.
+* If your xdrip-js.log file contains messages similar to `Error: /root/Lookout/node_modules/bluetooth-hci-socket/build/Release/binding.node: undefined symbol: _ZN2v816FunctionTemplate3NewEPNS_7IsolateEPFvRKNS_20FunctionCallbackInfoINS_5ValueEEEENS_5LocalIS4_EENSA_INS_9SignatureEEEi` run the following command: `cd ~/Lookout; npm rebuild`
 
 ## Options
 * `--extend_sensor`: Lookout uses the calibrated and unfiltered values reported by the G5 to calculate the running calibration slope and intercept values whenever the current calibration values it has produces a calibrated value that is more than 5 mg/dL away from the G5 reported calibrated value.  If the `--extend_sensor` option is enabled, Lookout will apply the most recent calculated calibration to the G5's unfiltered value if the transmitter does not report a calibrated SGV.  This enables Lookout to continue reporting SGV values to Nightscout and OpenAPS after the sensor session is ended, providing greater flexibility on when the user changes the site.  This is not intended to extend a sensor life past 24 hours due to the lack of an ongoing calibration update mechanism.

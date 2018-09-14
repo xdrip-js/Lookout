@@ -1,17 +1,18 @@
 'use strict';
 
 const xDripAPS = require('./xDripAPS')();
-const storage = require('node-persist');
 const moment = require('moment');
 const timeLimitedPromise = require('./timeLimitedPromise');
 const storageLock = require('./storageLock');
+const calibration = require('./calibration');
 
 var _ = require('lodash');
 
-const syncCal = async (sensorInsert) => {
+const syncCal = async (storage, sensorInsert, expiredCal) => {
   let rigCal = null;
   let NSCal = null;
   let nsQueryError = false;
+  let rigCalStr = null;
 
   NSCal = await xDripAPS.latestCal()
     .catch(error => {
@@ -30,7 +31,15 @@ const syncCal = async (sensorInsert) => {
 
   await storageLock.lockStorage();
 
-  rigCal = await storage.getItem('g5Calibration')
+  if (expiredCal) {
+    rigCalStr = 'expiredCal';
+    console.log('Expired calibration use disabled - synchronized g5 calibration with NS');
+    rigCalStr = 'g5Calibration';
+  } else {
+    rigCalStr = 'g5Calibration';
+  }
+
+  rigCal = await storage.getItem(rigCalStr)
     .catch(error => {
       console.log('Error getting rig calibration: ' + error);
     });
@@ -40,25 +49,39 @@ const syncCal = async (sensorInsert) => {
   }
 
   if (NSCal) {
-    if (!rigCal) {
+    // don't use NS cal if in expiredCal mode
+    if (!rigCal && (rigCalStr !== 'expiredCal')) {
       console.log('No rig calibration, storing NS calibration');
 
       if (sensorInsert.diff(moment(NSCal.date)) > 0) {
         console.log('Found sensor insert after latest NS calibration. Not updating local rig calibration');
       } else {
-        await storage.setItem('g5Calibration', NSCal)
+        await storage.setItem(rigCalStr, NSCal)
           .catch(() => {
             console.log('Unable to store NS Calibration');
           });
       }
-    } else if (rigCal.date < NSCal.date) {
-      console.log('NS calibration more recent than rig calibration NS Cal Date: ' + NSCal.date + ' Rig Cal Date: ' + rigCal.date);
+    } else if (rigCal && (rigCal.date < NSCal.date)) {
+      if (rigCalStr !== 'expiredCal') {
+        console.log('NS calibration more recent than rig calibration NS Cal Date: ' + NSCal.date + ' Rig Cal Date: ' + rigCal.date);
 
-      storage.setItem('g5Calibration', NSCal)
-        .catch(() => {
-          console.log('Unable to store NS Calibration');
-        });
-    } else if (rigCal.date > NSCal.date) {
+        storage.setItem(rigCalStr, NSCal)
+          .catch(() => {
+            console.log('Unable to store NS Calibration');
+          });
+      } else if ((Math.abs(rigCal.slope - NSCal.slope) > 0.001) || (Math.abs(rigCal.intercept - NSCal.intercept) > 0.001)) {
+        console.log('NS calibration more recent than rig calibration NS Cal Date: ' + NSCal.date + ' Rig Cal Date: ' + rigCal.date);
+        console.log('Currently operating in expired calibration mode - uploading expired cal record.');
+
+        // Upload a new calibration to NS to match the expiredCal we have
+        // Add 1 to the date so it becomes effective
+        rigCal.date = NSCal.date + 1;
+        xDripAPS.postCalibration(rigCal);
+      } else {
+        console.log('NS calibration more recent than rig calibration NS Cal Date: ' + NSCal.date + ' Rig Cal Date: ' + rigCal.date);
+        console.log('Currently operating in expired calibration mode - NS Cal matches expired cal.');
+      }
+    } else if (rigCal && (rigCal.date > NSCal.date)) {
       console.log('Rig calibration more recent than NS calibration NS Cal Date: ' + NSCal.date + ' Rig Cal Date: ' + rigCal.date);
       console.log('Upoading rig calibration');
 
@@ -80,7 +103,7 @@ const syncCal = async (sensorInsert) => {
   console.log('syncCal complete');
 };
 
-const syncSGVs = async () => {
+const syncSGVs = async (storage) => {
   let timeSince = null;
 
   let rigSGVs = null;
@@ -162,8 +185,8 @@ const syncSGVs = async () => {
     console.log('Most recent rig SGV - date: ' + moment(sgv.readDate).format() + ' sgv: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered);
   }
 
-  for (let nsIndex = 0; nsIndex < nsSGVs.length; ++nsIndex) {
-    let nsSGV = nsSGVs[nsIndex];
+  for (let i = 0; i < nsSGVs.length; ++i) {
+    let nsSGV = nsSGVs[i];
     let rigSGV = null;
 
     for (; rigIndex < rigSGVsLength; ++rigIndex) {
@@ -235,9 +258,11 @@ const syncSGVs = async () => {
   console.log('syncSGVs complete');
 };
 
-const syncBGChecks = async (sensorInsert) => {
+const syncBGChecks = async (storage, sensorInsert, expiredCal) => {
   let NSBGChecks = null;
   let nsQueryError = false;
+  let calculateExpiredCal = false;
+  let sliceStart = 0;
 
   NSBGChecks = await xDripAPS.BGChecksSince(sensorInsert)
     .catch(error => {
@@ -267,6 +292,16 @@ const syncBGChecks = async (sensorInsert) => {
   });
 
   NSBGChecks = _.sortBy(NSBGChecks, ['dateMills']);
+
+  sliceStart = 0;
+
+  for (let i = 0; i < NSBGChecks.length; ++i) {
+    if (moment(NSBGChecks[i].created_at).diff(sensorInsert) < 0) {
+      sliceStart = i+1;
+    }
+  }
+
+  NSBGChecks = NSBGChecks.slice(sliceStart);
 
   if (NSBGChecks.length > 0) {
     let bgCheck = NSBGChecks[NSBGChecks.length-1];
@@ -298,8 +333,8 @@ const syncBGChecks = async (sensorInsert) => {
     console.log('Most recent Rig BG Check - date: ' + moment(bgCheck.date).format() + ' glucose: ' + bgCheck.glucose + ' unfiltered: ' + bgCheck.unfiltered);
   }
 
-  for (let nsIndex = 0; nsIndex < NSBGChecks.length; ++nsIndex) {
-    let nsValue = NSBGChecks[nsIndex];
+  for (let i = 0; i < NSBGChecks.length; ++i) {
+    let nsValue = NSBGChecks[i];
     let rigValue = null;
 
     for (; rigIndex < rigDataLength; ++rigIndex) {
@@ -323,12 +358,15 @@ const syncBGChecks = async (sensorInsert) => {
       };
 
       rigBGChecks.push(rigValue);
+
+      // we found a new BG check, trigger calculating new calibration
+      calculateExpiredCal = true;
     }
   }
 
   rigBGChecks = _.sortBy(rigBGChecks, ['dateMills']);
 
-  let sliceStart = 0;
+  sliceStart = 0;
 
   // Remove any cal data we have
   // that predates the last sensor insert
@@ -347,8 +385,12 @@ const syncBGChecks = async (sensorInsert) => {
     if (!('unfiltered' in rigValue) || !rigValue.unfiltered) {
       let NSSGVs = null;
       let valueTime = rigValue.dateMills;
-      let timeStart = moment(rigValue.dateMills).subtract(6, 'minutes');
-      let timeEnd = moment(rigValue.dateMills).add(6, 'minutes');
+      let timeStart = moment(rigValue.dateMills).subtract(11, 'minutes');
+      let timeEnd = moment(rigValue.dateMills).add(11, 'minutes');
+      let SGVBefore = null;
+      let SGVBeforeTime = null;
+      let SGVAfter = null;
+      let SGVAfterTime = null;
 
       // Get NS SGV immediately before BG Check
       NSSGVs = await xDripAPS.SGVsBetween(timeStart, timeEnd, 5)
@@ -365,12 +407,24 @@ const syncBGChecks = async (sensorInsert) => {
         return sgv;
       });
 
-      for (let i=0; i < NSSGVs.length; ++i) {
-        if (Math.abs(NSSGVs[i].dateMills - valueTime) < 5*60*1000) {
-          rigValue.unfiltered = NSSGVs[i].unfiltered;
-          console.log('Adding unfiltered value to BGCheck at ' + moment(valueTime).utc().format() + ': id = ' + NSSGVs[i]._id + ' time = ' + NSSGVs[i].date);
+      NSSGVs = _.sortBy(NSSGVs, ['dateMills']);
+
+      for (let i=0; i < (NSSGVs.length-1); ++i) {
+        // Is the next SGV after valueTime
+        // and the current SGV is before valueTime
+        SGVBeforeTime = NSSGVs[i].dateMills;
+        SGVAfterTime = NSSGVs[i+1].dateMills;
+        if ((SGVBeforeTime < valueTime) && (SGVAfterTime > valueTime)) {
+          SGVBefore = NSSGVs[i];
+          SGVAfter = NSSGVs[i+1];
           break;
         }
+      }
+
+      if (SGVBefore && SGVAfter) {
+        rigValue.unfiltered = calibration.interpolateUnfiltered(xDripAPS.convertEntryToxDrip(SGVBefore), xDripAPS.convertEntryToxDrip(SGVAfter), moment(valueTime));
+      } else {
+        console.log('Unable to find bounding SGVs for BG Check at ' + moment(valueTime).format());
       }
     }
   }
@@ -405,10 +459,28 @@ const syncBGChecks = async (sensorInsert) => {
     }
   }
 
+  if (calculateExpiredCal) {
+    let newCal = calibration.expiredCalibration(rigBGChecks, sensorInsert);
+
+    await storageLock.lockStorage();
+
+    await storage.setItem('expiredCal', newCal)
+      .catch((err) => {
+        console.log('Unable to store expiredCal: ' + err);
+      });
+
+    storageLock.unlockStorage();
+
+    if (expiredCal && newCal) {
+      console.log('Expired calibration use disabled - not sending it to NS');
+      // xDripAPS.postCalibration(newCal);
+    }
+  }
+
   console.log('syncBGChecks complete');
 };
 
-const syncNS = async () => {
+const syncNS = async (storage, expiredCal) => {
   let sensorInsert = null;
   let nsQueryError = false;
 
@@ -428,7 +500,7 @@ const syncNS = async () => {
 
     setTimeout(() => {
       // Restart the syncNS after 5 minute
-      syncNS();
+      syncNS(storage, expiredCal);
     }, 5 * 60000);
 
     return;
@@ -438,31 +510,31 @@ const syncNS = async () => {
   // call resolve so the Promise.all works as it
   // should and doesn't trigger early because of an error
   var syncCalPromise = new timeLimitedPromise(4*60*1000, async (resolve) => {
-    await syncCal(sensorInsert);
+    await syncCal(storage, sensorInsert, expiredCal);
     resolve();
   });
 
   let syncSGVsPromise = new timeLimitedPromise(4*60*1000, async (resolve) => {
-    await syncSGVs();
+    await syncSGVs(storage);
     resolve();
   });
 
   let syncBGChecksPromise = new timeLimitedPromise(4*60*1000, async (resolve) => {
-    await syncBGChecks(sensorInsert);
+    await syncBGChecks(storage, sensorInsert, expiredCal);
     resolve();
   });
 
-  Promise.all([syncCalPromise, syncSGVsPromise, syncBGChecksPromise])
+  await Promise.all([syncCalPromise, syncSGVsPromise, syncBGChecksPromise])
     .catch(error => {
       console.log('syncNS error: ' + error);
-    }).then( () => {
-      console.log('syncNS complete - setting 5 minute timer');
-
-      setTimeout(() => {
-        // Restart the syncNS after 5 minute
-        syncNS();
-      }, 5 * 60000);
     });
+
+  console.log('syncNS complete - setting 5 minute timer');
+
+  setTimeout(() => {
+    // Restart the syncNS after 5 minute
+    syncNS(storage, expiredCal);
+  }, 5 * 60000);
 };
 
 module.exports = syncNS;

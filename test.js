@@ -125,10 +125,10 @@ describe('Test Calibration', function() {
       'stateString': 'Need calibration',
     };
 
-    let lastCal = calibration.calculateG5Calibration(null, 0, glucoseHist, currSGV);
+    let lastCal = calibration.calculateG5Calibration(null, 0, null, glucoseHist, currSGV);
 
     lastCal.slope.should.be.greaterThan(800);
-    lastCal.slope.should.be.lessThan(900);
+    lastCal.slope.should.be.lessThan(810);
     lastCal.intercept.should.be.greaterThan(33500);
     lastCal.intercept.should.be.lessThan(33600);
     lastCal.type.should.equal('LeastSquaresRegression');
@@ -182,7 +182,7 @@ describe('Test Calibration', function() {
       'stateString': 'Need calibration',
     };
 
-    let lastCal = calibration.calculateG5Calibration(null, 0, glucoseHist, currSGV);
+    let lastCal = calibration.calculateG5Calibration(null, 0, null, glucoseHist, currSGV);
 
     lastCal.slope.should.be.greaterThan(1050);
     lastCal.slope.should.be.lessThan(1060);

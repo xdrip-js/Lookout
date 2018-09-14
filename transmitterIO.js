@@ -9,12 +9,11 @@ const stats = require('./calcStats');
 
 var _ = require('lodash');
 
-module.exports = async (io, extend_sensor_opt) => {
+module.exports = async (io, extend_sensor, expired_cal) => {
   let txId;
   let txFailedReads = 0;
   let txStatus = null;
   let pending = [];
-  let extend_sensor = extend_sensor_opt;
   let worker = null;
   let timerObj = null;
 
@@ -64,6 +63,7 @@ module.exports = async (io, extend_sensor_opt) => {
 
   const processNewGlucose = async (sgv) => {
     let lastCal = null;
+    let lastExpiredCal = null;
     let glucoseHist = null;
     let sensorInsert = null;
     let sendSGV = true;
@@ -94,6 +94,11 @@ module.exports = async (io, extend_sensor_opt) => {
         console.log('Unable to obtain current NS Calibration' + error);
       });
 
+    lastExpiredCal = await storage.getItem('expiredCal')
+      .catch(error => {
+        console.log('Unable to obtain current Expired Calibration' + error);
+      });
+
     glucoseHist = await storage.getItem('glucoseHist')
       .catch((err) => {
         console.log('Error getting glucoseHist: ' + err);
@@ -118,7 +123,7 @@ module.exports = async (io, extend_sensor_opt) => {
     }
 
     if (glucoseHist.length > 0) {
-      newCal = calibration.calculateG5Calibration(lastCal, lastG5CalTime, glucoseHist, sgv);
+      newCal = calibration.calculateG5Calibration(lastCal, lastG5CalTime, sensorInsert, glucoseHist, sgv);
 
       if (sgv.state != glucoseHist[glucoseHist.length-1].state) {
         xDripAPS.postAnnouncement('Sensor: ' + sgv.stateString);
@@ -132,15 +137,37 @@ module.exports = async (io, extend_sensor_opt) => {
     if (!sgv.glucose && extend_sensor && lastCal && (lastCal.type !== 'Unity')) {
       sgv.glucose = calibration.calcGlucose(sgv, lastCal);
 
-      console.log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value');
+      console.log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value from G5 calibration algorithm');
       console.log('Calibrated SGV: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered + ' slope: ' + lastCal.slope + ' intercept: ' + lastCal.intercept);
 
       sgv.g5calibrated = false;
     }
 
-    if (sensorInsert && lastCal && (sensorInsert.diff(moment(lastCal.date).subtract(6, 'minutes')) > 0) && (lastCal.type !== 'Unity')) {
+    if (expired_cal && lastExpiredCal) {
+      let expiredCalGlucose = calibration.calcGlucose(sgv, lastExpiredCal);
+
+      if (!sgv.glucose) {
+        sgv.glucose = expiredCalGlucose;
+
+        console.log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value from expired calibration algorithm');
+        console.log('Calibrated SGV: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered + ' slope: ' + lastCal.slope + ' intercept: ' + lastCal.intercept);
+
+        console.log('Expired calibration use disabled - not replacing invalid glucose');
+        sgv.glucose = null;
+
+        sgv.g5calibrated = false;
+      } else {
+        let calErr = expiredCalGlucose - sgv.glucose;
+        console.log('Current expired calibration error: ' + Math.round(calErr*10)/10 + ' calibrated value: ' + Math.round(expiredCalGlucose*10)/10 + ' slope: ' + Math.round(lastExpiredCal.slope*10)/10 + ' intercept: ' + Math.round(lastExpiredCal.intercept*10)/10);
+      }
+    }
+
+    if (sensorInsert && (lastCal.type !== 'Unity') && 
+      ((lastCal && (sensorInsert.diff(moment(lastCal.date).subtract(6, 'minutes')) > 0))
+      || (lastExpiredCal && (sensorInsert.diff(moment(lastExpiredCal.date).subtract(6, 'minutes')) > 0)))) {
       console.log('Found sensor insert after latest calibration. Deleting calibration data.');
       await storage.del('g5Calibration');
+      await storage.del('expiredCal');
       await storage.del('bgChecks');
       await storage.del('glucoseHist');
 
@@ -166,7 +193,12 @@ module.exports = async (io, extend_sensor_opt) => {
           console.log('Unable to store new NS Calibration');
         });
 
-      xDripAPS.postCalibration(newCal);
+      if (!expired_cal) {
+        xDripAPS.postCalibration(newCal);
+      } else {
+        console.log('Expired calibration use disabled - sending new G5 calibration to NS');
+        xDripAPS.postCalibration(newCal);
+      }
     }
 
 
@@ -448,7 +480,6 @@ module.exports = async (io, extend_sensor_opt) => {
 
   const processG5CalData = async (calData) => {
     let rigSGVs = null;
-    let matchingSGV = null;
     let bgChecks = null;
 
     calData.dateMills = moment(calData.date).valueOf();
@@ -473,6 +504,8 @@ module.exports = async (io, extend_sensor_opt) => {
       bgChecks = [];
     }
 
+    // Look through the BG Checks we have to see if we already
+    // have this BG Check
     for (let i = (bgChecks.length-1); i >= 0; --i) {
       if (Math.abs(bgChecks[i].dateMills - calData.dateMills) < 2*60*1000) {
         // The G5 transmitter report varies the time around
@@ -486,6 +519,22 @@ module.exports = async (io, extend_sensor_opt) => {
       }
     }
 
+    let sensorInsert = await xDripAPS.latestSensorInserted()
+      .catch(error => {
+        console.log('Unable to get latest sensor inserted record from NS: ' + error);
+      });
+
+    let valueTime = moment(calData.date);
+
+    if (sensorInsert && (sensorInsert.diff(valueTime) > 0)) {
+      // The calibration value pre-dates the NS sensorInsert record
+      // Bail out.
+
+      storageLock.unlockStorage();
+
+      return;
+    }
+
     rigSGVs = await storage.getItem('glucoseHist')
       .catch(error => {
         console.log('Error getting rig SGVs: ' + error);
@@ -493,14 +542,19 @@ module.exports = async (io, extend_sensor_opt) => {
 
     calData.unfiltered = 0;
 
-    if (rigSGVs && (rigSGVs.length > 0)) {
-      // check the sensor state
-      // don't use this cal message data
-      // if sensor state isn't OK
-      // In stopped state and maybe other states,
-      // the last calibration data is not valid
+    if (rigSGVs && (rigSGVs.length > 1)) {
+      let SGVBefore = null;
+      let SGVBeforeTime = null;
+      let SGVAfter = null;
+      let SGVAfterTime = null;
+
       let latestSGV = rigSGVs[rigSGVs.length-1];
 
+      // check the sensor state
+      // don't use this cal message data
+      // if sensor state isn't OK or Need Calibration
+      // In stopped state and maybe other states,
+      // the last calibration data is not valid
       if ((latestSGV.state != 0x06) && (latestSGV.state != 0x07)) {
         console.log('Sensor state not "OK" or "Need Calibration" - not using latest calibration message data.');
         storageLock.unlockStorage();
@@ -509,16 +563,25 @@ module.exports = async (io, extend_sensor_opt) => {
 
       // we can assume they are already sorted
       // since we sort before storing them
+      // Search from the end since in the normal case
+      // the G5 cal is processed within 2 readings
+      // of the event.
+      for (let i=(rigSGVs.length-2); i >= 0; --i) {
+        // Is the next SGV after valueTime
+        // and the current SGV is before valueTime
+        SGVBeforeTime = rigSGVs[i].readDateMills;
+        SGVAfterTime = rigSGVs[i+1].readDateMills;
+        if ((valueTime.valueOf() > SGVBeforeTime) && (SGVAfterTime > valueTime.valueOf())) {
+          SGVBefore = rigSGVs[i];
+          SGVAfter = rigSGVs[i+1];
+          break;
+        }
+      }
 
-      matchingSGV = _.find(rigSGVs, (o) => {
-        return o.readDateMills > calData.dateMills;
-      });
-
-      if (matchingSGV) {
-        console.log('Matching SGV Unfiltered: ' + matchingSGV.unfiltered);
-        console.log('Matching Cal SGV: ' + calData.glucose);
-
-        calData.unfiltered = matchingSGV.unfiltered;
+      if (SGVBefore && SGVAfter) {
+        calData.unfiltered = calibration.interpolateUnfiltered(SGVBefore, SGVAfter, valueTime);
+      } else {
+        console.log('Unable to find bounding SGVs for calibration at ' + valueTime.format());
       }
     }
 
@@ -531,11 +594,23 @@ module.exports = async (io, extend_sensor_opt) => {
         console.log('Error saving bgChecks: ' + error);
       });
 
+    let newCal = calibration.expiredCalibration(bgChecks, sensorInsert);
+
+    await storage.setItem('expiredCal', newCal)
+      .catch((err) => {
+        console.log('Unable to store expiredCal: ' + err);
+      });
+
     storageLock.unlockStorage();
 
     xDripAPS.postBGCheck(calData);
 
     io.emit('calibrationData', calData);
+
+    if (expired_cal && newCal) {
+      console.log('Expired calibration use disabled - not sending it to NS');
+      // xDripAPS.postCalibration(newCal);
+    }
   };
 
   const processBatteryStatus = (batteryStatus) => {
@@ -571,7 +646,9 @@ module.exports = async (io, extend_sensor_opt) => {
       } else if (m.msg == 'glucose') {
         const glucose = m.data;
 
-        console.log('got glucose: ' + glucose.glucose + ' unfiltered: ' + glucose.unfiltered/1000);
+        glucose.readDateMills = moment(glucose.readDate).valueOf();
+
+        console.log('got glucose: ' + glucose.glucose + ' unfiltered: ' + (glucose.unfiltered/1000));
 
         // restart txFailedReads counter since we were successfull
         txFailedReads = 0;
@@ -644,7 +721,7 @@ module.exports = async (io, extend_sensor_opt) => {
 
   txId = value || '500000';
 
-  syncNS();
+  syncNS(storage, expired_cal);
 
   listenToTransmitter(txId);
 

@@ -1,15 +1,13 @@
 const xDripAPS = require('./xDripAPS')();
 const calibration = require('./calibration');
-const storage = require('node-persist');
 const cp = require('child_process');
 const moment = require('moment');
-const storageLock = require('./storageLock');
 const syncNS = require('./syncNS');
 const stats = require('./calcStats');
 
 var _ = require('lodash');
 
-module.exports = async (io, extend_sensor, expired_cal) => {
+module.exports = async (options, storage, storageLock, client) => {
   let txId;
   let txFailedReads = 0;
   let txStatus = null;
@@ -134,7 +132,7 @@ module.exports = async (io, extend_sensor, expired_cal) => {
       lastCal = newCal;
     }
 
-    if (!sgv.glucose && extend_sensor && lastCal && (lastCal.type !== 'Unity')) {
+    if (!sgv.glucose && options.extend_sensor && lastCal && (lastCal.type !== 'Unity')) {
       sgv.glucose = calibration.calcGlucose(sgv, lastCal);
 
       console.log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value from G5 calibration algorithm');
@@ -143,7 +141,7 @@ module.exports = async (io, extend_sensor, expired_cal) => {
       sgv.g5calibrated = false;
     }
 
-    if (expired_cal && lastExpiredCal) {
+    if (options.expired_cal && lastExpiredCal) {
       let expiredCalGlucose = calibration.calcGlucose(sgv, lastExpiredCal);
 
       if (!sgv.glucose) {
@@ -193,7 +191,7 @@ module.exports = async (io, extend_sensor, expired_cal) => {
           console.log('Unable to store new NS Calibration');
         });
 
-      if (!expired_cal) {
+      if (!options.expired_cal) {
         xDripAPS.postCalibration(newCal);
       } else {
         console.log('Expired calibration use disabled - sending new G5 calibration to NS');
@@ -280,7 +278,7 @@ module.exports = async (io, extend_sensor, expired_cal) => {
   };
 
   const sendNewGlucose = (sgv, sendSGV) => {
-    io.emit('glucose', sgv);
+    client.newSGV(sgv);
 
     if (!sgv.glucose) {
       // Set to 5 so NS will plot the unfiltered glucose values
@@ -605,9 +603,9 @@ module.exports = async (io, extend_sensor, expired_cal) => {
 
     xDripAPS.postBGCheck(calData);
 
-    io.emit('calibrationData', calData);
+    client.newCal(calData);
 
-    if (expired_cal && newCal) {
+    if (options.expired_cal && newCal) {
       console.log('Expired calibration use disabled - not sending it to NS');
       // xDripAPS.postCalibration(newCal);
     }
@@ -622,6 +620,11 @@ module.exports = async (io, extend_sensor, expired_cal) => {
   };
 
   const listenToTransmitter = (id) => {
+    if (!id) {
+      console.log('Unable to listen to invalid Transmitter ID');
+      return;
+    }
+
     // Remove the BT device so it starts from scratch
     removeBTDevice(id);
 
@@ -642,7 +645,7 @@ module.exports = async (io, extend_sensor, expired_cal) => {
         // shuts down before acting on them, or in the
         // event of lost comms
         // better to return something from the worker
-        io.emit('pending', pending);
+        client.newPending(pending);
       } else if (m.msg == 'glucose') {
         const glucose = m.data;
 
@@ -657,7 +660,7 @@ module.exports = async (io, extend_sensor, expired_cal) => {
       } else if (m.msg == 'messageProcessed') {
         // TODO: check that dates match
         pending.shift();
-        io.emit('pending', pending);
+        client.newPending(pending);
       } else if (m.msg == 'calibrationData') {
         processG5CalData(m.data);
       } else if (m.msg == 'batteryStatus') {
@@ -682,7 +685,7 @@ module.exports = async (io, extend_sensor, expired_cal) => {
         clearTimeout(timerObj);
       }
 
-      if (id !== txId) {
+      if (id && id !== txId) {
         removeBTDevice(id);
       }
 
@@ -712,79 +715,74 @@ module.exports = async (io, extend_sensor, expired_cal) => {
     }, 6 * 60000);
   };
 
-  // handle persistence here
-  // make the storage direction relative to the install directory,
-  // not the calling directory
-  await storage.init({dir: __dirname + '/storage'});
+  const transmitterIO = {
+    getTxId: () => {
+      return txId;
+    },
 
-  let value = await storage.getItem('id');
+    getPending: () => {
+      return pending;
+    },
 
-  txId = value || '500000';
+    getGlucose: async () => {
+      let glucoseHist = await storage.getItem('glucoseHist');
 
-  syncNS(storage, expired_cal);
+      if (glucoseHist) {
+        return glucoseHist[glucoseHist.length-1];
+      } else {
+        return null;
+      }
+    },
 
-  listenToTransmitter(txId);
+    getHistory: async () => {
+      let glucoseHist = await storage.getItem('glucoseHist')
+        .catch(error => {
+          console.log('Unable to get glucoseHist storage item: ' + error);
+        });
 
-  io.on('connection', async socket => {
-    // TODO: should this just be a 'data' message?
-    // how do we initialise the connection with
-    // all the data it needs?
+      if (!glucoseHist) {
+        glucoseHist = [];
+      }
 
-    console.log('about to emit id ' + txId);
-    socket.emit('id', txId);
-    socket.emit('pending', pending);
-
-    let glucoseHist = await storage.getItem('glucoseHist')
-      .catch(error => {
-        console.log('Unable to get glucoseHist storage item: ' + error);
-      });
-
-    if (glucoseHist) {
-      socket.emit('glucose', glucoseHist[glucoseHist.length - 1]);
-      socket.emit('glucoseHistory', glucoseHist.map((sgv) => {
+      return glucoseHist.map((sgv) => {
         return { readDate: sgv.readDateMills, glucose: sgv.glucose };
-      }));
-    }
-
-    let bgChecks = await storage.getItem('bgChecks')
-      .catch(error => {
-        console.log('Unable to get bgChecks storage item: ' + error);
       });
+    },
 
-    let lastG5Cal = getLastG5Cal(bgChecks);
+    getLastCal: async () => {
+      let bgChecks = await storage.getItem('bgChecks')
+        .catch(error => {
+          console.log('Unable to get bgChecks storage item: ' + error);
+        });
 
-    if (lastG5Cal) {
-      socket.emit('calibrationData', lastG5Cal);
-    }
+      let lastG5Cal = getLastG5Cal(bgChecks);
 
-    socket.on('resetTx', () => {
-      console.log('received resetTx command');
+      return lastG5Cal;
+    },
+
+    resetTx: () => {
       pending.push({date: Date.now(), type: 'ResetTx'});
-      io.emit('pending', pending);
-    });
-    socket.on('startSensor', () => {
-      console.log('received startSensor command');
+    },
+
+    startSensor: () => {
       pending.push({date: Date.now(), type: 'StartSensor'});
-      io.emit('pending', pending);
-    });
-    socket.on('backStartSensor', () => {
-      console.log('received backStartSensor command');
+    },
+
+    backStartSensor: () => {
       pending.push({date: Date.now() - 2*60*60*1000, type: 'StartSensor'});
-      io.emit('pending', pending);
-    });
-    socket.on('stopSensor', () => {
-      console.log('received stopSensor command');
+    },
+
+    stopSensor: () => {
       // Stop sensor 3 hours prior to now to enable a rapid restart
       // if one is desired.
       pending.push({date: Date.now() - 3*60*60*1000, type: 'StopSensor'});
-      io.emit('pending', pending);
-    });
-    socket.on('calibrate', glucose => {
-      console.log('received calibration of ' + glucose);
+    },
+
+    calibrate: (glucose) => {
       pending.push({date: Date.now(), type: 'CalibrateSensor', glucose});
-      io.emit('pending', pending);
-    });
-    socket.on('id', value => {
+    },
+
+    setTxId: (value) => {
       if (value.length != 6) {
         console.log('received invalid transmitter id of ' + value);
       } else {
@@ -797,6 +795,10 @@ module.exports = async (io, extend_sensor, expired_cal) => {
           } catch (error) {
             console.log('Error killing old worker: ' + error);
           }
+        } else if (!txId) {
+          // If the current txId was null,
+          // then we need to start the listener
+          listenToTransmitter(txId);
         }
 
         console.log('received id of ' + value);
@@ -807,12 +809,15 @@ module.exports = async (io, extend_sensor, expired_cal) => {
         storage.del('glucoseHist');
 
         storage.setItemSync('id', txId);
-        // TODO: clear glucose on new id
-        // use io.emit rather than socket.emit
-        // since we want to notify all connections
-        io.emit('id', txId);
       }
-    });
-  });
+    }
+  };
 
+  client.setTransmitter(transmitterIO);
+
+  syncNS(storage, options.expired_cal);
+
+  txId = await storage.getItem('id');
+
+  listenToTransmitter(txId);
 };

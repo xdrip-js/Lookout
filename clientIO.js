@@ -1,4 +1,6 @@
 
+const LoopIO = require('./loopIO');
+const PumpIO = require('./pumpIO');
 const express = require('express');
 const socketIO = require('socket.io');
 
@@ -16,6 +18,9 @@ module.exports = (options) => {
     .listen(options.port, () => console.log(`Listening on ${ options.port }`));
 
   const io = socketIO(server);
+
+  LoopIO(io.of('/loop'));
+  PumpIO(io.of('/pump'));
 
   const initClient = async (socket) => {
     let txId = transmitter && transmitter.getTxId() || null;

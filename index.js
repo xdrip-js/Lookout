@@ -1,7 +1,5 @@
 #!/usr/bin/env node
 
-const LoopIO = require('./loopIO');
-const PumpIO = require('./pumpIO');
 const storage = require('node-persist');
 const storageLock = require('./storageLock');
 
@@ -48,8 +46,6 @@ const init = async () => {
 
   TransmitterIO(options, storage, storageLock, client);
 
-  LoopIO(io.of('/loop'));
-  PumpIO(io.of('/pump'));
 };
 
 init();

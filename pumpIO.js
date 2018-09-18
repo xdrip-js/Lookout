@@ -1,8 +1,9 @@
 const chokidar = require('chokidar');
 const fs = require('fs');
 
-module.exports = (io) => {
+module.exports = (io, options) => {
   let basalProfile;
+  const openapsDir = options.openaps;
 
   const readBasalProfile = (path) => {
     console.log(`Reading file ${path}`);
@@ -19,7 +20,7 @@ module.exports = (io) => {
     }, 1000);
   };
 
-  chokidar.watch('myopenaps/settings/basal_profile.json')
+  chokidar.watch(openapsDir + '/settings/basal_profile.json')
     .on('change', readBasalProfile)
     .on('add', readBasalProfile);
 

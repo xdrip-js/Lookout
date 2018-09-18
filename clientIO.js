@@ -18,9 +18,10 @@ module.exports = (options) => {
     .listen(options.port, () => console.log(`Listening on ${ options.port }`));
 
   const io = socketIO(server);
+  const cgmIO = io.of('/cgm');
 
-  LoopIO(io.of('/loop'));
-  PumpIO(io.of('/pump'));
+  LoopIO(io.of('/loop'), options);
+  PumpIO(io.of('/pump'), options);
 
   const initClient = async (socket) => {
     let txId = transmitter && transmitter.getTxId() || null;
@@ -51,7 +52,7 @@ module.exports = (options) => {
     }
   };
 
-  io.on('connection', async socket => {
+  cgmIO.on('connection', async socket => {
     // TODO: should this just be a 'data' message?
     // how do we initialise the connection with
     // all the data it needs?
@@ -69,7 +70,7 @@ module.exports = (options) => {
       let pending = transmitter && transmitter.getPending() || null;
 
       if (pending) {
-        io.emit('pending', pending);
+        cgmIO.emit('pending', pending);
       }
     });
     socket.on('startSensor', () => {
@@ -80,7 +81,7 @@ module.exports = (options) => {
       let pending = transmitter && transmitter.getPending() || null;
 
       if (pending) {
-        io.emit('pending', pending);
+        cgmIO.emit('pending', pending);
       }
     });
     socket.on('backStartSensor', () => {
@@ -91,7 +92,7 @@ module.exports = (options) => {
       let pending = transmitter && transmitter.getPending() || null;
 
       if (pending) {
-        io.emit('pending', pending);
+        cgmIO.emit('pending', pending);
       }
     });
     socket.on('stopSensor', () => {
@@ -102,7 +103,7 @@ module.exports = (options) => {
       let pending = transmitter && transmitter.getPending() || null;
 
       if (pending) {
-        io.emit('pending', pending);
+        cgmIO.emit('pending', pending);
       }
     });
     socket.on('calibrate', glucose => {
@@ -113,7 +114,7 @@ module.exports = (options) => {
       let pending = transmitter && transmitter.getPending() || null;
 
       if (pending) {
-        io.emit('pending', pending);
+        cgmIO.emit('pending', pending);
       }
     });
     socket.on('id', value => {
@@ -123,25 +124,25 @@ module.exports = (options) => {
 
       let txId = transmitter && transmitter.getTxId() || null;
 
-      io.emit('id', txId);
+      cgmIO.emit('id', txId);
     });
   });
 
   return {
-    newSgv: (sgv) => {
-      io.emit('glucose', sgv);
+    newSGV: (sgv) => {
+      cgmIO.emit('glucose', sgv);
     },
 
     newCal: (cal) => {
-      io.emit('calibrationData', cal);
+      cgmIO.emit('calibrationData', cal);
     },
 
     newPending: (pending) => {
-      io.emit('pending', pending);
+      cgmIO.emit('pending', pending);
     },
 
     txId: (txId) => {
-      io.emit('id', txId);
+      cgmIO.emit('id', txId);
     },
 
     setTransmitter: (txmitter) => {

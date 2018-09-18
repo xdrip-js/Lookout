@@ -1,6 +1,6 @@
 
 /*eslint-disable no-unused-vars*/
-module.exports = (options, client) => {
+module.exports = (options, storage, storageLock, client) => {
 /*eslint-enable no-unused-vars*/
   let id = 'ABCDEF';
   const glucose = {
@@ -15,8 +15,8 @@ module.exports = (options, client) => {
     activationDate: Date.now() - 17*24*60*60*1000
   };
   const glucoseHistory = [
-    {readDate: Date.now(), glucose: 100},
-    {readDate: Date.now() - 15*60000, glucose: 80}
+    {readDate: Date.now(), readDateMills: Date.now(), glucose: 100},
+    {readDate: Date.now() - 15*60000, readDateMills: Date.now() - 15*60000, glucose: 80}
   ];
   let calibration = {
     date: Date.now() - 12*60*60*1000,
@@ -25,12 +25,13 @@ module.exports = (options, client) => {
   setInterval(() => {
     glucose.glucose += 1;
     glucose.readDate = Date.now();
+    glucose.readDateMills = Date.now();
     glucose.trend += 10;
     if (glucose.trend >= 40) {
       glucose.trend -= 70;
     }
     console.log('trend = ' + glucose.trend);
-    io.emit('glucose', glucose);
+    client.newSGV(glucose);
   }, 60000);
 
   const transmitterIO = {

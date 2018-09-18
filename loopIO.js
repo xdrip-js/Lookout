@@ -2,8 +2,8 @@ const chokidar = require('chokidar');
 const fs = require('fs');
 const moment = require('moment');
 
-module.exports = (io) => {
-  const openapsDir = '/root/myopenaps';
+module.exports = (io, options) => {
+  const openapsDir = options.openaps;
 
   let iob;
   let enacted;
@@ -23,7 +23,7 @@ module.exports = (io) => {
       });
     }, 1000);
   };
-  chokidar.watch(openapsDir + '/iob.json')
+  chokidar.watch(openapsDir + '/monitor/iob.json')
     .on('change', readIOB)
     .on('add', readIOB);
 

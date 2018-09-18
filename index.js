@@ -15,10 +15,20 @@ const argv = require('yargs')
     describe: 'Enables expired calibration mode',
     default: false
   })
+  .option('sim', {
+    boolean: true,
+    describe: 'Enable simulation mode',
+    default: false
+  })
   .option('port', {
     nargs: 1,
     describe: 'Port number for web server',
     default: 3000
+  })
+  .option('openaps', {
+    nargs: 1,
+    describe: 'OpenAPS directory',
+    default: '/root/myopenaps'
   })
   .strict(true)
   .help('help');
@@ -28,17 +38,19 @@ const params = argv.argv;
 let options = {
   extend_sensor: params.extend_sensor,
   expired_cal: params.expired_cal,
-  port: params.port
+  port: params.port,
+  sim: params.sim,
+  openaps: params.openaps
 };
 
-const init = async () => {
+const init = async (options) => {
 
   // handle persistence here
   // make the storage direction relative to the install directory,
   // not the calling directory
   await storage.init({dir: __dirname + '/storage'});
 
-  const TransmitterIO = argv.sim ? require('./transmitterIO-simulated') : require('./transmitterIO');
+  const TransmitterIO = options.sim ? require('./transmitterIO-simulated') : require('./transmitterIO');
 
   const ClientIO = require('./clientIO');
 
@@ -48,5 +60,5 @@ const init = async () => {
 
 };
 
-init();
+init(options);
 

@@ -40,12 +40,14 @@ module.exports = (io, options) => {
             timestamp,
             rate,
             duration,
-            units
+            units,
+            COB
           }) => ({
             date: moment(timestamp).toDate().getTime(),
             rate,
             duration,
-            units
+            units,
+            COB
           }))(obj);
           console.log(enacted);
           io.emit('enacted', enacted);

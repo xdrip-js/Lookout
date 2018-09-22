@@ -4,6 +4,7 @@ const PumpIO = require('./pumpIO');
 const express = require('express');
 const socketIO = require('socket.io');
 
+// Create a Lookout GUI HTTP server
 module.exports = (options) => {
 
   let transmitter = null;
@@ -18,9 +19,14 @@ module.exports = (options) => {
     .listen(options.port, () => console.log(`Listening on ${ options.port }`));
 
   const io = socketIO(server);
+
+  // /cgm path is handled by this module
   const cgmIO = io.of('/cgm');
 
+  // /loop path provides Loop status obtained from the OpenAPS directory
   LoopIO(io.of('/loop'), options);
+
+  // /pump path provides Pump status obtained from the OpenAPS directory
   PumpIO(io.of('/pump'), options);
 
   const initClient = async (socket) => {
@@ -128,23 +134,32 @@ module.exports = (options) => {
     });
   });
 
+  // Return an object that can be used to interact with the
+  // client.
   return {
+    // Send a new SGV to all connected clients.
     newSGV: (sgv) => {
       cgmIO.emit('glucose', sgv);
     },
 
+    // Send a new Cal to all connected clients.
     newCal: (cal) => {
       cgmIO.emit('calibrationData', cal);
     },
 
+    // Send an updated Pending List to all connected clients.
     newPending: (pending) => {
       cgmIO.emit('pending', pending);
     },
 
+    // Send an updated transmitter ID to all connected clients.
     txId: (txId) => {
       cgmIO.emit('id', txId);
     },
 
+    // Set the transmitter object that can be used
+    // to get data from the transmitter and
+    // send commands to the transmitter from the client.
     setTransmitter: (txmitter) => {
       transmitter = txmitter;
     }

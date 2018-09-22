@@ -4,7 +4,7 @@ const storage = require('node-persist');
 const storageLock = require('./storageLock');
 
 const argv = require('yargs')
-  .usage('$0 [--extend_sensor] [--expired_cal] [--port <port>]')
+  .usage('$0 [--extend_sensor] [--expired_cal] [--port <port>] [--openaps <directory>] [--sim]')
   .option('extend_sensor', {
     boolean: true,
     describe: 'Enables extended sensor session mode',
@@ -30,6 +30,7 @@ const argv = require('yargs')
     describe: 'OpenAPS directory',
     default: '/root/myopenaps'
   })
+  .wrap(null)
   .strict(true)
   .help('help');
 

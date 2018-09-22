@@ -715,15 +715,20 @@ module.exports = async (options, storage, storageLock, client) => {
     }, 6 * 60000);
   };
 
+  // Create an object that can be used
+  // to interact with the transmitter.
   const transmitterIO = {
+    // provide the current transmitter ID
     getTxId: () => {
       return txId;
     },
 
+    // provide the pending list
     getPending: () => {
       return pending;
     },
 
+    // provide the most recent glucose reading
     getGlucose: async () => {
       let glucoseHist = await storage.getItem('glucoseHist');
 
@@ -734,6 +739,7 @@ module.exports = async (options, storage, storageLock, client) => {
       }
     },
 
+    // provide the glucose history
     getHistory: async () => {
       let glucoseHist = await storage.getItem('glucoseHist')
         .catch(error => {
@@ -749,6 +755,7 @@ module.exports = async (options, storage, storageLock, client) => {
       });
     },
 
+    // provide the most recent G5 calibration
     getLastCal: async () => {
       let bgChecks = await storage.getItem('bgChecks')
         .catch(error => {
@@ -760,14 +767,17 @@ module.exports = async (options, storage, storageLock, client) => {
       return lastG5Cal;
     },
 
+    // Reset the transmitter
     resetTx: () => {
       pending.push({date: Date.now(), type: 'ResetTx'});
     },
 
+    // Start a sensor session
     startSensor: () => {
       pending.push({date: Date.now(), type: 'StartSensor'});
     },
 
+    // Start a sensor session back started 2 hours
     backStartSensor: () => {
       pending.push({date: Date.now() - 2*60*60*1000, type: 'StartSensor'});
     },
@@ -778,10 +788,12 @@ module.exports = async (options, storage, storageLock, client) => {
       pending.push({date: Date.now() - 3*60*60*1000, type: 'StopSensor'});
     },
 
+    // calibrate the sensor
     calibrate: (glucose) => {
       pending.push({date: Date.now(), type: 'CalibrateSensor', glucose});
     },
 
+    // Set the transmitter Id to the value provided
     setTxId: (value) => {
       if (value.length != 6) {
         console.log('received invalid transmitter id of ' + value);
@@ -813,11 +825,15 @@ module.exports = async (options, storage, storageLock, client) => {
     }
   };
 
+  // Provide the object to the client
   client.setTransmitter(transmitterIO);
 
+  // Start the Nightscout synchronization loop task
   syncNS(storage, options.expired_cal);
 
+  // Read the current stored transmitter value
   txId = await storage.getItem('id');
 
+  // Start the transmitter loopp task
   listenToTransmitter(txId);
 };

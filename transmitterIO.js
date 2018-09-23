@@ -43,6 +43,36 @@ module.exports = async (options, storage, storageLock, client) => {
     });
   };
 
+  const changeTxId = (value) => {
+    if (value.length != 6) {
+      console.log('received invalid transmitter id of ' + value);
+    } else {
+      if (worker !== null) {
+        // When worker exits, listenToTransmitter will
+        // be scheduled
+        try {
+          console.log('Attempting to kill worker for old id');
+          worker.kill('SIGTERM');
+        } catch (error) {
+          console.log('Error killing old worker: ' + error);
+        }
+      } else if (!txId) {
+        // If the current txId was null,
+        // then we need to start the listener
+        listenToTransmitter(txId);
+      }
+
+      console.log('received id of ' + value);
+      txId = value;
+
+      storage.del('g5Calibration');
+      storage.del('bgChecks');
+      storage.del('glucoseHist');
+
+      storage.setItemSync('id', txId);
+    }
+  };
+
   const getLastG5Cal = (bgChecks) => {
     let lastG5Cal = null;
 
@@ -794,33 +824,7 @@ module.exports = async (options, storage, storageLock, client) => {
 
     // Set the transmitter Id to the value provided
     setTxId: (value) => {
-      if (value.length != 6) {
-        console.log('received invalid transmitter id of ' + value);
-      } else {
-        if (worker !== null) {
-          // When worker exits, listenToTransmitter will
-          // be scheduled
-          try {
-            console.log('Attempting to kill worker for old id');
-            worker.kill('SIGTERM');
-          } catch (error) {
-            console.log('Error killing old worker: ' + error);
-          }
-        } else if (!txId) {
-          // If the current txId was null,
-          // then we need to start the listener
-          listenToTransmitter(txId);
-        }
-
-        console.log('received id of ' + value);
-        txId = value;
-
-        storage.del('g5Calibration');
-        storage.del('bgChecks');
-        storage.del('glucoseHist');
-
-        storage.setItemSync('id', txId);
-      }
+      changeTxId(value);
     }
   };
 
@@ -830,6 +834,6 @@ module.exports = async (options, storage, storageLock, client) => {
   // Read the current stored transmitter value
   txId = await storage.getItem('id');
 
-  // Start the transmitter loopp task
+  // Start the transmitter loop task
   listenToTransmitter(txId);
 };

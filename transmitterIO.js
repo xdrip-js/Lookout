@@ -2,7 +2,6 @@ const xDripAPS = require('./xDripAPS')();
 const calibration = require('./calibration');
 const cp = require('child_process');
 const moment = require('moment');
-const syncNS = require('./syncNS');
 const stats = require('./calcStats');
 
 var _ = require('lodash');
@@ -827,9 +826,6 @@ module.exports = async (options, storage, storageLock, client) => {
 
   // Provide the object to the client
   client.setTransmitter(transmitterIO);
-
-  // Start the Nightscout synchronization loop task
-  syncNS(storage, options.expired_cal);
 
   // Read the current stored transmitter value
   txId = await storage.getItem('id');

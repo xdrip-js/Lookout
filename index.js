@@ -55,10 +55,16 @@ const init = async (options) => {
 
   const ClientIO = require('./clientIO');
 
+  const syncNS = require('./syncNS');
+
+  // Start the web GUI server
   const client = ClientIO(options);
 
+  // Start the transmitter loop task
   TransmitterIO(options, storage, storageLock, client);
 
+  // Start the Nightscout synchronization loop task
+  syncNS(storage, storageLock, options.expired_cal);
 };
 
 init(options);

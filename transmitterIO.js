@@ -506,7 +506,6 @@ module.exports = async (options, storage, storageLock, client) => {
   };
 
   const processG5CalData = async (calData) => {
-    let rigSGVs = null;
     let bgChecks = null;
     let bgCheckIdx = -1;
 
@@ -572,55 +571,7 @@ module.exports = async (options, storage, storageLock, client) => {
       return;
     }
 
-    rigSGVs = await storage.getItem('glucoseHist')
-      .catch(error => {
-        console.log('Error getting rig SGVs: ' + error);
-      });
-
-    calData.unfiltered = 0;
-
-    if (rigSGVs && (rigSGVs.length > 1)) {
-      let SGVBefore = null;
-      let SGVBeforeTime = null;
-      let SGVAfter = null;
-      let SGVAfterTime = null;
-
-      let latestSGV = rigSGVs[rigSGVs.length-1];
-
-      // check the sensor state
-      // don't use this cal message data
-      // if sensor state isn't OK or Need Calibration
-      // In stopped state and maybe other states,
-      // the last calibration data is not valid
-      if ((latestSGV.state != 0x06) && (latestSGV.state != 0x07)) {
-        console.log('Sensor state not "OK" or "Need Calibration" - not using latest calibration message data.');
-        storageLock.unlockStorage();
-        return;
-      }
-
-      // we can assume they are already sorted
-      // since we sort before storing them
-      // Search from the end since in the normal case
-      // the G5 cal is processed within 2 readings
-      // of the event.
-      for (let i=(rigSGVs.length-2); i >= 0; --i) {
-        // Is the next SGV after valueTime
-        // and the current SGV is before valueTime
-        SGVBeforeTime = rigSGVs[i].readDateMills;
-        SGVAfterTime = rigSGVs[i+1].readDateMills;
-        if ((valueTime.valueOf() > SGVBeforeTime) && (SGVAfterTime > valueTime.valueOf())) {
-          SGVBefore = rigSGVs[i];
-          SGVAfter = rigSGVs[i+1];
-          break;
-        }
-      }
-
-      if (SGVBefore && SGVAfter) {
-        calData.unfiltered = calibration.interpolateUnfiltered(SGVBefore, SGVAfter, valueTime);
-      } else {
-        console.log('Unable to find bounding SGVs for calibration at ' + valueTime.format());
-      }
-    }
+    calData.unfiltered = calibration.getUnfiltered(storage, valueTime);
 
     if (bgCheckIdx >= 0) {
       // We already had this bgCheck but didn't have the unfiltered value

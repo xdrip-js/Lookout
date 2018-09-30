@@ -305,7 +305,102 @@ exports.expiredCalibration = (bgChecks, sensorInsert) => {
   return calReturn;
 };
 
-exports.interpolateUnfiltered = (SGVBefore, SGVAfter, valueTime) => {
+exports.getUnfiltered = (storage, valueTime) => {
+
+  let rigSGVs = await storage.getItem('glucoseHist')
+    .catch(error => {
+      console.log('Error getting rig SGVs: ' + error);
+    });
+
+  if (rigSGVs && (rigSGVs.length > 1)) {
+    let SGVBefore = null;
+    let SGVBeforeTime = null;
+    let SGVAfter = null;
+    let SGVAfterTime = null;
+
+    let latestSGV = rigSGVs[rigSGVs.length-1];
+
+    // check the sensor state
+    // don't use this cal message data
+    // if sensor state isn't OK or Need Calibration
+    // In stopped state and maybe other states,
+    // the last calibration data is not valid
+    if ((latestSGV.state != 0x06) && (latestSGV.state != 0x07)) {
+      return;
+    }
+
+    // we can assume they are already sorted
+    // since we sort before storing them
+    // Search from the end since in the normal case
+    // the G5 cal is processed within 2 readings
+    // of the event.
+    for (let i=(rigSGVs.length-2); i >= 0; --i) {
+      // Is the next SGV after valueTime
+      // and the current SGV is before valueTime
+      SGVBeforeTime = rigSGVs[i].readDateMills;
+      SGVAfterTime = rigSGVs[i+1].readDateMills;
+      if ((valueTime.valueOf() > SGVBeforeTime) && (SGVAfterTime > valueTime.valueOf())) {
+        SGVBefore = rigSGVs[i];
+        SGVAfter = rigSGVs[i+1];
+        break;
+      }
+    }
+
+    if (SGVBefore && SGVAfter) {
+      return interpolateUnfiltered(SGVBefore, SGVAfter, valueTime);
+    }
+    console.log('Unable to find bounding SGVs for calibration at ' + valueTime.format());
+    console.log('Looking in Nightscout');
+    return getUnfilteredFromNS(valueTime);
+  }
+};
+
+const getUnfilteredFromNS = (valueTime) => {
+  let NSSGVs = null;
+  let timeStart = moment(valueTime.valueOf()).subtract(11, 'minutes');
+  let timeEnd = moment(valueTime.valueOf()).add(11, 'minutes');
+  let SGVBefore = null;
+  let SGVBeforeTime = null;
+  let SGVAfter = null;
+  let SGVAfterTime = null;
+
+  // Get NS SGV immediately before BG Check
+  NSSGVs = await xDripAPS.SGVsBetween(timeStart, timeEnd, 5)
+    .catch(error => {
+      console.log('Unable to get NS SGVs to match unfiltered with BG Check: ' + error);
+    });
+
+  if (!NSSGVs) {
+    NSSGVs = [];
+  }
+
+  NSSGVs = NSSGVs.map((sgv) => {
+    sgv.dateMills = moment(sgv.date).valueOf();
+    return sgv;
+  });
+
+  NSSGVs = _.sortBy(NSSGVs, ['dateMills']);
+
+  for (let i=0; i < (NSSGVs.length-1); ++i) {
+    // Is the next SGV after valueTime
+    // and the current SGV is before valueTime
+    SGVBeforeTime = NSSGVs[i].dateMills;
+    SGVAfterTime = NSSGVs[i+1].dateMills;
+    if ((SGVBeforeTime < valueTime.valueOf()) && (SGVAfterTime > valueTime.valueOf())) {
+      SGVBefore = NSSGVs[i];
+      SGVAfter = NSSGVs[i+1];
+      break;
+    }
+  }
+
+  if (SGVBefore && SGVAfter) {
+    rigValue.unfiltered = calibration.interpolateUnfiltered(xDripAPS.convertEntryToxDrip(SGVBefore), xDripAPS.convertEntryToxDrip(SGVAfter), valueTime);
+  } else {
+    console.log('Unable to find bounding SGVs for BG Check at ' + valueTime.format());
+  }
+};
+
+const interpolateUnfiltered = (SGVBefore, SGVAfter, valueTime) => {
   let totalTime = SGVAfter.readDateMills - SGVBefore.readDateMills;
   let totalDelta = SGVAfter.unfiltered - SGVBefore.unfiltered;
   let fractionTime = (valueTime.valueOf() - SGVBefore.readDateMills) / totalTime;
@@ -327,4 +422,6 @@ exports.interpolateUnfiltered = (SGVBefore, SGVAfter, valueTime) => {
 
   return returnVal;
 };
+
+exports.interpolateUnfiltered = interpolateUnfiltered;
 

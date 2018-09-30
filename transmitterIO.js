@@ -508,6 +508,7 @@ module.exports = async (options, storage, storageLock, client) => {
   const processG5CalData = async (calData) => {
     let rigSGVs = null;
     let bgChecks = null;
+    let bgCheckIdx = -1;
 
     calData.dateMills = moment(calData.date).valueOf();
 
@@ -540,9 +541,18 @@ module.exports = async (options, storage, storageLock, client) => {
         // If they are within two minutes, assume it's the same
         // check and bail out.
 
-        storageLock.unlockStorage();
+        if (bgChecks[i].unfiltered) {
+          // If it already has a unfiltered value
+          // we have already completed processing
+          // it.
+          storageLock.unlockStorage();
 
-        return;
+          return;
+        } else {
+          // break out of the loop, but try to find
+          // the unfiltered value
+          bgCheckIdx = i;
+        }
       }
     }
 
@@ -612,9 +622,15 @@ module.exports = async (options, storage, storageLock, client) => {
       }
     }
 
-    bgChecks.push(calData);
+    if (bgCheckIdx >= 0) {
+      // We already had this bgCheck but didn't have the unfiltered value
+      bgChecks[bgCheckIdx].unfiltered = calData.unfiltered;
+    } else {
+      // This is a new bgCheck we didn't already have
+      bgChecks.push(calData);
 
-    bgChecks = _.sortBy(bgChecks, ['dateMills']);
+      bgChecks = _.sortBy(bgChecks, ['dateMills']);
+    }
 
     storage.setItem('bgChecks', bgChecks)
       .catch(error => {

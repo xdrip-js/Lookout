@@ -65,15 +65,16 @@ npm test
 cd ~/Lookout
 git remote remove upstream # Just in case one already exists - this command may error, but that is OK
 git remote add upstream https://github.com/xdrip-js/Lookout.git
-git checkout master
-git merge upstream/master
-git push
+git checkout --force upstream/master # Force a checkout of the current master even if we have made local changes
+git checkout -B master # Force an overwrite of the local master with the upstream master
 sudo npm install
 sudo npm link
 ```
 If your upstream is already set to the xdrip-js repository, you can skip the `git remote` commands.  The current git remote repositories can be displayed with the `git remote -v` command.
 
 If you want to run the dev branch, replace `master` in the commands above with `dev`.
+
+After updating the rig, reboot to restart Lookout with the updated version.
 
 ## Example usage
 Just type `Lookout`. The app will run on port 3000.

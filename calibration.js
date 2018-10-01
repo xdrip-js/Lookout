@@ -237,12 +237,17 @@ const calcGlucose = (sgv, calibration) => {
 
 exports.calcGlucose = calcGlucose;
 
-exports.expiredCalibration = (bgChecks, sensorInsert) => {
+exports.expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorInsert, sgv) => {
   let calPairs = [];
   let calReturn = null;
   let calPairsStart = 0;
 
   for (let i=0; i < bgChecks.length; ++i) {
+    if (!('unfiltered' in bgChecks[i]) || !bgChecks[i].unfiltered) {
+      // Try to get the unfiltered value if we don't have it
+      bgChecks[i].unfiltered = await getUnfiltered(storage, moment(bgChecks[i].dateMills), sgv);
+    }
+
     if ((bgChecks[i].type !== 'Unity') && (bgChecks[i].unfiltered)) {
       calPairs.push({
         unfiltered: bgChecks[i].unfiltered,
@@ -303,10 +308,23 @@ exports.expiredCalibration = (bgChecks, sensorInsert) => {
     console.log('No suitable glucose pairs found for expired calibration.');
   }
 
-  return calReturn;
+  // Default to sending a new calibration calculation
+  let slopeDelta = 1;
+  let interceptDelta = 1;
+
+  if (lastExpiredCal) {
+    slopeDelta = Math.abs(calReturn.slope - lastExpiredCal.slope);
+    interceptDelta = Math.abs(calReturn.intercept - lastExpiredCal.intercept);
+  }
+
+  if ((slopeDelta < 1) && (interceptDelta < 1)) {
+    return null;
+  } else {
+    return calReturn;
+  }
 };
 
-exports.getUnfiltered = async (storage, valueTime) => {
+const getUnfiltered = async (storage, valueTime, sgv) => {
 
   let rigSGVs = await storage.getItem('glucoseHist')
     .catch(error => {
@@ -319,15 +337,12 @@ exports.getUnfiltered = async (storage, valueTime) => {
     let SGVAfter = null;
     let SGVAfterTime = null;
 
-    let latestSGV = rigSGVs[rigSGVs.length-1];
-
-    // check the sensor state
-    // don't use this cal message data
-    // if sensor state isn't OK or Need Calibration
-    // In stopped state and maybe other states,
-    // the last calibration data is not valid
-    if ((latestSGV.state != 0x06) && (latestSGV.state != 0x07)) {
-      return;
+    if (sgv) {
+      // if we got an sgv argument
+      // it is the latest sgv that hasn't
+      // been appended to the storage array
+      // yet
+      rigSGVs.push(sgv);
     }
 
     // we can assume they are already sorted
@@ -355,6 +370,8 @@ exports.getUnfiltered = async (storage, valueTime) => {
     return await getUnfilteredFromNS(valueTime);
   }
 };
+
+exports.getUnfiltered = getUnfiltered;
 
 const getUnfilteredFromNS = async (valueTime) => {
   let NSSGVs = null;

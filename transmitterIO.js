@@ -138,6 +138,7 @@ module.exports = async (options, storage, storageLock, client) => {
 
     let lastG5CalTime = 0;
     let newCal = null;
+    let newExpiredCal = null;
 
     let lastG5Cal = getLastG5Cal(bgChecks);
 
@@ -152,6 +153,8 @@ module.exports = async (options, storage, storageLock, client) => {
     if (glucoseHist.length > 0) {
       newCal = calibration.calculateG5Calibration(lastCal, lastG5CalTime, sensorInsert, glucoseHist, sgv);
 
+      newExpiredCal = calibration.expiredCalibration(storage, bgChecks, lastExpiredCal, sensorInsert, sgv);
+
       if (sgv.state != glucoseHist[glucoseHist.length-1].state) {
         xDripAPS.postAnnouncement('Sensor: ' + sgv.stateString);
       }
@@ -159,6 +162,10 @@ module.exports = async (options, storage, storageLock, client) => {
 
     if (newCal) {
       lastCal = newCal;
+    }
+
+    if (newExpiredCal) {
+      lastExpiredCal = newExpiredCal;
     }
 
     if (!sgv.glucose && options.extend_sensor && lastCal && (lastCal.type !== 'Unity')) {
@@ -226,6 +233,18 @@ module.exports = async (options, storage, storageLock, client) => {
         console.log('Expired calibration use disabled - sending new G5 calibration to NS');
         xDripAPS.postCalibration(newCal);
       }
+    }
+
+    if (newExpiredCal && options.expired_cal) {
+      console.log('New expired calibration: slope = ' + newExpiredCal.slope + ', intercept = ' + newExpiredCal.intercept + ', scale = ' + newExpiredCal.scale);
+
+      await storage.setItem('expiredCal', newExpiredCal)
+        .catch(() => {
+          console.log('Unable to store new NS Calibration');
+        });
+
+      // Expired calibration use disabled
+      // xDripAPS.postCalibration(newExpiredCal);
     }
 
 
@@ -518,6 +537,29 @@ module.exports = async (options, storage, storageLock, client) => {
       return;
     }
 
+    let rigSGVs = await storage.getItem('glucoseHist')
+      .catch(error => {
+        console.log('Error getting rig SGVs: ' + error);
+      });
+
+    if (!rigSGVs) {
+      // we really shouldn't have gotten to this
+      // state, but bail since we don't have any
+      // glucose history to work with
+      return;
+    }
+
+    let latestSGV = rigSGVs[rigSGVs.length-1];
+
+    // check the sensor state
+    // don't use this cal message data
+    // if sensor state isn't OK or Need Calibration
+    // In stopped state and maybe other states,
+    // the last calibration data is not valid
+    if ((latestSGV.state != 0x06) && (latestSGV.state != 0x07)) {
+      return;
+    }
+
     calData.type = 'G5';
 
     await storageLock.lockStorage();
@@ -589,7 +631,7 @@ module.exports = async (options, storage, storageLock, client) => {
         console.log('Error saving bgChecks: ' + error);
       });
 
-    let newCal = calibration.expiredCalibration(bgChecks, sensorInsert);
+    let newCal = calibration.expiredCalibration(storage, bgChecks, null, sensorInsert, null);
 
     await storage.setItem('expiredCal', newCal)
       .catch((err) => {

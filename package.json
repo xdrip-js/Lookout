@@ -1,7 +1,7 @@
 {
     "name": "Lookout",
     "version": "1.0.1",
-    "description": "A web app for communicating with an OpenAPS rig.",
+    "description": "A web app for controlling and monitoring an Dexcom CGM via Lookout.",
     "main": "index.js",
     "scripts": {
         "pretest": "./node_modules/.bin/eslint \"./**/*.js\"",

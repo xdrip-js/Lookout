@@ -1,9 +1,8 @@
 
 /*eslint-disable no-unused-vars*/
-module.exports = (io, extend_sensor, expired_cal_opt) => {
+module.exports = (options, storage, storageLock, client) => {
 /*eslint-enable no-unused-vars*/
   let id = 'ABCDEF';
-  const version = '1.2.3.4';
   const glucose = {
     inSession: true,
     glucose: 120,
@@ -16,8 +15,8 @@ module.exports = (io, extend_sensor, expired_cal_opt) => {
     activationDate: Date.now() - 17*24*60*60*1000
   };
   const glucoseHistory = [
-    {readDate: Date.now(), glucose: 100},
-    {readDate: Date.now() - 15*60000, glucose: 80}
+    {readDate: Date.now(), readDateMills: Date.now(), glucose: 100},
+    {readDate: Date.now() - 15*60000, readDateMills: Date.now() - 15*60000, glucose: 80}
   ];
   let calibration = {
     date: Date.now() - 12*60*60*1000,
@@ -26,35 +25,56 @@ module.exports = (io, extend_sensor, expired_cal_opt) => {
   setInterval(() => {
     glucose.glucose += 1;
     glucose.readDate = Date.now();
+    glucose.readDateMills = Date.now();
     glucose.trend += 10;
     if (glucose.trend >= 40) {
       glucose.trend -= 70;
     }
     console.log('trend = ' + glucose.trend);
-    io.emit('glucose', glucose);
+    client.newSGV(glucose);
   }, 60000);
 
-  io.on('connection', (socket) => {
-    socket.emit('id', id);
-    socket.emit('version', version);
-    socket.emit('glucose', glucose);
-    socket.emit('calibration', calibration);
-    socket.emit('glucoseHistory', glucoseHistory);
+  const transmitterIO = {
+    getTxId: () => {
+      return id;
+    },
 
-    socket.on('startSensor', () => {
-      // transmitter.startSensor();
-    });
-    socket.on('stopSensor', () => {
-    });
-    socket.on('calibrate', glucose => {
-      console.log('received calibration of ' + glucose);
-      // const pending = transmitter.calibrate(glucose);
-      // storage.setItemSync('calibration', pending);
-      // io.emit('calibration', pending);
-    });
-    socket.on('id', txId => {
-      id = txId;
-      io.emit('id', id);
-    });
-  });
+    getPending: () => {
+      return null;
+    },
+
+    getGlucose: async () => {
+      return glucose;
+    },
+
+    getHistory: async () => {
+      return glucoseHistory;
+    },
+
+    getLastCal: async () => {
+      return calibration;
+    },
+
+    resetTx: () => {
+    },
+
+    startSensor: () => {
+    },
+
+    backStartSensor: () => {
+    },
+
+    stopSensor: () => {
+    },
+
+    calibrate: () => {
+    },
+
+    setTxId: (value) => {
+      id = value;
+    }
+  };
+
+  client.setTransmitter(transmitterIO);
+
 };

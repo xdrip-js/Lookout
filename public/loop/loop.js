@@ -22,7 +22,7 @@ angular.module('AngularOpenAPS.loop', [
         return iob;
       },
       get cob() {
-        return 84;
+        return enacted.COB;
       },
       get enacted() {
         return enacted;

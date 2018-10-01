@@ -3,12 +3,14 @@
 const xDripAPS = require('./xDripAPS')();
 const moment = require('moment');
 const timeLimitedPromise = require('./timeLimitedPromise');
-const storageLock = require('./storageLock');
 const calibration = require('./calibration');
 
 var _ = require('lodash');
 
-const syncCal = async (storage, sensorInsert, expiredCal) => {
+var storage = null;
+var storageLock = null;
+
+const syncCal = async (sensorInsert, expiredCal) => {
   let rigCal = null;
   let NSCal = null;
   let nsQueryError = false;
@@ -103,7 +105,7 @@ const syncCal = async (storage, sensorInsert, expiredCal) => {
   console.log('syncCal complete');
 };
 
-const syncSGVs = async (storage) => {
+const syncSGVs = async () => {
   let timeSince = null;
 
   let rigSGVs = null;
@@ -258,7 +260,7 @@ const syncSGVs = async (storage) => {
   console.log('syncSGVs complete');
 };
 
-const syncBGChecks = async (storage, sensorInsert, expiredCal) => {
+const syncBGChecks = async (sensorInsert, expiredCal) => {
   let NSBGChecks = null;
   let nsQueryError = false;
   let calculateExpiredCal = false;
@@ -480,9 +482,12 @@ const syncBGChecks = async (storage, sensorInsert, expiredCal) => {
   console.log('syncBGChecks complete');
 };
 
-const syncNS = async (storage, expiredCal) => {
+const syncNS = async (storage_, storageLock_, expiredCal) => {
   let sensorInsert = null;
   let nsQueryError = false;
+
+  storage = storage_;
+  storageLock = storageLock_;
 
   sensorInsert = await xDripAPS.latestSensorInserted()
     .catch(error => {
@@ -500,7 +505,7 @@ const syncNS = async (storage, expiredCal) => {
 
     setTimeout(() => {
       // Restart the syncNS after 5 minute
-      syncNS(storage, expiredCal);
+      syncNS(storage, storageLock, expiredCal);
     }, 5 * 60000);
 
     return;
@@ -510,17 +515,17 @@ const syncNS = async (storage, expiredCal) => {
   // call resolve so the Promise.all works as it
   // should and doesn't trigger early because of an error
   var syncCalPromise = new timeLimitedPromise(4*60*1000, async (resolve) => {
-    await syncCal(storage, sensorInsert, expiredCal);
+    await syncCal(sensorInsert, expiredCal);
     resolve();
   });
 
   let syncSGVsPromise = new timeLimitedPromise(4*60*1000, async (resolve) => {
-    await syncSGVs(storage);
+    await syncSGVs();
     resolve();
   });
 
   let syncBGChecksPromise = new timeLimitedPromise(4*60*1000, async (resolve) => {
-    await syncBGChecks(storage, sensorInsert, expiredCal);
+    await syncBGChecks(sensorInsert, expiredCal);
     resolve();
   });
 
@@ -533,7 +538,7 @@ const syncNS = async (storage, expiredCal) => {
 
   setTimeout(() => {
     // Restart the syncNS after 5 minute
-    syncNS(storage, expiredCal);
+    syncNS(storage, storageLock, expiredCal);
   }, 5 * 60000);
 };
 

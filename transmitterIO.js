@@ -571,11 +571,12 @@ module.exports = async (options, storage, storageLock, client) => {
       return;
     }
 
-    calData.unfiltered = calibration.getUnfiltered(storage, valueTime);
+    calData.unfiltered = await calibration.getUnfiltered(storage, valueTime);
 
     if (bgCheckIdx >= 0) {
       // We already had this bgCheck but didn't have the unfiltered value
       bgChecks[bgCheckIdx].unfiltered = calData.unfiltered;
+      bgChecks[bgCheckIdx].type = calData.type;
     } else {
       // This is a new bgCheck we didn't already have
       bgChecks.push(calData);
@@ -785,7 +786,38 @@ module.exports = async (options, storage, storageLock, client) => {
     },
 
     // calibrate the sensor
-    calibrate: (glucose) => {
+    calibrate: async (glucose) => {
+      let timeValue = moment();
+
+      await storageLock.lockStorage();
+
+      let bgChecks = await storage.getItem('bgChecks')
+        .catch(error => {
+          console.log('Error getting bgChecks: ' + error);
+        });
+
+      if (!bgChecks) {
+        bgChecks = [];
+      }
+
+      let calData = {
+        'date': timeValue.format(),
+        'dateMills': timeValue.valueOf(),
+        'glucose': glucose,
+        'type': 'GUI'
+      };
+
+      bgChecks.push(calData);
+
+      bgChecks = _.sortBy(bgChecks, ['dateMills']);
+
+      storage.setItem('bgChecks', bgChecks)
+        .catch(error => {
+          console.log('Error saving bgChecks: ' + error);
+        });
+
+      storageLock.unlockStorage();
+
       pending.push({date: Date.now(), type: 'CalibrateSensor', glucose});
     },
 

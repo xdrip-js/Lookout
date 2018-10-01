@@ -385,7 +385,7 @@ const syncBGChecks = async (sensorInsert, expiredCal) => {
     let rigValue = rigBGChecks[i];
 
     if (!('unfiltered' in rigValue) || !rigValue.unfiltered) {
-      calibration.getUnfiltered(storage, valueTime);
+      rigValue.unfiltered = await calibration.getUnfiltered(storage, moment(rigValue.dateMills));
     }
   }
 

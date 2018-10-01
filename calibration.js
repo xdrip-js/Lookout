@@ -2,17 +2,18 @@
 //Rule 2 - Don't allow any BG calibrations or take in any new calibrations 
 //         within 15 minutes of last sensor insert
 //Rule 3 - Only use Single Point Calibration for 1st 12 hours since Sensor insert
-//Rule 4 - Do not store calibration records within 12 hours since Sensor insert. 
-//         Use for SinglePoint calibration, but then discard them
-//Rule 5 - Do not use LSR until we have 3 or more calibration points. 
+//Rule 4 - Do not use LSR until we have 3 or more calibration points. 
 //         Use SinglePoint calibration only for less than 3 calibration points. 
 //         SinglePoint simply uses the latest calibration record and assumes 
 //         the yIntercept is 0.
-//Rule 6 - TODO: Drop back to SinglePoint calibration if slope is out of bounds 
+//Rule 5 - TODO: Drop back to SinglePoint calibration if slope is out of bounds 
 //         (>MAXSLOPE or <MINSLOPE)
-//Rule 7 - TODO: Drop back to SinglePoint calibration if yIntercept is out of bounds 
+//Rule 6 - TODO: Drop back to SinglePoint calibration if yIntercept is out of bounds 
 //         (> minimum unfiltered value in calibration record set or 
 //          < - minimum unfiltered value in calibration record set)
+
+const xDripAPS = require('./xDripAPS')();
+var _ = require('lodash');
 
 var exports = module.exports = {};
 
@@ -305,7 +306,7 @@ exports.expiredCalibration = (bgChecks, sensorInsert) => {
   return calReturn;
 };
 
-exports.getUnfiltered = (storage, valueTime) => {
+exports.getUnfiltered = async (storage, valueTime) => {
 
   let rigSGVs = await storage.getItem('glucoseHist')
     .catch(error => {
@@ -351,11 +352,11 @@ exports.getUnfiltered = (storage, valueTime) => {
     }
     console.log('Unable to find bounding SGVs for calibration at ' + valueTime.format());
     console.log('Looking in Nightscout');
-    return getUnfilteredFromNS(valueTime);
+    return await getUnfilteredFromNS(valueTime);
   }
 };
 
-const getUnfilteredFromNS = (valueTime) => {
+const getUnfilteredFromNS = async (valueTime) => {
   let NSSGVs = null;
   let timeStart = moment(valueTime.valueOf()).subtract(11, 'minutes');
   let timeEnd = moment(valueTime.valueOf()).add(11, 'minutes');
@@ -394,9 +395,10 @@ const getUnfilteredFromNS = (valueTime) => {
   }
 
   if (SGVBefore && SGVAfter) {
-    rigValue.unfiltered = calibration.interpolateUnfiltered(xDripAPS.convertEntryToxDrip(SGVBefore), xDripAPS.convertEntryToxDrip(SGVAfter), valueTime);
+    return interpolateUnfiltered(xDripAPS.convertEntryToxDrip(SGVBefore), xDripAPS.convertEntryToxDrip(SGVAfter), valueTime);
   } else {
     console.log('Unable to find bounding SGVs for BG Check at ' + valueTime.format());
+    return null;
   }
 };
 

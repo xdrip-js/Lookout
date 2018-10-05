@@ -7,17 +7,17 @@ let command = null;
 const argv = require('yargs')
   .command('cal <sgv>', 'Calibration the transmitter with provided glucose meter reading', (yargs) => {
     yargs.positional('sgv', {
-        describe: 'glucose value from meter',
-        type: 'number',
-        required: true
-      })
+      describe: 'glucose value from meter',
+      type: 'number',
+      required: true
+    });
   })
   .command('id <id>', 'Set transmitter ID', (yargs) => {
     yargs.positional('id', {
-        describe: 'transmitter serial number',
-        type: 'string',
-        required: true
-      })
+      describe: 'transmitter serial number',
+      type: 'string',
+      required: true
+    });
   })
   .command('start', 'Start sensor session')
   .command('back-start', 'Start sensor session back dated by 2 hours')
@@ -32,7 +32,6 @@ const argv = require('yargs')
 const params = argv.argv;
 command = params._.shift();
 
-let requestOptions = null;
 let socket = io('http://localhost:3000/cgm');
 let sendCmd = null;
 let sendArg = null;
@@ -53,7 +52,19 @@ if (command === 'cal') {
   sendCmd = 'resetTx';
 }
 
-socket.on('connect', () => {
+socket.on('pending', (pending) => {
+  console.log('Pending: ', pending);
+});
+
+socket.on('id', id => {
+  console.log('Transmitter ID: ', id);
+});
+
+socket.on('glucoseHistory', data => {
+  data && data.length > 0 && console.log(data[data.length-1]);
+});
+
+socket.on('connect', async () => {
   socket.emit(sendCmd, sendArg);
 });
 

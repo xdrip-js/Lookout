@@ -54,30 +54,39 @@ if (command === 'cal') {
 }
 
 socket.on('pending', (pending) => {
-  console.log('Pending: ', pending);
+  console.log('          Pending: ', pending);
 });
 
 socket.on('id', id => {
-  console.log('Transmitter ID: ', id);
+  console.log('   Transmitter ID: ', id);
 });
 
 socket.on('glucose', glucose => {
+  let sessionStart = moment(glucose.sessionStartDate);
+  let sessionAge = moment.duration(moment().diff(sessionStart));
+
+  let transmitterStart = moment(glucose.transmitterStartDate);
+  let transmitterAge = moment.duration(moment().diff(transmitterStart));
+
+  console.log('          glucose: ' + glucose.glucose);
+  console.log('            noise: ' + Math.round(glucose.noise*10)/10);
+  console.log('      noise index: ' + glucose.nsNoise);
+  console.log('        inSession: ' + glucose.inSession);
+  console.log('     sensor state: ' + glucose.stateString);
   console.log('transmitter state: ' + glucose.txStatusString);
-  console.log('sensor state: ' + glucose.stateString);
-  console.log('inSession: ' + glucose.inSession);
-  console.log('readDate: ' + moment(glucose.readDate).format());
-  console.log('session start: ' + moment(glucose.sessionStartDate).format());
-  console.log('transmitter start: ' + moment(glucose.transmitterStartDate).format());
-  console.log('glucose: ' + glucose.glucose);
-  console.log('noise: ' + glucose.noise);
-  console.log('noise index: ' + glucose.nsNoise);
+  console.log('         readDate: ' + moment(glucose.readDate).format());
+  console.log('    session start: ' + sessionStart.format());
+  console.log('      session age: ' + sessionAge.days() + ' days ' + sessionAge.hours() + ' hours ' + sessionAge.minutes() + ' minutes');
+  console.log('transmitter start: ' + transmitterStart.format());
+  console.log('  transmitter age: ' + transmitterAge.days() + ' days ' + transmitterAge.hours() + ' hours ' + transmitterAge.minutes() + ' minutes');
 });
 
 socket.on('glucoseHistory', data => {
-  data && data.length > 0 && console.log(data[data.length-1]);
+  // No need to print this
+  // data && data.length > 0 && console.log(data[data.length-1]);
 });
 
-socket.on('connect', async () => {
+socket.on('connect', () => {
   sendCmd && socket.emit(sendCmd, sendArg);
 });
 

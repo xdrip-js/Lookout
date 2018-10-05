@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const io = require('socket.io-client');
+const moment = require('moment');
 
 let command = null;
 
@@ -23,7 +24,7 @@ const argv = require('yargs')
   .command('back-start', 'Start sensor session back dated by 2 hours')
   .command('stop', 'Stop sensor session')
   .command('reset', 'Reset transmitter')
-  .demandCommand(1, 'Must provide a valid command')
+  .command(['status', '$0'], 'Show status')
   .help()
   .wrap(null)
   .strict(true)
@@ -60,11 +61,23 @@ socket.on('id', id => {
   console.log('Transmitter ID: ', id);
 });
 
+socket.on('glucose', glucose => {
+  console.log('transmitter state: ' + glucose.txStatusString);
+  console.log('sensor state: ' + glucose.stateString);
+  console.log('inSession: ' + glucose.inSession);
+  console.log('readDate: ' + moment(glucose.readDate).format());
+  console.log('session start: ' + moment(glucose.sessionStartDate).format());
+  console.log('transmitter start: ' + moment(glucose.transmitterStartDate).format());
+  console.log('glucose: ' + glucose.glucose);
+  console.log('noise: ' + glucose.noise);
+  console.log('noise index: ' + glucose.nsNoise);
+});
+
 socket.on('glucoseHistory', data => {
   data && data.length > 0 && console.log(data[data.length-1]);
 });
 
 socket.on('connect', async () => {
-  socket.emit(sendCmd, sendArg);
+  sendCmd && socket.emit(sendCmd, sendArg);
 });
 

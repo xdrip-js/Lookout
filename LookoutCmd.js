@@ -53,9 +53,6 @@ if (command === 'cal') {
   sendCmd = 'resetTx';
 }
 
-console.log(command);
-console.log(params);
-
 socket.on('connect', () => {
   socket.emit(sendCmd, sendArg);
 });

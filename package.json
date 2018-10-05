@@ -11,7 +11,7 @@
     "license": "MIT",
     "bin": {
         "Lookout": "./index.js",
-        "lookout": "./LookoutCmd.js"
+        "lookout": "./lookout.js"
     },
     "dependencies": {
         "angular": "1.7.0",

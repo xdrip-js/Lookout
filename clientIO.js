@@ -72,65 +72,31 @@ module.exports = (options) => {
       console.log('received resetTx command');
 
       transmitter && transmitter.resetTx();
-
-      let pending = transmitter && transmitter.getPending() || null;
-
-      if (pending) {
-        cgmIO.emit('pending', pending);
-      }
     });
     socket.on('startSensor', () => {
       console.log('received startSensor command');
 
       transmitter && transmitter.startSensor();
-
-      let pending = transmitter && transmitter.getPending() || null;
-
-      if (pending) {
-        cgmIO.emit('pending', pending);
-      }
     });
     socket.on('backStartSensor', () => {
       console.log('received backStartSensor command');
 
       transmitter && transmitter.backStartSensor();
-
-      let pending = transmitter && transmitter.getPending() || null;
-
-      if (pending) {
-        cgmIO.emit('pending', pending);
-      }
     });
     socket.on('stopSensor', () => {
       console.log('received stopSensor command');
 
       transmitter && transmitter.stopSensor();
-
-      let pending = transmitter && transmitter.getPending() || null;
-
-      if (pending) {
-        cgmIO.emit('pending', pending);
-      }
     });
     socket.on('calibrate', glucose => {
       console.log('received calibration of ' + glucose);
 
       transmitter && transmitter.calibrate(glucose);
-
-      let pending = transmitter && transmitter.getPending() || null;
-
-      if (pending) {
-        cgmIO.emit('pending', pending);
-      }
     });
     socket.on('id', value => {
       console.log('received transmitter id of ' + value);
 
       transmitter && transmitter.setTxId(value);
-
-      let txId = transmitter && transmitter.getTxId() || null;
-
-      cgmIO.emit('id', txId);
     });
   });
 

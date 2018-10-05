@@ -79,12 +79,13 @@ socket.on('glucose', glucose => {
   console.log('      session age: ' + sessionAge.days() + ' days ' + sessionAge.hours() + ' hours ' + sessionAge.minutes() + ' minutes');
   console.log('transmitter start: ' + transmitterStart.format());
   console.log('  transmitter age: ' + transmitterAge.days() + ' days ' + transmitterAge.hours() + ' hours ' + transmitterAge.minutes() + ' minutes');
+  console.log('=====================================');
 });
 
-socket.on('glucoseHistory', data => {
-  // No need to print this
-  // data && data.length > 0 && console.log(data[data.length-1]);
-});
+// No need to print this
+//socket.on('glucoseHistory', data => {
+//  data && data.length > 0 && console.log(data[data.length-1]);
+//});
 
 socket.on('connect', () => {
   sendCmd && socket.emit(sendCmd, sendArg);

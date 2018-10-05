@@ -102,7 +102,6 @@ Once the browser is open to your Lookout page (see above steps), you can start t
 ## Using the command line to control your G5
 The commands below can be entered on the rig command line to control the CGM. Regardless of which command is entered, after executing the command the command will enter a status loop indefinately printing the CGM status at each glucose read event. Enter `Ctrl-C` to exit the command.
 ```
-Commands:
   lookout cal <sgv>   # Calibrate the transmitter with provided glucose meter reading
   lookout id <id>     # Set transmitter ID
   lookout start       # Start sensor session

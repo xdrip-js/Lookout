@@ -6,7 +6,7 @@ const moment = require('moment');
 let command = null;
 
 const argv = require('yargs')
-  .command('cal <sgv>', 'Calibration the transmitter with provided glucose meter reading', (yargs) => {
+  .command('cal <sgv>', 'Calibrate the transmitter with provided glucose meter reading', (yargs) => {
     yargs.positional('sgv', {
       describe: 'glucose value from meter',
       type: 'number',

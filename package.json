@@ -9,7 +9,10 @@
     },
     "author": "Paul Dickens",
     "license": "MIT",
-    "bin": "./index.js",
+    "bin": {
+        "Lookout": "./index.js",
+        "lookout": "./LookoutCmd.js"
+    },
     "dependencies": {
         "angular": "1.7.0",
         "angular-chart.js": "^1.1.1",

@@ -2,6 +2,7 @@
 
 const io = require('socket.io-client');
 const moment = require('moment');
+const prompt = require('./prompt');
 
 let command = null;
 
@@ -34,24 +35,53 @@ const params = argv.argv;
 command = params._.shift();
 
 let socket = io('http://localhost:3000/cgm');
-let sendCmd = null;
-let sendArg = null;
 
-if (command === 'cal') {
-  sendCmd = 'calibrate';
-  sendArg = params.sgv;
-} else if (command === 'start') {
-  sendCmd = 'startSensor';
-} else if (command === 'back-start') {
-  sendCmd = 'backStartSensor';
-} else if (command === 'stop') {
-  sendCmd = 'stopSensor';
-} else if (command === 'id') {
-  sendCmd = 'id';
-  sendArg = params.id;
-} else if (command === 'reset') {
-  sendCmd = 'resetTx';
-}
+const processCommand = async (command, params, socket) => {
+  let sendCmd = null;
+  let sendArg = null;
+
+  if (command === 'cal') {
+    sendCmd = 'calibrate';
+    sendArg = params.sgv;
+  } else if (command === 'start') {
+    sendCmd = 'startSensor';
+  } else if (command === 'back-start') {
+    sendCmd = 'backStartSensor';
+  } else if (command === 'stop') {
+    let promptStr = [
+      'Your current session will be lost and will have to be restarted using \'lookout start\'\n',
+      'Are you sure? (y/n) '
+      ].join('\n');
+
+    let answer = await prompt(promptStr);
+
+    if (answer === "y" || answer === "Y") {
+      sendCmd = 'stopSensor';
+    }
+  } else if (command === 'id') {
+    sendCmd = 'id';
+    sendArg = params.id;
+  } else if (command === 'reset') {
+    let promptStr = [
+      'Running this command will instruct Logger to reset the Dexcom Transmitter!',
+      'Your current session will be lost and will have to be restarted using \'lookout start\'\n',
+      'Are you sure? (y/n) '
+      ].join('\n');
+
+    let answer = await prompt(promptStr);
+
+    if (answer === "y" || answer === "Y") {
+      sendCmd = 'resetTx';
+    }
+  }
+
+  socket.on('connect', () => {
+    sendCmd && socket.emit(sendCmd, sendArg);
+
+    // Only send it once
+    sendCmd = null;
+  });
+};
 
 socket.on('pending', (pending) => {
   console.log('          Pending: ', pending);
@@ -84,12 +114,5 @@ socket.on('glucose', glucose => {
   console.log('=====================================');
 });
 
-// No need to print this
-//socket.on('glucoseHistory', data => {
-//  data && data.length > 0 && console.log(data[data.length-1]);
-//});
-
-socket.on('connect', () => {
-  sendCmd && socket.emit(sendCmd, sendArg);
-});
+processCommand(command, params, socket);
 

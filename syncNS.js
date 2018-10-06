@@ -385,49 +385,7 @@ const syncBGChecks = async (sensorInsert, expiredCal) => {
     let rigValue = rigBGChecks[i];
 
     if (!('unfiltered' in rigValue) || !rigValue.unfiltered) {
-      let NSSGVs = null;
-      let valueTime = rigValue.dateMills;
-      let timeStart = moment(rigValue.dateMills).subtract(11, 'minutes');
-      let timeEnd = moment(rigValue.dateMills).add(11, 'minutes');
-      let SGVBefore = null;
-      let SGVBeforeTime = null;
-      let SGVAfter = null;
-      let SGVAfterTime = null;
-
-      // Get NS SGV immediately before BG Check
-      NSSGVs = await xDripAPS.SGVsBetween(timeStart, timeEnd, 5)
-        .catch(error => {
-          console.log('Unable to get NS SGVs to match unfiltered with BG Check: ' + error);
-        });
-
-      if (!NSSGVs) {
-        NSSGVs = [];
-      }
-
-      NSSGVs = NSSGVs.map((sgv) => {
-        sgv.dateMills = moment(sgv.date).valueOf();
-        return sgv;
-      });
-
-      NSSGVs = _.sortBy(NSSGVs, ['dateMills']);
-
-      for (let i=0; i < (NSSGVs.length-1); ++i) {
-        // Is the next SGV after valueTime
-        // and the current SGV is before valueTime
-        SGVBeforeTime = NSSGVs[i].dateMills;
-        SGVAfterTime = NSSGVs[i+1].dateMills;
-        if ((SGVBeforeTime < valueTime) && (SGVAfterTime > valueTime)) {
-          SGVBefore = NSSGVs[i];
-          SGVAfter = NSSGVs[i+1];
-          break;
-        }
-      }
-
-      if (SGVBefore && SGVAfter) {
-        rigValue.unfiltered = calibration.interpolateUnfiltered(xDripAPS.convertEntryToxDrip(SGVBefore), xDripAPS.convertEntryToxDrip(SGVAfter), moment(valueTime));
-      } else {
-        console.log('Unable to find bounding SGVs for BG Check at ' + moment(valueTime).format());
-      }
+      rigValue.unfiltered = await calibration.getUnfiltered(storage, moment(rigValue.dateMills));
     }
   }
 
@@ -462,7 +420,7 @@ const syncBGChecks = async (sensorInsert, expiredCal) => {
   }
 
   if (calculateExpiredCal) {
-    let newCal = calibration.expiredCalibration(rigBGChecks, sensorInsert);
+    let newCal = calibration.expiredCalibration(storage, rigBGChecks, null, sensorInsert, null);
 
     await storageLock.lockStorage();
 

@@ -2,17 +2,19 @@
 //Rule 2 - Don't allow any BG calibrations or take in any new calibrations 
 //         within 15 minutes of last sensor insert
 //Rule 3 - Only use Single Point Calibration for 1st 12 hours since Sensor insert
-//Rule 4 - Do not store calibration records within 12 hours since Sensor insert. 
-//         Use for SinglePoint calibration, but then discard them
-//Rule 5 - Do not use LSR until we have 3 or more calibration points. 
+//Rule 4 - Do not use LSR until we have 3 or more calibration points. 
 //         Use SinglePoint calibration only for less than 3 calibration points. 
 //         SinglePoint simply uses the latest calibration record and assumes 
 //         the yIntercept is 0.
-//Rule 6 - TODO: Drop back to SinglePoint calibration if slope is out of bounds 
+//Rule 5 - TODO: Drop back to SinglePoint calibration if slope is out of bounds 
 //         (>MAXSLOPE or <MINSLOPE)
-//Rule 7 - TODO: Drop back to SinglePoint calibration if yIntercept is out of bounds 
+//Rule 6 - TODO: Drop back to SinglePoint calibration if yIntercept is out of bounds 
 //         (> minimum unfiltered value in calibration record set or 
 //          < - minimum unfiltered value in calibration record set)
+
+const xDripAPS = require('./xDripAPS')();
+var _ = require('lodash');
+var moment = require('moment');
 
 var exports = module.exports = {};
 
@@ -236,12 +238,17 @@ const calcGlucose = (sgv, calibration) => {
 
 exports.calcGlucose = calcGlucose;
 
-exports.expiredCalibration = (bgChecks, sensorInsert) => {
+exports.expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorInsert, sgv) => {
   let calPairs = [];
   let calReturn = null;
   let calPairsStart = 0;
 
   for (let i=0; i < bgChecks.length; ++i) {
+    if (!('unfiltered' in bgChecks[i]) || !bgChecks[i].unfiltered) {
+      // Try to get the unfiltered value if we don't have it
+      bgChecks[i].unfiltered = await getUnfiltered(storage, moment(bgChecks[i].dateMills), sgv);
+    }
+
     if ((bgChecks[i].type !== 'Unity') && (bgChecks[i].unfiltered)) {
       calPairs.push({
         unfiltered: bgChecks[i].unfiltered,
@@ -302,10 +309,118 @@ exports.expiredCalibration = (bgChecks, sensorInsert) => {
     console.log('No suitable glucose pairs found for expired calibration.');
   }
 
-  return calReturn;
+  // Default to sending a new calibration calculation
+  let slopeDelta = 1;
+  let interceptDelta = 1;
+
+  if (lastExpiredCal) {
+    slopeDelta = Math.abs(calReturn.slope - lastExpiredCal.slope);
+    interceptDelta = Math.abs(calReturn.intercept - lastExpiredCal.intercept);
+  }
+
+  if ((slopeDelta < 1) && (interceptDelta < 1)) {
+    return null;
+  } else {
+    return calReturn;
+  }
 };
 
-exports.interpolateUnfiltered = (SGVBefore, SGVAfter, valueTime) => {
+const getUnfiltered = async (storage, valueTime, sgv) => {
+
+  let rigSGVs = await storage.getItem('glucoseHist')
+    .catch(error => {
+      console.log('Error getting rig SGVs: ' + error);
+    });
+
+  if (rigSGVs && (rigSGVs.length > 1)) {
+    let SGVBefore = null;
+    let SGVBeforeTime = null;
+    let SGVAfter = null;
+    let SGVAfterTime = null;
+
+    if (sgv) {
+      // if we got an sgv argument
+      // it is the latest sgv that hasn't
+      // been appended to the storage array
+      // yet
+      rigSGVs.push(sgv);
+    }
+
+    // we can assume they are already sorted
+    // since we sort before storing them
+    // Search from the end since in the normal case
+    // the G5 cal is processed within 2 readings
+    // of the event.
+    for (let i=(rigSGVs.length-2); i >= 0; --i) {
+      // Is the next SGV after valueTime
+      // and the current SGV is before valueTime
+      SGVBeforeTime = rigSGVs[i].readDateMills;
+      SGVAfterTime = rigSGVs[i+1].readDateMills;
+      if ((valueTime.valueOf() > SGVBeforeTime) && (SGVAfterTime > valueTime.valueOf())) {
+        SGVBefore = rigSGVs[i];
+        SGVAfter = rigSGVs[i+1];
+        break;
+      }
+    }
+
+    if (SGVBefore && SGVAfter) {
+      return interpolateUnfiltered(SGVBefore, SGVAfter, valueTime);
+    }
+    console.log('Unable to find bounding SGVs for calibration at ' + valueTime.format());
+    console.log('Looking in Nightscout');
+    return await getUnfilteredFromNS(valueTime);
+  }
+};
+
+exports.getUnfiltered = getUnfiltered;
+
+const getUnfilteredFromNS = async (valueTime) => {
+  let NSSGVs = null;
+  let timeStart = moment(valueTime.valueOf()).subtract(11, 'minutes');
+  let timeEnd = moment(valueTime.valueOf()).add(11, 'minutes');
+  let SGVBefore = null;
+  let SGVBeforeTime = null;
+  let SGVAfter = null;
+  let SGVAfterTime = null;
+
+  // Get NS SGV immediately before BG Check
+  NSSGVs = await xDripAPS.SGVsBetween(timeStart, timeEnd, 5)
+    .catch(error => {
+      console.log('Unable to get NS SGVs to match unfiltered with BG Check: ' + error);
+    });
+
+  if (!NSSGVs) {
+    NSSGVs = [];
+  }
+
+  NSSGVs = NSSGVs.map((sgv) => {
+    sgv.dateMills = moment(sgv.date).valueOf();
+    return sgv;
+  });
+
+  NSSGVs = _.sortBy(NSSGVs, ['dateMills']);
+
+  for (let i=0; i < (NSSGVs.length-1); ++i) {
+    // Is the next SGV after valueTime
+    // and the current SGV is before valueTime
+    SGVBeforeTime = NSSGVs[i].dateMills;
+    SGVAfterTime = NSSGVs[i+1].dateMills;
+    if ((SGVBeforeTime < valueTime.valueOf()) && (SGVAfterTime > valueTime.valueOf())) {
+      SGVBefore = NSSGVs[i];
+      SGVAfter = NSSGVs[i+1];
+      break;
+    }
+  }
+
+  if (SGVBefore && SGVAfter) {
+    return interpolateUnfiltered(xDripAPS.convertEntryToxDrip(SGVBefore), xDripAPS.convertEntryToxDrip(SGVAfter), valueTime);
+  } else {
+    console.log('Unable to find bounding SGVs for BG Check at ' + valueTime.format());
+    return null;
+  }
+};
+
+const interpolateUnfiltered = (SGVBefore, SGVAfter, valueTime) => {
   let totalTime = SGVAfter.readDateMills - SGVBefore.readDateMills;
   let totalDelta = SGVAfter.unfiltered - SGVBefore.unfiltered;
   let fractionTime = (valueTime.valueOf() - SGVBefore.readDateMills) / totalTime;

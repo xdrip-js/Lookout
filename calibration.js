@@ -443,5 +443,3 @@ const interpolateUnfiltered = (SGVBefore, SGVAfter, valueTime) => {
   return returnVal;
 };
 
-exports.interpolateUnfiltered = interpolateUnfiltered;
-

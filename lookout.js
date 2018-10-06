@@ -79,6 +79,8 @@ socket.on('glucose', glucose => {
   console.log('      session age: ' + sessionAge.days() + ' days ' + sessionAge.hours() + ' hours ' + sessionAge.minutes() + ' minutes');
   console.log('transmitter start: ' + transmitterStart.format());
   console.log('  transmitter age: ' + transmitterAge.days() + ' days ' + transmitterAge.hours() + ' hours ' + transmitterAge.minutes() + ' minutes');
+  console.log('        voltage a: ' + glucose.voltagea);
+  console.log('        voltage b: ' + glucose.voltageb);
   console.log('=====================================');
 });
 

@@ -9,5 +9,5 @@ module.exports = (question) => {
     stdin.on('data', data => resolve(data.toString().trim()));
     stdin.on('error', err => reject(err));
   });
-}
+};
 

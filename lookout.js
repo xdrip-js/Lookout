@@ -51,11 +51,11 @@ const processCommand = async (command, params, socket) => {
     let promptStr = [
       'Your current session will be lost and will have to be restarted using \'lookout start\'\n',
       'Are you sure? (y/n) '
-      ].join('\n');
+    ].join('\n');
 
     let answer = await prompt(promptStr);
 
-    if (answer === "y" || answer === "Y") {
+    if (answer === 'y' || answer === 'Y') {
       sendCmd = 'stopSensor';
     }
   } else if (command === 'id') {
@@ -66,11 +66,11 @@ const processCommand = async (command, params, socket) => {
       'Running this command will instruct Logger to reset the Dexcom Transmitter!',
       'Your current session will be lost and will have to be restarted using \'lookout start\'\n',
       'Are you sure? (y/n) '
-      ].join('\n');
+    ].join('\n');
 
     let answer = await prompt(promptStr);
 
-    if (answer === "y" || answer === "Y") {
+    if (answer === 'y' || answer === 'Y') {
       sendCmd = 'resetTx';
     }
   }

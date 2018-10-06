@@ -46,7 +46,13 @@ angular.module('AngularOpenAPS.cgm', [
         return glucose ? moment(glucose.transmitterStartDate) : null;
       },
       get status() {
-        return glucose ? glucose.status : null;
+        return glucose ? glucose.txStatusString : null;
+      },
+      get voltagea() {
+        return glucose ? glucose.voltagea : null;
+      },
+      get voltageb() {
+        return glucose ? glucose.voltageb : null;
       },
       reset: function() {
         console.log('resetting transmitter');

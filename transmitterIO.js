@@ -679,6 +679,9 @@ module.exports = async (options, storage, storageLock, client) => {
         const glucose = m.data;
 
         glucose.readDateMills = moment(glucose.readDate).valueOf();
+        glucose.voltagea = txStatus && txStatus.voltagea || null;
+        glucose.voltageb = txStatus && txStatus.voltageb || null;
+        glucose.voltageTime = txStatus && txStatus.timestamp.valueOf() || null;
 
         console.log('got glucose: ' + glucose.glucose + ' unfiltered: ' + (glucose.unfiltered/1000));
 

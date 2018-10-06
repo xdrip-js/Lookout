@@ -271,6 +271,7 @@ module.exports = async (options, storage, storageLock, client) => {
     }
 
     sgv.nsNoise = stats.calcNSNoise(sgv.noise, glucoseHist);
+    sgv.noiseString = stats.NSNoiseString(sgv.nsNoise),
 
     console.log('Current sensor trend: ' + Math.round(sgv.trend*10)/10 + ' Sensor Noise: ' + Math.round(sgv.noise*1000)/1000 + ' NS Noise: ' + sgv.nsNoise);
 

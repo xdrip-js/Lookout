@@ -3,7 +3,6 @@ const os = require('os');
 const request = require('request');
 const requestPromise = require('request-promise-native');
 const moment = require('moment');
-const stats = require('./calcStats');
 
 const _convertEntryToNS = (glucose) => {
   let direction;
@@ -445,7 +444,7 @@ module.exports = () => {
           'unfiltered': sgv.unfiltered,
           'filtered': sgv.filtered,
           'noise': sgv.noise,
-          'noiseString': stats.NSNoiseString(sgv.nsNoise),
+          'noiseString': sgv.noiseString,
           'slope': (cal && cal.slope) || 1,
           'intercept': (cal && cal.intercept) || 0,
           'calType': (cal && cal.type) || 'None', // 'LeastSquaresRegression' or 'SinglePoint' or 'Unity'

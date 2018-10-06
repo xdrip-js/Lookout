@@ -640,8 +640,6 @@ module.exports = async (options, storage, storageLock, client) => {
 
     storageLock.unlockStorage();
 
-    xDripAPS.postBGCheck(calData);
-
     client.newCal(calData);
 
     if (options.expired_cal && newCal) {
@@ -861,6 +859,8 @@ module.exports = async (options, storage, storageLock, client) => {
       storageLock.unlockStorage();
 
       pending.push({date: Date.now(), type: 'CalibrateSensor', glucose});
+
+      xDripAPS.postBGCheck(calData);
     },
 
     // Set the transmitter Id to the value provided

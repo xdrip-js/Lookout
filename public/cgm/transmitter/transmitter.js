@@ -36,21 +36,4 @@ angular.module('AngularOpenAPS.cgm.transmitter', [
       G5.transmitter.reset();
       $location.path('/cgm/transmitter');
     };
-  }])
-
-  .filter('status', function() {
-    return function(status) {
-      switch (status) {
-      case null:
-        return '--';
-      case 0x00:
-        return 'OK';
-      case 0x81:
-        return 'Low battery';
-      case 0x83:
-        return 'Bricked';
-      default:
-        return status ? 'Unknown: 0x' + status.toString(16) : '--';
-      }
-    };
-  });
+  }]);

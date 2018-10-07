@@ -811,22 +811,30 @@ module.exports = async (options, storage, storageLock, client) => {
     // Reset the transmitter
     resetTx: () => {
       pending.push({date: Date.now(), type: 'ResetTx'});
+
+      client.newPending(pending);
     },
 
     // Start a sensor session
     startSensor: () => {
       pending.push({date: Date.now(), type: 'StartSensor'});
+
+      client.newPending(pending);
     },
 
     // Start a sensor session back started 2 hours
     backStartSensor: () => {
       pending.push({date: Date.now() - 2*60*60*1000, type: 'StartSensor'});
+
+      client.newPending(pending);
     },
 
     stopSensor: () => {
       // Stop sensor 3 hours prior to now to enable a rapid restart
       // if one is desired.
       pending.push({date: Date.now() - 3*60*60*1000, type: 'StopSensor'});
+
+      client.newPending(pending);
     },
 
     // calibrate the sensor
@@ -865,11 +873,15 @@ module.exports = async (options, storage, storageLock, client) => {
       pending.push({date: Date.now(), type: 'CalibrateSensor', glucose});
 
       xDripAPS.postBGCheck(calData);
+
+      client.newPending(pending);
     },
 
     // Set the transmitter Id to the value provided
     setTxId: (value) => {
       changeTxId(value);
+
+      client.txId(value);
     }
   };
 

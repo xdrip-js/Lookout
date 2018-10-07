@@ -85,6 +85,8 @@ const processCommand = async (command, params, socket) => {
     // Only send it once
     sendCmd = null;
   });
+
+  console.log('\nPress Ctrl-C to Exit');
 };
 
 socket.on('pending', (pending) => {
@@ -115,6 +117,7 @@ socket.on('glucose', glucose => {
   console.log('  transmitter age: ' + transmitterAge.days() + ' days ' + transmitterAge.hours() + ' hours ' + transmitterAge.minutes() + ' minutes');
   console.log('        voltage a: ' + glucose.voltagea);
   console.log('        voltage b: ' + glucose.voltageb);
+  console.log('\nPress Ctrl-C to Exit');
   console.log('=====================================');
 });
 

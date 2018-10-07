@@ -90,10 +90,6 @@ const processCommand = async (command, params, socket) => {
     }
   }
 
-  console.log(sendCmd);
-  console.log(sendArg);
-  console.log(params);
-
   socket.on('connect', () => {
     sendCmd && socket.emit(sendCmd, sendArg);
 

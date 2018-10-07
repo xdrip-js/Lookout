@@ -57,6 +57,8 @@ const processCommand = async (command, params, socket) => {
 
     if (answer === 'y' || answer === 'Y') {
       sendCmd = 'stopSensor';
+    } else {
+      console.log('Aborting stop session');
     }
   } else if (command === 'id') {
     sendCmd = 'id';
@@ -72,6 +74,8 @@ const processCommand = async (command, params, socket) => {
 
     if (answer === 'y' || answer === 'Y') {
       sendCmd = 'resetTx';
+    } else {
+      console.log('Aborting reset');
     }
   }
 

@@ -21,6 +21,12 @@ const argv = require('yargs')
       required: true
     });
   })
+  .option('mmol', {
+    alias: 'm',
+    boolean: true,
+    describe: 'Use mmol instead of mg/dL',
+    default: false
+  })
   .command('start', 'Start sensor session')
   .command('back-start', 'Start sensor session back dated by 2 hours')
   .command('stop', 'Stop sensor session')
@@ -42,7 +48,12 @@ const processCommand = async (command, params, socket) => {
 
   if (command === 'cal') {
     sendCmd = 'calibrate';
+
     sendArg = params.sgv;
+
+    if (params.mmol) {
+      sendArg = sendArg * 18;
+    }
   } else if (command === 'start') {
     sendCmd = 'startSensor';
   } else if (command === 'back-start') {
@@ -104,7 +115,13 @@ socket.on('glucose', glucose => {
   let transmitterStart = moment(glucose.transmitterStartDate);
   let transmitterAge = moment.duration(moment().diff(transmitterStart));
 
-  console.log('          glucose: ' + glucose.glucose);
+  let sgv = glucose.glucose;
+
+  if (params.mmol) {
+    sgv = Math.round(sgv / 18 * 10) / 10;
+  }
+
+  console.log('          glucose: ' + sgv);
   console.log('            noise: ' + Math.round(glucose.noise*10)/10);
   console.log('      noise index: ' + glucose.nsNoise);
   console.log('        inSession: ' + glucose.inSession);

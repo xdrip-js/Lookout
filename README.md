@@ -111,6 +111,8 @@ The commands below can be entered on the rig command line to control the CGM. Re
   lookout status      # Show status  [default]
 ```
 
+Use `-m` option for mmol instead of mg/dL. For example, `lookout -m cal 4.1` will calibrate with 4.1 mmol.
+
 ## Nightscout CGM Status Pill
 This feature requires Nightscout 0.10.3 or later. Lookout provides devicestatus records to Nightscout which will display the CGM status in a CGM pill if the Nightscout xdrip-js plugin is enabled. See the Nightscout README for details on enabling the plugin and settings.
 

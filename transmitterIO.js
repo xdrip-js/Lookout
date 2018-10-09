@@ -153,7 +153,7 @@ module.exports = async (options, storage, storageLock, client) => {
     if (glucoseHist.length > 0) {
       newCal = calibration.calculateG5Calibration(lastCal, lastG5CalTime, sensorInsert, glucoseHist, sgv);
 
-      newExpiredCal = calibration.expiredCalibration(storage, bgChecks, lastExpiredCal, sensorInsert, sgv);
+      newExpiredCal = await calibration.expiredCalibration(storage, bgChecks, lastExpiredCal, sensorInsert, sgv);
 
       if (sgv.state != glucoseHist[glucoseHist.length-1].state) {
         xDripAPS.postAnnouncement('Sensor: ' + sgv.stateString);
@@ -632,7 +632,7 @@ module.exports = async (options, storage, storageLock, client) => {
         console.log('Error saving bgChecks: ' + error);
       });
 
-    let newCal = calibration.expiredCalibration(storage, bgChecks, null, sensorInsert, null);
+    let newCal = await calibration.expiredCalibration(storage, bgChecks, null, sensorInsert, null);
 
     await storage.setItem('expiredCal', newCal)
       .catch((err) => {

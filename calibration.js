@@ -154,12 +154,13 @@ exports.calculateG5Calibration = (lastCal, lastG5CalTime, sensorInsert, glucoseH
   var calErr = 100;
   var calValue;
   var i;
+  let calReturn = null;
 
   if (lastCal) {
     calValue = calcGlucose(currSGV, lastCal);
     calErr = Math.abs(calValue - currSGV.glucose);
 
-    console.log('Current calibration error: ' + Math.round(calErr*10)/10 + ' calibrated value: ' + Math.round(calValue*10)/10 + ' slope: ' + Math.round(lastCal.slope*10)/10 + ' intercept: ' + Math.round(lastCal.intercept*10)/10);
+    console.log('Current CGM calculated calibration error: ' + Math.round(calErr*10)/10 + ' calibrated value: ' + Math.round(calValue*10)/10 + ' slope: ' + Math.round(lastCal.slope*10)/10 + ' intercept: ' + Math.round(lastCal.intercept*10)/10);
   }
 
   // Check if we need a calibration
@@ -191,13 +192,11 @@ exports.calculateG5Calibration = (lastCal, lastG5CalTime, sensorInsert, glucoseH
 
       if ((calResult.slope > MAXSLOPE) || (calResult.slope < MINSLOPE)) {
         // wait until the next opportunity
-        console.log('Slope out of range to calibrate: ' + calResult.slope);
+        console.log('CGM calculated calibration slope out of range: ' + calResult.slope);
         return null;
       }
 
-      console.log('Calibrated with LSR');
-
-      return {
+      calReturn = {
         date: Date.now(),
         scale: 1,
         intercept: calResult.yIntercept,
@@ -208,9 +207,7 @@ exports.calculateG5Calibration = (lastCal, lastG5CalTime, sensorInsert, glucoseH
     } else if ((calErr > 5) && (calPairs.length > 0)) {
       let calResult = singlePointCalibration(calPairs);
 
-      console.log('Calibrated with Single Point');
-
-      return {
+      calReturn = {
         date: Date.now(),
         scale: 1,
         intercept: calResult.yIntercept,
@@ -218,13 +215,18 @@ exports.calculateG5Calibration = (lastCal, lastG5CalTime, sensorInsert, glucoseH
         type: calResult.calibrationType
       };
     } else if (calErr > 5) {
-      console.log('Calibration needed, but no suitable glucose pairs found.');
+      console.log('CGM calculated calibration update needed, but no suitable glucose pairs found.');
       return null;
     }
   }
 
-  console.log('No calibration update needed.');
-  return null;
+  if (calReturn) {
+    console.log('Calculated new CGM calculated calibration with ' + calReturn.type + ' due to ' + calPairs.length + ' calibration pairs:\n', calReturn);
+  } else {
+    console.log('No CGM calculated calibration update needed.');
+  }
+
+  return calReturn;
 };
 
 const calcGlucose = (sgv, calibration) => {
@@ -291,8 +293,6 @@ exports.expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorIns
       slope: calResult.slope,
       type: calResult.calibrationType
     };
-
-    console.log('Expired calibration with LSR using ' + calPairs.length + ' calibration pairs:\n', calReturn);
   } else if (calPairs.length > 0) {
     let calResult = singlePointCalibration(calPairs);
 
@@ -303,8 +303,6 @@ exports.expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorIns
       slope: calResult.slope,
       type: calResult.calibrationType
     };
-
-    console.log('Expired calibration with Single Point due to ' + calPairs.length + ' calibration pairs:\n', calReturn);
   } else {
     console.log('No suitable glucose pairs found for expired calibration.');
   }
@@ -319,8 +317,10 @@ exports.expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorIns
   }
 
   if ((slopeDelta < 1) && (interceptDelta < 1)) {
+    console.log('No calibration update: slopeDelta=' + Math.round(slopeDelta*10)/10 + ' interceptDelta=' + Math.round(interceptDelta*10)/10);
     return null;
   } else {
+    console.log('Expired calibration with ' + calReturn.type + ' due to ' + calPairs.length + ' calibration pairs:\n', calReturn);
     return calReturn;
   }
 };

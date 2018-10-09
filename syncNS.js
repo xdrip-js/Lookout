@@ -420,7 +420,7 @@ const syncBGChecks = async (sensorInsert, expiredCal) => {
   }
 
   if (calculateExpiredCal) {
-    let newCal = calibration.expiredCalibration(storage, rigBGChecks, null, sensorInsert, null);
+    let newCal = await calibration.expiredCalibration(storage, rigBGChecks, null, sensorInsert, null);
 
     await storageLock.lockStorage();
 

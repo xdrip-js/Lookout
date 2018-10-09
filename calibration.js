@@ -291,8 +291,6 @@ exports.expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorIns
       slope: calResult.slope,
       type: calResult.calibrationType
     };
-
-    console.log('Expired calibration with LSR using ' + calPairs.length + ' calibration pairs:\n', calReturn);
   } else if (calPairs.length > 0) {
     let calResult = singlePointCalibration(calPairs);
 
@@ -303,8 +301,6 @@ exports.expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorIns
       slope: calResult.slope,
       type: calResult.calibrationType
     };
-
-    console.log('Expired calibration with Single Point due to ' + calPairs.length + ' calibration pairs:\n', calReturn);
   } else {
     console.log('No suitable glucose pairs found for expired calibration.');
   }
@@ -319,8 +315,10 @@ exports.expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorIns
   }
 
   if ((slopeDelta < 1) && (interceptDelta < 1)) {
+    console.log('No calibration update: slopeDelta=' + Math.round(slopeDelta*10)/10 + ' interceptDelta=' + Math.round(interceptDelta*10)/10);
     return null;
   } else {
+    console.log('Expired calibration with ' + calReturn.type + ' due to ' + calPairs.length + ' calibration pairs:\n', calReturn);
     return calReturn;
   }
 };

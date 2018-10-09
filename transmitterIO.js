@@ -236,8 +236,6 @@ module.exports = async (options, storage, storageLock, client) => {
     }
 
     if (newExpiredCal && options.expired_cal) {
-      console.log('New expired calibration: slope = ' + newExpiredCal.slope + ', intercept = ' + newExpiredCal.intercept + ', scale = ' + newExpiredCal.scale);
-
       await storage.setItem('expiredCal', newExpiredCal)
         .catch(() => {
           console.log('Unable to store new NS Calibration');

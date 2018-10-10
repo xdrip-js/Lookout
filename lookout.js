@@ -40,9 +40,7 @@ const argv = require('yargs')
 const params = argv.argv;
 command = params._.shift();
 
-let socket = io('http://localhost:3000/cgm');
-
-const processCommand = async (command, params, socket) => {
+const processCommand = async (command, params) => {
   let sendCmd = null;
   let sendArg = null;
 
@@ -90,6 +88,8 @@ const processCommand = async (command, params, socket) => {
     }
   }
 
+  let socket = io('http://localhost:3000/cgm');
+
   socket.on('connect', () => {
     sendCmd && socket.emit(sendCmd, sendArg);
 
@@ -97,18 +97,22 @@ const processCommand = async (command, params, socket) => {
     sendCmd = null;
   });
 
+  socket.on('pending', (pending) => {
+    console.log('          Pending: ', pending);
+  });
+
+  socket.on('id', id => {
+    console.log('   Transmitter ID: ', id);
+  });
+
+  socket.on('glucose', glucose => {
+    processGlucose(glucose);
+  });
+
   console.log('\nPress Ctrl-C to Exit');
 };
 
-socket.on('pending', (pending) => {
-  console.log('          Pending: ', pending);
-});
-
-socket.on('id', id => {
-  console.log('   Transmitter ID: ', id);
-});
-
-socket.on('glucose', glucose => {
+const processGlucose = glucose => {
   let sessionStart = moment(glucose.sessionStartDate);
   let sessionAge = moment.duration(moment().diff(sessionStart));
 
@@ -136,7 +140,7 @@ socket.on('glucose', glucose => {
   console.log('        voltage b: ' + glucose.voltageb);
   console.log('\nPress Ctrl-C to Exit');
   console.log('=====================================');
-});
+};
 
-processCommand(command, params, socket);
+processCommand(command, params);
 

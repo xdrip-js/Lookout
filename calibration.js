@@ -320,7 +320,9 @@ exports.expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorIns
     console.log('No calibration update: slopeDelta=' + Math.round(slopeDelta*10)/10 + ' interceptDelta=' + Math.round(interceptDelta*10)/10);
     return null;
   } else {
-    console.log('Expired calibration with ' + calReturn.type + ' due to ' + calPairs.length + ' calibration pairs:\n', calReturn);
+    if (calReturn) {
+      console.log('Expired calibration with ' + calReturn.type + ' due to ' + calPairs.length + ' calibration pairs:\n', calReturn);
+    }
     return calReturn;
   }
 };

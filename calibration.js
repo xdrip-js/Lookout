@@ -311,7 +311,7 @@ exports.expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorIns
   let slopeDelta = 1;
   let interceptDelta = 1;
 
-  if (lastExpiredCal) {
+  if (lastExpiredCal && calReturn) {
     slopeDelta = Math.abs(calReturn.slope - lastExpiredCal.slope);
     interceptDelta = Math.abs(calReturn.intercept - lastExpiredCal.intercept);
   }

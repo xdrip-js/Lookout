@@ -37,6 +37,11 @@ module.exports = (options) => {
       socket.emit('id', txId);
     }
 
+    let meterId = transmitter && await transmitter.getMeterId() || null;
+    if (meterId) {
+      socket.emit('meterid', meterId);
+    }
+
     let pending = transmitter && transmitter.getPending() || null;
     if (pending) {
       socket.emit('pending', pending);
@@ -98,6 +103,11 @@ module.exports = (options) => {
 
       transmitter && transmitter.setTxId(value);
     });
+    socket.on('meterid', value => {
+      console.log('received meter id of ' + value);
+
+      transmitter && transmitter.setMeterId(value);
+    });
   });
 
   // Return an object that can be used to interact with the
@@ -121,6 +131,11 @@ module.exports = (options) => {
     // Send an updated transmitter ID to all connected clients.
     txId: (txId) => {
       cgmIO.emit('id', txId);
+    },
+
+    // Send an updated transmitter ID to all connected clients.
+    meterId: (meterId) => {
+      cgmIO.emit('meterid', meterId);
     },
 
     // Set the transmitter object that can be used

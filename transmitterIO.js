@@ -762,6 +762,16 @@ module.exports = async (options, storage, storageLock, client) => {
       return txId;
     },
 
+    // provide the current transmitter ID
+    getMeterId: async () => {
+      let meterId = await storage.getItem('meterid')
+        .catch(error => {
+          console.log('Unable to get meterid storage item: ' + error);
+        });
+
+      return meterId;
+    },
+
     // provide the pending list
     getPending: () => {
       return pending;
@@ -880,6 +890,16 @@ module.exports = async (options, storage, storageLock, client) => {
       changeTxId(value);
 
       client.txId(value);
+    },
+
+    // Set the meter Id to the value provided
+    setMeterId: (value) => {
+      storage.setItem('meterid', value)
+        .catch(error => {
+          console.log('Error saving meterid: ' + error);
+        });
+
+      client.meterId(value);
     }
   };
 

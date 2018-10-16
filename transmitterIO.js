@@ -767,12 +767,15 @@ module.exports = async (options, storage, storageLock, client) => {
       let meterId = await storage.getItem('meterid')
         .catch(error => {
           console.log('Unable to get meterid storage item: ' + error);
-          meterId = '000000';
-          storage.setItem('meterid', meterId)
-            .catch(error => {
-              console.log('Unable to store meterid storage item: ' + error);
-            });
         });
+
+      if (!meterId) {
+        meterId = '000000';
+        storage.setItem('meterid', meterId)
+          .catch(error => {
+            console.log('Unable to store meterid storage item: ' + error);
+          });
+      }
 
       return meterId;
     },

@@ -81,7 +81,7 @@ const processCommand = async (command, params) => {
     sendArg = params.id;
   } else if (command === 'meterid') {
     sendCmd = 'meterid';
-    sendArg = params.meterid;
+    sendArg = params.meterid.padStart(6, 0);
   } else if (command === 'reset') {
     let promptStr = [
       'Running this command will instruct Logger to reset the Dexcom Transmitter!',

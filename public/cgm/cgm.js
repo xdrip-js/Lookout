@@ -16,6 +16,7 @@ angular.module('AngularOpenAPS.cgm', [
     });
 
     let id;
+    let meterid;
     let glucose;
     // TODO: replace these with the real thing (faked for now)
     let version = '1.2.3.4';
@@ -38,6 +39,12 @@ angular.module('AngularOpenAPS.cgm', [
       },
       set id(value) {
         socket.emit('id', value);
+      },
+      get meterid() {
+        return meterid;
+      },
+      set meterid(value) {
+        socket.emit('meterid', value);
       },
       get version() {
         return version;
@@ -118,6 +125,11 @@ angular.module('AngularOpenAPS.cgm', [
     socket.on('id', value => {
       console.log('got id of ' + value);
       id = value;
+    });
+
+    socket.on('meterid', value => {
+      console.log('got meterid of ' + value);
+      meterid = value;
     });
 
     socket.on('glucose', value => {

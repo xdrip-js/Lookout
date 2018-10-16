@@ -32,6 +32,11 @@ angular.module('AngularOpenAPS.cgm.transmitter', [
       $location.path('/cgm/transmitter');
     };
 
+    $scope.setMeterID = function(id) {
+      G5.transmitter.meterid = id;
+      $location.path('/cgm/transmitter');
+    };
+
     $scope.resetG5Tx = function() {
       G5.transmitter.reset();
       $location.path('/cgm/transmitter');

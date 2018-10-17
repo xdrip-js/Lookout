@@ -9,6 +9,7 @@ Lookout provides a rig-based interface to a Dexcom G5 CGM using Bluetooth Low En
 - start and stop sensor sessions
 - view reported glucose values
 - send glucose values to OpenAPS and Nightscout
+- send glucose values to Pump via fakemeter
 - send finger stick calibration values to the transmitter
 - reset expired transmitters
 - calculate and report trend and noise values
@@ -102,13 +103,14 @@ Once the browser is open to your Lookout page (see above steps), you can start t
 ## Using the command line to control your G5
 The commands below can be entered on the rig command line to control the CGM. Regardless of which command is entered, after executing the command the command will enter a status loop indefinately printing the CGM status at each glucose read event. Enter `Ctrl-C` to exit the command.
 ```
-  lookout cal <sgv>   # Calibrate the transmitter with provided glucose meter reading
-  lookout id <id>     # Set transmitter ID
-  lookout start       # Start sensor session
-  lookout back-start  # Start sensor session back dated by 2 hours
-  lookout stop        # Stop sensor session
-  lookout reset       # Reset transmitter
-  lookout status      # Show status  [default]
+  lookout cal <sgv>         # Calibrate the transmitter with provided glucose meter reading
+  lookout id <id>           # Set transmitter ID
+  lookout meterid <meterid> # Set transmitter ID
+  lookout start             # Start sensor session
+  lookout back-start        # Start sensor session back dated by 2 hours
+  lookout stop              # Stop sensor session
+  lookout reset             # Reset transmitter
+  lookout status            # Show status  [default]
 ```
 
 Use `-m` option for mmol instead of mg/dL. For example, `lookout -m cal 4.1` will calibrate with 4.1 mmol.
@@ -122,6 +124,10 @@ This feature requires Nightscout 0.10.3 or later. Lookout provides devicestatus 
 * Click "Menu" on the Lookout page, then `CGM` and `Transmitter`, then `Reset Transmitter`, then `Reset`
 * wait 5 minutes and press the "Menu" button, then `CGM` and `Transmitter`, the `Age` should show as less than a day.
 * After successfully resetting the transmitter, follow the instructions above to start a sensor session.
+
+## Setup fakemeter
+* Set a meter ID in the CGM/Transmitter menu or using `lookout meterid` command (default value is 000000)
+* Set meter ID on the pump to match
 
 ## Making it permanent
 So far in the above you've only run Lookout from the command line - the next time you close your terminal, or reboot your rig, it will only run if you add it to your crontab:

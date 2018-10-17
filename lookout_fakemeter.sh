@@ -20,9 +20,9 @@ export MEDTRONIC_PUMP_ID=`grep serial ${myopenaps}/pump.ini | tr -cd 0-9`
 export MEDTRONIC_FREQUENCY=`cat ${myopenaps}/monitor/medtronic_frequency.ini`
 
 if ! listen -t 4s >& /dev/null ; then
-  echo "Sending BG of $calibratedBG to pump via meterid $meterid"
-  fakemeter -m $meterid  $calibratedBG
+  echo "Sending BG of $calibratedBG to pump via meterid $meterId"
+  fakemeter -m $meterId  $calibratedBG
 else
-  echo "Timed out trying to send BG of $calibratedBG to pump via meterid $meterid"
+  echo "Timed out trying to send BG of $calibratedBG to pump via meterid $meterId"
 fi
 

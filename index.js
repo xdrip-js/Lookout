@@ -60,7 +60,7 @@ const init = async (options) => {
   // Start the web GUI server
   const client = ClientIO(options);
 
-  const fakeMeter = require('./fakemeter')(storage, client);
+  const fakeMeter = require('./fakemeter')(options, storage, client);
 
   // Start the transmitter loop task
   TransmitterIO(options, storage, storageLock, client, fakeMeter);

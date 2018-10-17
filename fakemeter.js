@@ -4,6 +4,10 @@ const exec = require('./childExecPromis');
 
 let storage = null;
 
+const offline = async () => {
+  return false;
+};
+
 const _getMeterId = async () => {
   let meterId = await storage.getItem('meterid')
     .catch(error => {
@@ -49,7 +53,7 @@ module.exports = (options, _storage, client) => {
 
       let meterId = await _getMeterId();
 
-      if (fakemeterInstalled) {
+      if (fakemeterInstalled && (options.fakemeter || (await offline() && options.offline_fakemeter))) {
         let { stdout, stderr } = await exec('lookout_fakemeter '+meterId+' '+value+' '+options.openaps)
           .catch( (err) => {
             console.log('Unable to send glucose to fakemeter: ' + err.err);

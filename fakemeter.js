@@ -41,5 +41,7 @@ module.exports = (storage, client) => {
 
   // Provide the object to the client
   client.setFakeMeter(fakeMeter);
+
+  return fakeMeter;
 };
 

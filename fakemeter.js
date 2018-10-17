@@ -5,7 +5,20 @@ const exec = require('./childExecPromis');
 let storage = null;
 
 const offline = async () => {
-  return false;
+  let online = true;
+
+  let { stdout, stderr } = await exec('lookout_online')
+    .catch( (err) => {
+      console.log('Unable to send glucose to fakemeter: ' + err.err);
+      stdout = err.stdout;
+      stderr = err.stderr;
+      online = false;
+    });
+
+  console.log(`stdout: ${stdout}`);
+  console.log(`stderr: ${stderr}`);
+
+  return ! online;
 };
 
 const _getMeterId = async () => {

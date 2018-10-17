@@ -12,7 +12,8 @@
     "bin": {
         "Lookout": "./index.js",
         "lookout": "./lookout.js",
-        "lookout_fakemeter": "./lookout_fakemeter.sh"
+        "lookout_fakemeter": "./lookout_fakemeter.sh",
+        "lookout_online": "./lookout_online.sh"
     },
     "dependencies": {
         "angular": "1.7.0",

@@ -324,14 +324,16 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       });
   };
 
-  const sendNewGlucose = (sgv, sendSGV) => {
+  const sendNewGlucose = async (sgv, sendSGV) => {
     client.newSGV(sgv);
 
     if (!sgv.glucose) {
       // Set to 5 so NS will plot the unfiltered glucose values
       sgv.glucose = 5;
     } else {
-      fakeMeter.glucose(sgv.glucose);
+      // wait for fakeMeter to finish so it doesn't interfere with
+      // pump-loop
+      await fakeMeter.glucose(sgv.glucose);
     }
 
     xDripAPS.post(sgv, sendSGV);

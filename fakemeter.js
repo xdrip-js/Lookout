@@ -1,6 +1,6 @@
 
 const commandExists = require('command-exists');
-const cp = require('child_process');
+const exec = require('./childExecPromis');
 
 let storage = null;
 
@@ -50,15 +50,15 @@ module.exports = (options, _storage, client) => {
       let meterId = await _getMeterId();
 
       if (fakemeterInstalled) {
-        cp.exec('lookout_fakemeter '+meterId+' '+value+' '+options.openaps, (err, stdout, stderr) => {
-          if (err) {
-            console.log('Unable to send glucose to fakemeter: ' + err);
-            return;
-          }
+        let { stdout, stderr } = await exec('lookout_fakemeter '+meterId+' '+value+' '+options.openaps)
+          .catch( (err) => {
+            console.log('Unable to send glucose to fakemeter: ' + err.err);
+            stdout = err.stdout;
+            stderr = err.stderr;
+          });
 
-          console.log(`stdout: ${stdout}`);
-          console.log(`stderr: ${stderr}`);
-        });
+        console.log(`stdout: ${stdout}`);
+        console.log(`stderr: ${stderr}`);
       }
     }
   };

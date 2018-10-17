@@ -8,6 +8,7 @@ const socketIO = require('socket.io');
 module.exports = (options) => {
 
   let transmitter = null;
+  let fakeMeter = null;
 
   const server = express()
     .use(express.static(__dirname + '/public'))
@@ -37,7 +38,7 @@ module.exports = (options) => {
       socket.emit('id', txId);
     }
 
-    let meterId = transmitter && await transmitter.getMeterId() || null;
+    let meterId = fakeMeter && await fakeMeter.getMeterId() || null;
     if (meterId) {
       socket.emit('meterid', meterId);
     }
@@ -106,7 +107,7 @@ module.exports = (options) => {
     socket.on('meterid', value => {
       console.log('received meter id of ' + value);
 
-      transmitter && transmitter.setMeterId(value);
+      fakeMeter && fakeMeter.setMeterId(value);
     });
   });
 
@@ -143,6 +144,13 @@ module.exports = (options) => {
     // send commands to the transmitter from the client.
     setTransmitter: (txmitter) => {
       transmitter = txmitter;
+    },
+
+    // Set the fakemeter object that can be used
+    // to get data from the fakemeter and
+    // send commands to the fakemeter from the client.
+    setFakeMeter: (meter) => {
+      fakeMeter = meter;
     }
   };
 };

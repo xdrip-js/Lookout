@@ -60,8 +60,10 @@ const init = async (options) => {
   // Start the web GUI server
   const client = ClientIO(options);
 
+  const fakeMeter = require('./fakemeter')(storage, client);
+
   // Start the transmitter loop task
-  TransmitterIO(options, storage, storageLock, client);
+  TransmitterIO(options, storage, storageLock, client, fakeMeter);
 
   // Start the Nightscout synchronization loop task
   syncNS(storage, storageLock, options.expired_cal);

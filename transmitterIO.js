@@ -6,7 +6,7 @@ const stats = require('./calcStats');
 
 var _ = require('lodash');
 
-module.exports = async (options, storage, storageLock, client) => {
+module.exports = async (options, storage, storageLock, client, fakeMeter) => {
   let txId;
   let txFailedReads = 0;
   let txStatus = null;
@@ -330,6 +330,8 @@ module.exports = async (options, storage, storageLock, client) => {
     if (!sgv.glucose) {
       // Set to 5 so NS will plot the unfiltered glucose values
       sgv.glucose = 5;
+    } else {
+      fakeMeter.glucose(sgv.glucose);
     }
 
     xDripAPS.post(sgv, sendSGV);

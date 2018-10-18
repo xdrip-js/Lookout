@@ -93,8 +93,8 @@ module.exports = (_options, _storage, client) => {
         stdout = retVal && retVal.stdout || stdout;
         stderr = retVal && retVal.stderr || stderr;
 
-        options.verbose && console.log('fakemeter stdout: ${stdout}');
-        options.verbose && console.log('fakemeter stderr: ${stderr}');
+        options.verbose && console.log(`fakemeter stdout: ${stdout}`);
+        options.verbose && console.log(`fakemeter stderr: ${stderr}`);
       }
     }
   };

@@ -95,6 +95,8 @@ module.exports = (_options, _storage, client) => {
 
         options.verbose && console.log(`fakemeter stdout: ${stdout}`);
         options.verbose && console.log(`fakemeter stderr: ${stderr}`);
+      } else if (online && options.offline_fakemeter) {
+        console.log('Not sending glucose to fakemeter because rig is online');
       }
     }
   };

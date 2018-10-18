@@ -3,22 +3,23 @@ const commandExists = require('command-exists');
 const exec = require('./childExecPromis');
 
 let storage = null;
+let online = false;
 
-const offline = async () => {
-  let online = true;
+const test_online = async () => {
+  let status = true;
 
   let { stdout, stderr } = await exec('lookout_online')
     .catch( (err) => {
       console.log('Unable to send glucose to fakemeter: ' + err.err);
       stdout = err.stdout;
       stderr = err.stderr;
-      online = false;
+      status = false;
     });
 
   console.log(`stdout: ${stdout}`);
   console.log(`stderr: ${stderr}`);
 
-  return ! online;
+  return status;
 };
 
 const _getMeterId = async () => {
@@ -64,9 +65,15 @@ module.exports = (options, _storage, client) => {
     glucose: async (value) => {
       console.log('Sending glucose to fakemeter: ', value);
 
+      // trigger online status update. It lags by 1 glucose reading, but
+      // doesn't waste time waiting for response from Internet
+      test_online().then( (value) => {
+        online = value;
+      });
+
       let meterId = await _getMeterId();
 
-      if (fakemeterInstalled && (options.fakemeter || (await offline() && options.offline_fakemeter))) {
+      if (fakemeterInstalled && (options.fakemeter || (!online && options.offline_fakemeter))) {
         let { stdout, stderr } = await exec('lookout_fakemeter '+meterId+' '+value+' '+options.openaps)
           .catch( (err) => {
             console.log('Unable to send glucose to fakemeter: ' + err.err);

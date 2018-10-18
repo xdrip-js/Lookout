@@ -84,6 +84,9 @@ angular.module('AngularOpenAPS.cgm', [
       get inSession() {
         return glucose ? glucose.inSession : null;
       },
+      get displayGlucose() {
+        return glucose ? (glucose.inSession || glucose.inExpiredSession || glucose.inExtendedSession) : null;
+      },
       get pendingActions() {
         return pendingActions;
       },

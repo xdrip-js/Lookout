@@ -107,6 +107,8 @@ module.exports = async (options, storage, storageLock, client) => {
     await storageLock.lockStorage();
 
     sgv.g5calibrated = true;
+    sgv.inExtendedSession = false;
+    sgv.inExpiredSession = false;
     sgv.stateString = stateString(sgv.state);
     sgv.stateStringShort = stateStringShort(sgv.state);
     sgv.readDateMills = moment(sgv.readDate).valueOf();
@@ -170,6 +172,7 @@ module.exports = async (options, storage, storageLock, client) => {
 
     if (!sgv.glucose && options.extend_sensor && lastCal && (lastCal.type !== 'Unity')) {
       sgv.glucose = calibration.calcGlucose(sgv, lastCal);
+      sgv.inExpiredSession = true;
 
       console.log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value from G5 calibration algorithm');
       console.log('Calibrated SGV: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered + ' slope: ' + lastCal.slope + ' intercept: ' + lastCal.intercept);
@@ -182,12 +185,14 @@ module.exports = async (options, storage, storageLock, client) => {
 
       if (!sgv.glucose) {
         sgv.glucose = expiredCalGlucose;
+        sgv.inExpiredSession = true;
 
         console.log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value from expired calibration algorithm');
         console.log('Calibrated SGV: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered + ' slope: ' + lastCal.slope + ' intercept: ' + lastCal.intercept);
 
         console.log('Expired calibration use disabled - not replacing invalid glucose');
         sgv.glucose = null;
+        sgv.inExpiredSession = false;
 
         sgv.g5calibrated = false;
       } else {

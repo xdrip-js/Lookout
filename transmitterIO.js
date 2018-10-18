@@ -32,7 +32,7 @@ module.exports = async (options, storage, storageLock, client) => {
   const rebootRig = () => {
     console.log('============================\nRebooting rig due to too many read failures: ' + txFailedReads + ' failures.\n============================');
 
-    cp.exec('shutdown -r 1', (err, stdout, stderr) => {
+    cp.exec('shutdown -r now', (err, stdout, stderr) => {
       if (err) {
         console.log('Unable to reboot rig: - ' + err);
         return;

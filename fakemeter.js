@@ -1,14 +1,16 @@
 
-const commandExists = require('command-exists');
-const exec = require('./childExecPromis');
+const exec = require('./childExecPromise');
 
 let storage = null;
+let options = null;
 let online = false;
 
 const test_online = async () => {
   let status = true;
+  let stdout = null;
+  let stderr = null;
 
-  let { stdout, stderr } = await exec('lookout_online')
+  let retVal = await exec('./lookout_online.sh')
     .catch( (err) => {
       console.log('Unable to send glucose to fakemeter: ' + err.err);
       stdout = err.stdout;
@@ -16,8 +18,12 @@ const test_online = async () => {
       status = false;
     });
 
-  console.log(`stdout: ${stdout}`);
-  console.log(`stderr: ${stderr}`);
+  // replace it if we got a return value. If we didn't, we likely caught an error
+  stdout = retVal && retVal.stdout || stdout;
+  stderr = retVal && retVal.stderr || stderr;
+
+  options.verbose && console.log(`stdout: ${stdout}`);
+  options.verbose && console.log(`stderr: ${stderr}`);
 
   return status;
 };
@@ -40,10 +46,9 @@ const _getMeterId = async () => {
 };
 
 // Create a Lookout GUI HTTP server
-module.exports = (options, _storage, client) => {
-  let fakemeterInstalled = false;
-
+module.exports = (_options, _storage, client) => {
   storage = _storage;
+  options = _options;
 
   // Create an object that can be used
   // to interact with the transmitter.
@@ -73,28 +78,26 @@ module.exports = (options, _storage, client) => {
 
       let meterId = await _getMeterId();
 
-      if (fakemeterInstalled && (options.fakemeter || (!online && options.offline_fakemeter))) {
-        let { stdout, stderr } = await exec('lookout_fakemeter '+meterId+' '+value+' '+options.openaps)
+      if (!options.sim && (options.fakemeter || (!online && options.offline_fakemeter))) {
+        let stdout = null;
+        let stderr = null;
+
+        let retVal = await exec('lookout_fakemeter '+meterId+' '+value+' '+options.openaps)
           .catch( (err) => {
             console.log('Unable to send glucose to fakemeter: ' + err.err);
             stdout = err.stdout;
             stderr = err.stderr;
           });
 
-        console.log(`stdout: ${stdout}`);
-        console.log(`stderr: ${stderr}`);
+        // replace it if we got a return value. If we didn't, we likely caught an error
+        stdout = retVal && retVal.stdout || stdout;
+        stderr = retVal && retVal.stderr || stderr;
+
+        options.verbose && console.log(`stdout: ${stdout}`);
+        options.verbose && console.log(`stderr: ${stderr}`);
       }
     }
   };
-
-  commandExists('fakemeter')
-    .then( (command) => {
-      fakemeterInstalled = true;
-      console.log(command + ' not installed');
-    })
-    .catch( () => {
-      console.log('fakemeter not installed');
-    });
 
   // Provide the object to the client
   client.setFakeMeter(fakeMeter);

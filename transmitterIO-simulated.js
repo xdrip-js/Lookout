@@ -1,6 +1,6 @@
 
 /*eslint-disable no-unused-vars*/
-module.exports = (options, storage, storageLock, client) => {
+module.exports = (options, storage, storageLock, client, fakeMeter) => {
 /*eslint-enable no-unused-vars*/
   let id = 'ABCDEF';
   const glucose = {
@@ -32,6 +32,7 @@ module.exports = (options, storage, storageLock, client) => {
     }
     console.log('trend = ' + glucose.trend);
     client.newSGV(glucose);
+    fakeMeter.glucose(glucose.glucose);
   }, 60000);
 
   const transmitterIO = {

@@ -17,6 +17,12 @@ const argv = require('yargs')
     alias: 'x',
     default: false
   })
+  .option('verbose', {
+    boolean: true,
+    describe: 'Enables verbose mode',
+    alias: 'v',
+    default: false
+  })
   .option('sim', {
     boolean: true,
     describe: 'Enable simulation mode',

@@ -66,7 +66,8 @@ let options = {
   sim: params.sim,
   openaps: params.openaps,
   fakemeter: params.fakemeter,
-  offline_fakemeter: params.offline_fakemeter
+  offline_fakemeter: params.offline_fakemeter,
+  verbose: params.verbose
 };
 
 const init = async (options) => {

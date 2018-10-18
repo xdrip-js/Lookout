@@ -10,9 +10,9 @@ const test_online = async () => {
   let stdout = null;
   let stderr = null;
 
-  let retVal = await exec('./lookout_online.sh')
+  let retVal = await exec('lookout_online')
     .catch( (err) => {
-      console.log('Unable to send glucose to fakemeter: ' + err.err);
+      console.log('Online test failed with error: ' + err.err);
       stdout = err.stdout;
       stderr = err.stderr;
       status = false;
@@ -22,8 +22,8 @@ const test_online = async () => {
   stdout = retVal && retVal.stdout || stdout;
   stderr = retVal && retVal.stderr || stderr;
 
-  options.verbose && console.log(`stdout: ${stdout}`);
-  options.verbose && console.log(`stderr: ${stderr}`);
+  options.verbose && console.log(`lookout_online stdout: ${stdout}`);
+  options.verbose && console.log(`lookout_online stderr: ${stderr}`);
 
   return status;
 };
@@ -68,8 +68,6 @@ module.exports = (_options, _storage, client) => {
 
     // Send glucose to fakemeter
     glucose: async (value) => {
-      console.log('Sending glucose to fakemeter: ', value);
-
       // trigger online status update. It lags by 1 glucose reading, but
       // doesn't waste time waiting for response from Internet
       test_online().then( (value) => {
@@ -78,7 +76,9 @@ module.exports = (_options, _storage, client) => {
 
       let meterId = await _getMeterId();
 
-      if (!options.sim && (options.fakemeter || (!online && options.offline_fakemeter))) {
+      if (options.fakemeter || (!online && options.offline_fakemeter)) {
+        console.log('Sending glucose to fakemeter: ', value);
+
         let stdout = null;
         let stderr = null;
 
@@ -93,8 +93,8 @@ module.exports = (_options, _storage, client) => {
         stdout = retVal && retVal.stdout || stdout;
         stderr = retVal && retVal.stderr || stderr;
 
-        options.verbose && console.log(`stdout: ${stdout}`);
-        options.verbose && console.log(`stderr: ${stderr}`);
+        options.verbose && console.log('fakemeter stdout: ${stdout}');
+        options.verbose && console.log('fakemeter stderr: ${stderr}');
       }
     }
   };

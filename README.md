@@ -65,6 +65,7 @@ npm test
 cd ~/Lookout
 git remote remove upstream # Just in case one already exists - this command may error, but that is OK
 git remote add upstream https://github.com/xdrip-js/Lookout.git
+git fetch upstream
 git checkout --force upstream/master # Force a checkout of the current master even if we have made local changes
 git checkout -B master # Force an overwrite of the local master with the upstream master
 sudo npm install

@@ -11,6 +11,10 @@ angular.module('AngularOpenAPS.cgm.transmitter', [
       templateUrl: 'cgm/transmitter/pair.html',
       controller: 'TransmitterController'
     });
+    $routeProvider.when('/cgm/transmitter/meterid', {
+      templateUrl: 'cgm/transmitter/meterid.html',
+      controller: 'TransmitterController'
+    });
     $routeProvider.when('/cgm/transmitter/reset', {
       templateUrl: 'cgm/transmitter/reset.html',
       controller: 'TransmitterController'
@@ -29,6 +33,11 @@ angular.module('AngularOpenAPS.cgm.transmitter', [
 
     $scope.setID = function(id) {
       G5.transmitter.id = id;
+      $location.path('/cgm/transmitter');
+    };
+
+    $scope.setMeterID = function(id) {
+      G5.transmitter.meterid = id;
       $location.path('/cgm/transmitter');
     };
 

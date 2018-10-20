@@ -8,26 +8,49 @@ const argv = require('yargs')
   .option('extend_sensor', {
     boolean: true,
     describe: 'Enables extended sensor session mode',
+    alias: 'e',
     default: false
   })
   .option('expired_cal', {
     boolean: true,
     describe: 'Enables expired calibration mode',
+    alias: 'x',
+    default: false
+  })
+  .option('verbose', {
+    boolean: true,
+    describe: 'Enables verbose mode',
+    alias: 'v',
     default: false
   })
   .option('sim', {
     boolean: true,
     describe: 'Enable simulation mode',
+    alias: 's',
+    default: false
+  })
+  .option('fakemeter', {
+    boolean: true,
+    describe: 'Enable fakemeter',
+    alias: 'f',
+    default: false
+  })
+  .option('offline_fakemeter', {
+    boolean: true,
+    describe: 'Enable fakemeter only when offline',
+    alias: 'o',
     default: false
   })
   .option('port', {
     nargs: 1,
     describe: 'Port number for web server',
+    alias: 'p',
     default: 3000
   })
   .option('openaps', {
     nargs: 1,
     describe: 'OpenAPS directory',
+    alias: 'd',
     default: '/root/myopenaps'
   })
   .wrap(null)
@@ -41,7 +64,10 @@ let options = {
   expired_cal: params.expired_cal,
   port: params.port,
   sim: params.sim,
-  openaps: params.openaps
+  openaps: params.openaps,
+  fakemeter: params.fakemeter,
+  offline_fakemeter: params.offline_fakemeter,
+  verbose: params.verbose
 };
 
 const init = async (options) => {
@@ -60,8 +86,10 @@ const init = async (options) => {
   // Start the web GUI server
   const client = ClientIO(options);
 
+  const fakeMeter = require('./fakemeter')(options, storage, client);
+
   // Start the transmitter loop task
-  TransmitterIO(options, storage, storageLock, client);
+  TransmitterIO(options, storage, storageLock, client, fakeMeter);
 
   // Start the Nightscout synchronization loop task
   syncNS(storage, storageLock, options.expired_cal);

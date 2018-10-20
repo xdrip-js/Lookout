@@ -8,6 +8,7 @@ const socketIO = require('socket.io');
 module.exports = (options) => {
 
   let transmitter = null;
+  let fakeMeter = null;
 
   const server = express()
     .use(express.static(__dirname + '/public'))
@@ -35,6 +36,11 @@ module.exports = (options) => {
 
     if (txId) {
       socket.emit('id', txId);
+    }
+
+    let meterId = fakeMeter && await fakeMeter.getMeterId() || null;
+    if (meterId) {
+      socket.emit('meterid', meterId);
     }
 
     let pending = transmitter && transmitter.getPending() || null;
@@ -98,6 +104,11 @@ module.exports = (options) => {
 
       transmitter && transmitter.setTxId(value);
     });
+    socket.on('meterid', value => {
+      console.log('received meter id of ' + value);
+
+      fakeMeter && fakeMeter.setMeterId(value);
+    });
   });
 
   // Return an object that can be used to interact with the
@@ -123,11 +134,23 @@ module.exports = (options) => {
       cgmIO.emit('id', txId);
     },
 
+    // Send an updated transmitter ID to all connected clients.
+    meterId: (meterId) => {
+      cgmIO.emit('meterid', meterId);
+    },
+
     // Set the transmitter object that can be used
     // to get data from the transmitter and
     // send commands to the transmitter from the client.
     setTransmitter: (txmitter) => {
       transmitter = txmitter;
+    },
+
+    // Set the fakemeter object that can be used
+    // to get data from the fakemeter and
+    // send commands to the fakemeter from the client.
+    setFakeMeter: (meter) => {
+      fakeMeter = meter;
     }
   };
 };

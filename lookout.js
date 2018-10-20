@@ -21,6 +21,13 @@ const argv = require('yargs')
       required: true
     });
   })
+  .command('meterid <meterid>', 'Set fake meter ID', (yargs) => {
+    yargs.positional('meterid', {
+      describe: 'fake meter id',
+      type: 'string',
+      required: true
+    });
+  })
   .option('mmol', {
     alias: 'm',
     boolean: true,
@@ -72,6 +79,9 @@ const processCommand = async (command, params) => {
   } else if (command === 'id') {
     sendCmd = 'id';
     sendArg = params.id;
+  } else if (command === 'meterid') {
+    sendCmd = 'meterid';
+    sendArg = params.meterid.padStart(6, 0);
   } else if (command === 'reset') {
     let promptStr = [
       'Running this command will instruct Logger to reset the Dexcom Transmitter!',
@@ -103,6 +113,10 @@ const processCommand = async (command, params) => {
 
   socket.on('id', id => {
     console.log('   Transmitter ID: ', id);
+  });
+
+  socket.on('meterid', id => {
+    console.log('    Fake Meter ID: ', id);
   });
 
   socket.on('glucose', glucose => {

@@ -524,8 +524,31 @@ const syncBGChecks = async (sensorInsert) => {
   console.log('syncBGChecks complete');
 };
 
+const calcNextSyncTimeDelay = (sgv) => {
+
+  if (!sgv) {
+    // If we don't have a glucose value, just return 5 minutes
+    return 5 * 60000;
+  }
+
+  let sgvTime = sgv.readDateMills;
+  let now = moment().valueOf();
+
+  // Find the next point in time where
+  // 30 seconds less than the next possible
+  // transmitter wake up time is later than now
+  while ((sgvTime - 30000) < now) {
+    sgvTime = sgvTime + 5*60000;
+  }
+
+  // Return the amount of time in milliseconds between
+  // now and 30 seconds before the next wake up time
+  return (sgvTime - 30000 - now);
+};
+
 const syncNS = async (storage_, storageLock_) => {
   let sensorInsert = null;
+  let latestSGV = null;
 
   storage = storage_;
   storageLock = storageLock_;
@@ -552,7 +575,7 @@ const syncNS = async (storage_, storageLock_) => {
   });
 
   let syncSGVsPromise = new timeLimitedPromise(4*60*1000, async (resolve) => {
-    await syncSGVs();
+    latestSGV = await syncSGVs();
     resolve();
   });
 
@@ -566,12 +589,13 @@ const syncNS = async (storage_, storageLock_) => {
       console.log('syncNS error: ' + error);
     });
 
-  console.log('syncNS complete - setting 5 minute timer');
+  let timeDelay = calcNextSyncTimeDelay(latestSGV);
+  console.log('syncNS complete - setting ' + Math.round(timeDelay/6000)/10 + ' minute timer', latestSGV);
 
   setTimeout(() => {
     // Restart the syncNS after 5 minute
     syncNS(storage, storageLock);
-  }, 5 * 60000);
+  }, timeDelay);
 };
 
 module.exports = syncNS;

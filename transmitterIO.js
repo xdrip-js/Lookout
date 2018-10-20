@@ -2,7 +2,6 @@ const xDripAPS = require('./xDripAPS')();
 const calibration = require('./calibration');
 const cp = require('child_process');
 const moment = require('moment');
-const stats = require('./calcStats');
 
 var _ = require('lodash');
 
@@ -65,191 +64,84 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       console.log('received id of ' + value);
       txId = value;
 
-      storage.del('g5Calibration');
-      storage.del('bgChecks');
+      calibration.clearCalibration(storage);
       storage.del('glucoseHist');
 
       storage.setItemSync('id', txId);
     }
   };
 
-  const getLastG5Cal = (bgChecks) => {
-    let lastG5Cal = null;
-
-    if (bgChecks) {
-      for (let ii=(bgChecks.length-1); ii >= 0; --ii) {
-        if ((bgChecks[ii].type == 'G5') || (bgChecks[ii].type == 'Unity')) {
-          lastG5Cal = bgChecks[ii];
-          break;
-        }
-      }
+  // Checks whether the current sensor session should end based on
+  // the latest sensor insert record.
+  const checkSensorSession = (sensorInsert, sgv) => {
+    if (sgv.inSession && ((sensorInsert.valueOf() - (moment(sgv.sessionStartDate).valueOf() + 2*60*60000)) > 0)) {
+      // give a 2 hour play between the sensor insert record and the session start date from the transmitter
+      console.log('Found sensor insert after transmitter start date. Stopping Sensor Session.');
+      stopTransmitterSession();
+      stopSensorSession();
+    } else if (calibration.haveCalibration(storage) && !calibration.validateCalibration(storage, sensorInsert)) {
+      console.log('Transmitter not in session and found sensor insert after latest calibration and transmitter not in session. Stopping Sensor Session.');
+      stopSensorSession();
     }
+  };
 
-    return lastG5Cal;
+  const startTransmitterSession = () => {
+    pending.push({date: Date.now(), type: 'StartSensor'});
+
+    client.newPending(pending);
+  };
+
+  const stopTransmitterSession = () => {
+    // Stop sensor 3 hours prior to now to enable a rapid restart
+    // if one is desired.
+    pending.push({date: Date.now() - 3*60*60*1000, type: 'StopSensor'});
+
+    client.newPending(pending);
+  };
+
+  const stopSensorSession = async (storage) => {
+    await storage.del('glucoseHist');
+    await calibration.clearCalibration(storage);
   };
 
   const processNewGlucose = async (sgv) => {
-    let lastCal = null;
-    let lastExpiredCal = null;
     let glucoseHist = null;
-    let sensorInsert = null;
     let sendSGV = true;
 
-    // Check if a new sensor has been inserted.
-    // If it has been, it will clear the calibration value
-    // and abort sending the SGV if we are applying Lookout
-    // calibration instead of G5 calibration
-    sensorInsert = await xDripAPS.latestSensorInserted()
+    let sensorInsert = await storage.getItem('sensorInsert')
       .catch(error => {
-        console.log('Unable to get latest sensor inserted record from NS: ' + error);
+        console.log('Error getting rig sensorInsert: ' + error);
       });
+
+    if (sensorInsert) {
+      sensorInsert = moment(sensorInsert);
+      console.log('SyncNS Rig sensor insert - date: ' + sensorInsert.format());
+    }
 
     await storageLock.lockStorage();
 
-    sgv.g5calibrated = true;
-    sgv.inExtendedSession = false;
-    sgv.inExpiredSession = false;
-    sgv.stateString = stateString(sgv.state);
-    sgv.stateStringShort = stateStringShort(sgv.state);
     sgv.readDateMills = moment(sgv.readDate).valueOf();
 
-    sgv.txStatusString = txStatusString(sgv.status);
-    sgv.txStatusStringShort = txStatusStringShort(sgv.status);
-
-    console.log('sensor state: ' + sgv.stateString);
-
-    lastCal = await storage.getItem('g5Calibration')
-      .catch(error => {
-        console.log('Unable to obtain current NS Calibration' + error);
-      });
-
-    lastExpiredCal = await storage.getItem('expiredCal')
-      .catch(error => {
-        console.log('Unable to obtain current Expired Calibration' + error);
-      });
+    checkSensorSession(sensorInsert, sgv, calibration.getTxmitterCal(), calibration.getExpiredCal());
 
     glucoseHist = await storage.getItem('glucoseHist')
       .catch((err) => {
         console.log('Error getting glucoseHist: ' + err);
       });
 
-    let bgChecks = await storage.getItem('bgChecks')
-      .catch((err) => {
-        console.log('Error getting bgChecks: ' + err);
-      });
-
-    let lastG5CalTime = 0;
-    let newCal = null;
-    let newExpiredCal = null;
-
-    let lastG5Cal = getLastG5Cal(bgChecks);
-
-    if (lastG5Cal) {
-      lastG5CalTime = lastG5Cal.dateMills;
-    }
-
     if (!glucoseHist) {
       glucoseHist = [];
     }
 
-    if (glucoseHist.length > 0) {
-      newCal = calibration.calculateG5Calibration(lastCal, lastG5CalTime, sensorInsert, glucoseHist, sgv);
+    sgv = calibration.calibrateGlucose(storage, options, sensorInsert, glucoseHist, sgv);
 
-      newExpiredCal = await calibration.expiredCalibration(storage, bgChecks, lastExpiredCal, sensorInsert, sgv);
+    sgv.stateString = stateString(sgv.state);
+    sgv.stateStringShort = stateStringShort(sgv.state);
 
-      if (sgv.state != glucoseHist[glucoseHist.length-1].state) {
-        xDripAPS.postAnnouncement('Sensor: ' + sgv.stateString);
-      }
-    }
+    console.log('sensor state: ' + sgv.stateString);
 
-    if (newCal) {
-      lastCal = newCal;
-    }
-
-    if (newExpiredCal) {
-      lastExpiredCal = newExpiredCal;
-    }
-
-    if (!sgv.glucose && options.extend_sensor && lastCal && (lastCal.type !== 'Unity')) {
-      sgv.glucose = calibration.calcGlucose(sgv, lastCal);
-      sgv.inExpiredSession = true;
-
-      console.log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value from G5 calibration algorithm');
-      console.log('Calibrated SGV: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered + ' slope: ' + lastCal.slope + ' intercept: ' + lastCal.intercept);
-
-      sgv.g5calibrated = false;
-    }
-
-    if (options.expired_cal && lastExpiredCal) {
-      let expiredCalGlucose = calibration.calcGlucose(sgv, lastExpiredCal);
-
-      if (!sgv.glucose) {
-        sgv.glucose = expiredCalGlucose;
-        sgv.inExpiredSession = true;
-
-        console.log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value from expired calibration algorithm');
-        console.log('Calibrated SGV: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered + ' slope: ' + lastCal.slope + ' intercept: ' + lastCal.intercept);
-
-        console.log('Expired calibration use disabled - not replacing invalid glucose');
-        sgv.glucose = null;
-        sgv.inExpiredSession = false;
-
-        sgv.g5calibrated = false;
-      } else {
-        let calErr = expiredCalGlucose - sgv.glucose;
-        console.log('Current expired calibration error: ' + Math.round(calErr*10)/10 + ' calibrated value: ' + Math.round(expiredCalGlucose*10)/10 + ' slope: ' + Math.round(lastExpiredCal.slope*10)/10 + ' intercept: ' + Math.round(lastExpiredCal.intercept*10)/10 + ' type: ' + lastExpiredCal.type);
-      }
-    }
-
-    if (sensorInsert && (lastCal.type !== 'Unity') && 
-      ((lastCal && (sensorInsert.diff(moment(lastCal.date).subtract(6, 'minutes')) > 0))
-      || (lastExpiredCal && (sensorInsert.diff(moment(lastExpiredCal.date).subtract(6, 'minutes')) > 0)))) {
-      console.log('Found sensor insert after latest calibration. Deleting calibration data.');
-      await storage.del('g5Calibration');
-      await storage.del('expiredCal');
-      await storage.del('bgChecks');
-      await storage.del('glucoseHist');
-
-      newCal = {
-        date: Date.now(),
-        scale: 1,
-        intercept: 0,
-        slope: 1000,
-        type: 'Unity'
-      };       
-
-      // set the glucose value to null
-      // so it doesn't show up in the Lookout GUI
-      sgv.glucose = null;
-      sendSGV = false;
-    }
-
-    if (newCal) {
-      console.log('New calibration: slope = ' + newCal.slope + ', intercept = ' + newCal.intercept + ', scale = ' + newCal.scale);
-
-      await storage.setItem('g5Calibration', newCal)
-        .catch(() => {
-          console.log('Unable to store new NS Calibration');
-        });
-
-      if (!options.expired_cal) {
-        xDripAPS.postCalibration(newCal);
-      } else {
-        console.log('Expired calibration use disabled - sending new G5 calibration to NS');
-        xDripAPS.postCalibration(newCal);
-      }
-    }
-
-    if (newExpiredCal && options.expired_cal) {
-      await storage.setItem('expiredCal', newExpiredCal)
-        .catch(() => {
-          console.log('Unable to store new NS Calibration');
-        });
-
-      // Expired calibration use disabled
-      // xDripAPS.postCalibration(newExpiredCal);
-    }
-
+    sgv.txStatusString = txStatusString(sgv.status);
+    sgv.txStatusStringShort = txStatusStringShort(sgv.status);
 
     if (!sgv.glucose || sgv.glucose < 20) {
       sgv.glucose = null;
@@ -260,24 +152,6 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     // Store it regardless for state change history
     glucoseHist.push(sgv);
 
-    if (lastCal) {
-      // a valid calibration is available to use
-      sgv.trend = stats.calcTrend(glucoseHist, lastCal);
-
-      sgv.noise = stats.calcSensorNoise(glucoseHist, lastCal);
-    } else {
-      // No way to calculate a trend since we don't know the calibration slope
-      sgv.trend = 0;
-
-      // Put in light noise to account for uncertainty
-      sgv.noise = .4;
-    }
-
-    sgv.nsNoise = stats.calcNSNoise(sgv.noise, glucoseHist);
-    sgv.noiseString = stats.NSNoiseString(sgv.nsNoise),
-
-    console.log('Current sensor trend: ' + Math.round(sgv.trend*10)/10 + ' Sensor Noise: ' + Math.round(sgv.noise*1000)/1000 + ' NS Noise: ' + sgv.nsNoise);
-
     await storeNewGlucose(glucoseHist)
       .catch(() => {
         console.log('Unable to store new glucose');
@@ -285,23 +159,18 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     storageLock.unlockStorage();
 
-    sendCGMStatus(sgv, lastCal);
+    sendCGMStatus(sgv);
 
     sendNewGlucose(sgv, sendSGV);
   };
 
-  const sendCGMStatus = async (sgv, lastCal) => {
+  const sendCGMStatus = async (sgv) => {
 
-    let bgChecks = await storage.getItem('bgChecks')
-      .catch(error => {
-        console.log('Unable to get bgChecks storage item: ' + error);
-      });
+    let activeCal = calibration.getActiveCal(storage);
 
-    let lastG5Cal = getLastG5Cal(bgChecks);
+    let activeCalTime = (activeCal && activeCal.dateMills) || null;
 
-    let lastG5CalTime = (lastG5Cal && lastG5Cal.dateMills) || null;
-
-    xDripAPS.postStatus(txId, sgv, txStatus, lastCal, lastG5CalTime);
+    xDripAPS.postStatus(txId, sgv, txStatus, activeCal, activeCalTime);
   };
 
   // Store the last hour of glucose readings
@@ -605,10 +474,14 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       }
     }
 
-    let sensorInsert = await xDripAPS.latestSensorInserted()
+    let sensorInsert = await storage.getItem('sensorInsert')
       .catch(error => {
-        console.log('Unable to get latest sensor inserted record from NS: ' + error);
+        console.log('Error getting rig sensorInsert: ' + error);
       });
+
+    if (sensorInsert) {
+      sensorInsert = moment(sensorInsert);
+    }
 
     let valueTime = moment(calData.date);
 
@@ -649,11 +522,6 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     storageLock.unlockStorage();
 
     client.newCal(calData);
-
-    if (options.expired_cal && newCal) {
-      console.log('Expired calibration use disabled - not sending it to NS');
-      // xDripAPS.postCalibration(newCal);
-    }
   };
 
   const processBatteryStatus = (batteryStatus) => {
@@ -805,14 +673,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     // provide the most recent G5 calibration
     getLastCal: async () => {
-      let bgChecks = await storage.getItem('bgChecks')
-        .catch(error => {
-          console.log('Unable to get bgChecks storage item: ' + error);
-        });
-
-      let lastG5Cal = getLastG5Cal(bgChecks);
-
-      return lastG5Cal;
+      return calibration.getLastCal(storage);
     },
 
     // Reset the transmitter
@@ -824,9 +685,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     // Start a sensor session
     startSensor: () => {
-      pending.push({date: Date.now(), type: 'StartSensor'});
-
-      client.newPending(pending);
+      startTransmitterSession();
     },
 
     // Start a sensor session back started 2 hours
@@ -837,11 +696,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     },
 
     stopSensor: () => {
-      // Stop sensor 3 hours prior to now to enable a rapid restart
-      // if one is desired.
-      pending.push({date: Date.now() - 3*60*60*1000, type: 'StopSensor'});
-
-      client.newPending(pending);
+      stopTransmitterSession();
     },
 
     // calibrate the sensor
@@ -889,7 +744,23 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       changeTxId(value);
 
       client.txId(value);
+    },
+
+    stopSensorSession: () => {
+      stopSensorSession();
+    },
+
+    inSensorSession: (sgv) => {
+
+      if (sgv.inSession) {
+        return true;
+      }
+
+      // If the transmitter is not in a session, return whether
+      // we have a valid set of calibration values
+      return calibration.haveCalibration(storage);
     }
+
   };
 
   // Provide the object to the client

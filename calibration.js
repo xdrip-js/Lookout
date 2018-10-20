@@ -12,6 +12,7 @@
 //         (> minimum unfiltered value in calibration record set or 
 //          < - minimum unfiltered value in calibration record set)
 
+const stats = require('./calcStats');
 const xDripAPS = require('./xDripAPS')();
 var _ = require('lodash');
 var moment = require('moment');
@@ -140,7 +141,7 @@ const singlePointCalibration = (calibrationPairs) => {
   return returnVal;
 };
 
-exports.calculateG5Calibration = (lastCal, lastG5CalTime, sensorInsert, glucoseHist, currSGV) => {
+const calculateG5Calibration = (lastCal, lastG5CalTime, sensorInsert, glucoseHist, currSGV) => {
   // set it to a high number so we upload a new cal
   // if we don't have a previous calibration
 
@@ -197,7 +198,7 @@ exports.calculateG5Calibration = (lastCal, lastG5CalTime, sensorInsert, glucoseH
       }
 
       calReturn = {
-        date: Date.now(),
+        date: currSGV.readDateMills,
         scale: 1,
         intercept: calResult.yIntercept,
         slope: calResult.slope,
@@ -208,7 +209,7 @@ exports.calculateG5Calibration = (lastCal, lastG5CalTime, sensorInsert, glucoseH
       let calResult = singlePointCalibration(calPairs);
 
       calReturn = {
-        date: Date.now(),
+        date: currSGV.readDateMills,
         scale: 1,
         intercept: calResult.yIntercept,
         slope: calResult.slope,
@@ -229,6 +230,8 @@ exports.calculateG5Calibration = (lastCal, lastG5CalTime, sensorInsert, glucoseH
   return calReturn;
 };
 
+exports.calculateG5Calibration = calculateG5Calibration;
+
 const calcGlucose = (sgv, calibration) => {
   let glucose = Math.round((sgv.unfiltered-calibration.intercept)/calibration.slope);
 
@@ -240,7 +243,7 @@ const calcGlucose = (sgv, calibration) => {
 
 exports.calcGlucose = calcGlucose;
 
-exports.expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorInsert, sgv) => {
+const expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorInsert, sgv) => {
   let calPairs = [];
   let calReturn = null;
   let calPairsStart = 0;
@@ -287,7 +290,7 @@ exports.expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorIns
     }
 
     calReturn = {
-      date: Date.now(),
+      date: calPairs[calPairs.length-1].readDateMills,
       scale: 1,
       intercept: calResult.yIntercept,
       slope: calResult.slope,
@@ -297,7 +300,7 @@ exports.expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorIns
     let calResult = singlePointCalibration(calPairs);
 
     calReturn = {
-      date: Date.now(),
+      date: calPairs[calPairs.length-1].readDateMills,
       scale: 1,
       intercept: calResult.yIntercept,
       slope: calResult.slope,
@@ -326,6 +329,8 @@ exports.expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorIns
     return calReturn;
   }
 };
+
+exports.expiredCalibration = expiredCalibration;
 
 const getUnfiltered = async (storage, valueTime, sgv) => {
 
@@ -443,5 +448,234 @@ const interpolateUnfiltered = (SGVBefore, SGVAfter, valueTime) => {
   console.log('     totalTime: ' + totalTime + ' totalDelta: ' + (Math.round(totalDelta*1000) / 1000) + ' fractionTime: ' + (Math.round(fractionTime*100)/100));
 
   return returnVal;
+};
+
+const getExpiredCal = async (storage) => {
+  let lastExpiredCal = await storage.getItem('expiredCal')
+    .catch(error => {
+      console.log('Unable to obtain current Expired Calibration' + error);
+    });
+
+  return lastExpiredCal;
+};
+
+exports.getExpiredCal = getExpiredCal;
+
+const saveExpiredCal = async (storage, newCal) => {
+  await storage.setItem('expiredCal', newCal)
+    .catch(() => {
+      console.log('Unable to store new NS Calibration');
+    });
+};
+
+exports.saveExpiredCal = saveExpiredCal;
+
+const getTxmitterCal = async (storage) => {
+  let lastCal = await storage.getItem('g5Calibration')
+    .catch(error => {
+      console.log('Unable to obtain current NS Calibration' + error);
+    });
+
+  return lastCal;
+};
+
+exports.getTxmitterCal = getTxmitterCal;
+
+const saveTxmitterCal = async (storage, newCal) => {
+  await storage.setItem('g5Calibration', newCal)
+    .catch(() => {
+      console.log('Unable to store new NS Calibration');
+    });
+};
+
+exports.saveTxmitterCal = saveTxmitterCal;
+
+const getLastG5Cal = (bgChecks) => {
+  let lastG5Cal = null;
+
+  if (bgChecks) {
+    for (let ii=(bgChecks.length-1); ii >= 0; --ii) {
+      if ((bgChecks[ii].type == 'G5') || (bgChecks[ii].type == 'Unity')) {
+        lastG5Cal = bgChecks[ii];
+        break;
+      }
+    }
+  }
+
+  return lastG5Cal;
+};
+
+exports.getLastG5Cal = getLastG5Cal;
+
+const getActiveCal = async (options, storage) => {
+  let lastCal = getTxmitterCal(storage);
+  let lastExpiredCal = getExpiredCal(storage);
+
+  if (lastCal && (lastCal.type !== 'Unity')) {
+    return lastCal;
+  } else if (lastExpiredCal) {
+    return lastExpiredCal;
+  } else {
+    return false;
+  }
+};
+
+exports.getActiveCal = getActiveCal;
+
+// provide the most recent G5 calibration
+const getLastCal = async (storage) => {
+  let bgChecks = await storage.getItem('bgChecks')
+    .catch(error => {
+      console.log('Unable to get bgChecks storage item: ' + error);
+    });
+
+  let lastG5Cal = getLastG5Cal(bgChecks);
+
+  return lastG5Cal;
+};
+
+exports.getLastCal = getLastCal;
+
+exports.clearCalibration = async (storage) => {
+  await storage.del('g5Calibration');
+  await storage.del('expiredCal');
+  await storage.del('bgChecks');
+
+  let newCal = {
+    date: Date.now(),
+    scale: 1,
+    intercept: 0,
+    slope: 1000,
+    type: 'Unity'
+  };
+
+  saveTxmitterCal(storage, newCal);
+};
+
+exports.haveCalibration = (storage) => {
+  let lastCal = getTxmitterCal(storage);
+  let lastExpiredCal = getExpiredCal(storage);
+
+  if ((lastCal && (lastCal.type !== 'Unity'))
+    || lastExpiredCal) {
+    return true;
+  } else {
+    return false;
+  }
+};
+
+exports.validateCalibration = (storage, sensorInsert) => {
+  let lastCal = getTxmitterCal();
+  let lastExpiredCal = getExpiredCal();
+
+  if (sensorInsert &&
+    ((lastCal && (lastCal.type !== 'Unity') && (sensorInsert.diff(moment(lastCal.date).subtract(6, 'minutes')) > 0))
+    || (lastExpiredCal && (sensorInsert.diff(moment(lastExpiredCal.date).subtract(6, 'minutes')) > 0)))) {
+    return false;
+  } else {
+    return true;
+  }
+};
+
+exports.calibrateGlucose = async (storage, options, sensorInsert, glucoseHist, sgv) => {
+
+  let lastCal = getTxmitterCal();
+  let lastExpiredCal = getExpiredCal();
+
+  let bgChecks = await storage.getItem('bgChecks')
+    .catch((err) => {
+      console.log('Error getting bgChecks: ' + err);
+    });
+
+  let lastG5CalTime = 0;
+  let newCal = null;
+  let newExpiredCal = null;
+
+  let lastG5Cal = getLastG5Cal(bgChecks);
+
+  if (lastG5Cal) {
+    lastG5CalTime = lastG5Cal.dateMills;
+  }
+
+  sgv.g5calibrated = true;
+
+  sgv.inExtendedSession = false;
+  sgv.inExpiredSession = false;
+
+  if (glucoseHist.length > 0) {
+    newCal = calculateG5Calibration(lastCal, lastG5CalTime, sensorInsert, glucoseHist, sgv);
+
+    newExpiredCal = await expiredCalibration(storage, bgChecks, lastExpiredCal, sensorInsert, sgv);
+
+    if (sgv.state != glucoseHist[glucoseHist.length-1].state) {
+      xDripAPS.postAnnouncement('Sensor: ' + sgv.stateString);
+    }
+  }
+
+  if (newCal) {
+    lastCal = newCal;
+  }
+
+  if (newExpiredCal) {
+    lastExpiredCal = newExpiredCal;
+  }
+
+  if (!sgv.glucose && options.extend_sensor && lastCal && (lastCal.type !== 'Unity')) {
+    sgv.glucose = calcGlucose(sgv, lastCal);
+    sgv.inExpiredSession = true;
+
+    console.log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value from G5 calibration algorithm');
+    console.log('Calibrated SGV: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered + ' slope: ' + lastCal.slope + ' intercept: ' + lastCal.intercept);
+
+    sgv.g5calibrated = false;
+  }
+
+  if (options.expired_cal && lastExpiredCal) {
+    let expiredCalGlucose = calcGlucose(sgv, lastExpiredCal);
+
+    if (!sgv.glucose) {
+      sgv.glucose = expiredCalGlucose;
+      sgv.inExpiredSession = true;
+
+      console.log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value from expired calibration algorithm');
+      console.log('Calibrated SGV: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered + ' slope: ' + lastCal.slope + ' intercept: ' + lastCal.intercept);
+
+      sgv.g5calibrated = false;
+    } else {
+      let calErr = expiredCalGlucose - sgv.glucose;
+      console.log('Current expired calibration error: ' + Math.round(calErr*10)/10 + ' calibrated value: ' + Math.round(expiredCalGlucose*10)/10 + ' slope: ' + Math.round(lastExpiredCal.slope*10)/10 + ' intercept: ' + Math.round(lastExpiredCal.intercept*10)/10 + ' type: ' + lastExpiredCal.type);
+    }
+  }
+
+  if (newCal) {
+    console.log('New calibration: slope = ' + newCal.slope + ', intercept = ' + newCal.intercept + ', scale = ' + newCal.scale);
+
+    saveTxmitterCal(newCal);
+  }
+
+  if (newExpiredCal) {
+    console.log('New expired calibration: slope = ' + newExpiredCal.slope + ', intercept = ' + newExpiredCal.intercept + ', scale = ' + newExpiredCal.scale);
+    saveExpiredCal(storage, newExpiredCal);
+  }
+
+  if (lastCal) {
+    // a valid calibration is available to use
+    sgv.trend = stats.calcTrend(glucoseHist, lastCal);
+
+    sgv.noise = stats.calcSensorNoise(glucoseHist, lastCal);
+  } else {
+    // No way to calculate a trend since we don't know the calibration slope
+    sgv.trend = 0;
+
+    // Put in light noise to account for uncertainty
+    sgv.noise = .4;
+  }
+
+  sgv.nsNoise = stats.calcNSNoise(sgv.noise, glucoseHist);
+  sgv.noiseString = stats.NSNoiseString(sgv.nsNoise),
+
+  console.log('Current sensor trend: ' + Math.round(sgv.trend*10)/10 + ' Sensor Noise: ' + Math.round(sgv.noise*1000)/1000 + ' NS Noise: ' + sgv.nsNoise);
+
+  return sgv;
 };
 

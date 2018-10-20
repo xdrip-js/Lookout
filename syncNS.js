@@ -88,6 +88,81 @@ const syncCal = async (sensorInsert) => {
   console.log('syncCal complete');
 };
 
+const syncSensorInsert = async () => {
+  let rigInsert = null;
+  let nsInsert = null;
+  let nsQueryError = false;
+
+  nsInsert = await xDripAPS.latestSensorInserted()
+    .catch(error => {
+      console.log('Unable to get latest sensor inserted record from NS: ' + error);
+      nsQueryError = true;
+    });
+
+  if (nsInsert) {
+    console.log('SyncNS NS sensor insert - date: ' + nsInsert.format());
+  }
+
+  await storageLock.lockStorage();
+
+  rigInsert = await storage.getItem('sensorInsert')
+    .catch(error => {
+      console.log('Error getting rig sensorInsert: ' + error);
+    });
+
+  if (rigInsert) {
+    rigInsert = moment(rigInsert);
+    console.log('SyncNS Rig sensor insert - date: ' + rigInsert.format());
+  }
+
+  if (nsQueryError) {
+    // ns query failed, so just return the rig sensor insert
+    return rigInsert;
+  }
+
+  let latestInsert = rigInsert;
+
+  if (nsInsert) {
+    if (!rigInsert) {
+      console.log('No rig sensor insert, storing NS sensor insert');
+
+      await storage.setItem('sensorInsert', nsInsert.valueOf())
+        .catch(() => {
+          console.log('Unable to store sensor insert');
+        });
+    } else if (rigInsert && (rigInsert.valueOf() < nsInsert.valueOf())) {
+      console.log('NS insert more recent than rig insert NS insert date: ' + nsInsert.format() + ' Rig insert date: ' + rigInsert.format());
+
+      storage.setItem('sensorInsert', nsInsert.valueOf())
+        .catch(() => {
+          console.log('Unable to store sensor insert');
+        });
+    } else if (rigInsert && (rigInsert.valueOf() > nsInsert.valueOf())) {
+      console.log('Rig sensor insert more recent than NS sensor insert NS sensor insert dte: ' + nsInsert.format() + ' Rig sensor insert date: ' + rigInsert.format());
+      console.log('Upoading rig sensor insert');
+
+      latestInsert = rigInsert;
+      xDripAPS.postSensorInsert(rigInsert);
+    } else {
+      console.log('Rig and NS sensor insert dates match - no sync needed');
+    }
+  } else {
+    if (rigInsert) {
+      console.log('No NS sensor insert - uploading rig sensor insert');
+      latestInsert = rigInsert;
+      xDripAPS.postSensorInsert(rigInsert);
+    } else {
+      console.log('No rig or NS sensor insert');
+    }
+  }
+
+  storageLock.unlockStorage();
+
+  console.log('syncSensorInsert complete');
+
+  return latestInsert;
+};
+
 const syncSGVs = async () => {
   let rigSGVs = null;
   let nsSGVs = null;
@@ -278,6 +353,8 @@ const syncSGVs = async () => {
   storageLock.unlockStorage();
 
   console.log('syncSGVs complete');
+
+  return ((rigSGVs.length > 0) && rigSGVs[rigSGVs.length-1]) || null;
 };
 
 const syncBGChecks = async (sensorInsert) => {
@@ -441,6 +518,7 @@ const syncBGChecks = async (sensorInsert) => {
       });
 
     storageLock.unlockStorage();
+
   }
 
   console.log('syncBGChecks complete');
@@ -448,24 +526,14 @@ const syncBGChecks = async (sensorInsert) => {
 
 const syncNS = async (storage_, storageLock_) => {
   let sensorInsert = null;
-  let nsQueryError = false;
 
   storage = storage_;
   storageLock = storageLock_;
 
-  sensorInsert = await xDripAPS.latestSensorInserted()
-    .catch(error => {
-      console.log('Unable to get latest sensor inserted record from NS: ' + error);
-      nsQueryError = true;
-      return;
-    });
+  sensorInsert = await syncSensorInsert();
 
   if (!sensorInsert) {
-    console.log('No sensor inserted record returned from NS');
-  }
-
-  if (nsQueryError || !sensorInsert) {
-    console.log('syncNS - Setting 5 minute timer to try again');
+    console.log('syncNS - No known sensor insert -  Setting 5 minute timer to try again');
 
     setTimeout(() => {
       // Restart the syncNS after 5 minute

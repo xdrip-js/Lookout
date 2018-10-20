@@ -92,7 +92,7 @@ const init = async (options) => {
   TransmitterIO(options, storage, storageLock, client, fakeMeter);
 
   // Start the Nightscout synchronization loop task
-  syncNS(storage, storageLock, options.expired_cal);
+  syncNS(storage, storageLock);
 };
 
 init(options);

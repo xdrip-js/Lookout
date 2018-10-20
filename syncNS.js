@@ -590,7 +590,7 @@ const syncNS = async (storage_, storageLock_) => {
     });
 
   let timeDelay = calcNextSyncTimeDelay(latestSGV);
-  console.log('syncNS complete - setting ' + Math.round(timeDelay/6000)/10 + ' minute timer', latestSGV);
+  console.log('syncNS complete - setting ' + Math.round(timeDelay/6000)/10 + ' minute timer');
 
   setTimeout(() => {
     // Restart the syncNS after 5 minute

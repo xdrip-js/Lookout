@@ -23,6 +23,11 @@ const _convertEntryToNS = (glucose) => {
     direction = 'DoubleUp';
   }
 
+  if (!glucose.glucose) {
+    // Set to 5 so NS will plot the unfiltered glucose values
+    glucose.glucose = 5;
+  }
+
   console.log('Glucose: ' + glucose.glucose + ' Trend: ' + Math.round(glucose.trend*10)/10 + ' direction: ' + direction);
 
   return {
@@ -92,11 +97,6 @@ const postToNS = (entry) => {
     ns_url = ns_url + '?' + secret;
   } else {
     ns_headers['API-SECRET'] = secret;
-  }
-
-  if (!entry.glucose) {
-    // Set to 5 so NS will plot the unfiltered glucose values
-    entry.glucose = 5;
   }
 
   const optionsNS = {

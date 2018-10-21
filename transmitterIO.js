@@ -80,7 +80,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       stopTransmitterSession();
       await stopSensorSession();
     } else {
-      let haveCal = await.haveCalibration(storage);
+      let haveCal = await calibration.haveCalibration(storage);
       let haveValidCal = await calibration.validateCalibration(storage, sensorInsert);
 
       if (haveCal && !haveValidCal) {

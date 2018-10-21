@@ -73,15 +73,15 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
   // Checks whether the current sensor session should end based on
   // the latest sensor insert record.
-  const checkSensorSession = (sensorInsert, sgv) => {
+  const checkSensorSession = async (sensorInsert, sgv) => {
     if (sgv.inSession && ((sensorInsert.valueOf() - (moment(sgv.sessionStartDate).valueOf() + 2*60*60000)) > 0)) {
       // give a 2 hour play between the sensor insert record and the session start date from the transmitter
       console.log('Found sensor insert after transmitter start date. Stopping Sensor Session.');
       stopTransmitterSession();
-      stopSensorSession();
+      await stopSensorSession();
     } else if (calibration.haveCalibration(storage) && !calibration.validateCalibration(storage, sensorInsert)) {
       console.log('Transmitter not in session and found sensor insert after latest calibration and transmitter not in session. Stopping Sensor Session.');
-      stopSensorSession();
+      await stopSensorSession();
     }
   };
 
@@ -137,7 +137,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     sgv.readDateMills = moment(sgv.readDate).valueOf();
 
-    checkSensorSession(sensorInsert, sgv, calibration.getTxmitterCal(storage), calibration.getExpiredCal(storage));
+    await checkSensorSession(sensorInsert, sgv, calibration.getTxmitterCal(storage), calibration.getExpiredCal(storage));
 
     glucoseHist = await storage.getItem('glucoseHist')
       .catch((err) => {

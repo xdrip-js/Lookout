@@ -155,19 +155,19 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     sgv = await calibration.calibrateGlucose(storage, options, sensorInsert, glucoseHist, sgv);
 
+    sgv.stateString = stateString(sgv.state);
+    sgv.stateStringShort = stateStringShort(sgv.state);
+
+    sgv.txStatusString = txStatusString(sgv.status);
+    sgv.txStatusStringShort = txStatusStringShort(sgv.status);
+
     if (glucoseHist.length > 0) {
       if (sgv.state != glucoseHist[glucoseHist.length-1].state) {
         xDripAPS.postAnnouncement('Sensor: ' + sgv.stateString);
       }
     }
 
-    sgv.stateString = stateString(sgv.state);
-    sgv.stateStringShort = stateStringShort(sgv.state);
-
     console.log('sensor state: ' + sgv.stateString);
-
-    sgv.txStatusString = txStatusString(sgv.status);
-    sgv.txStatusStringShort = txStatusStringShort(sgv.status);
 
     if (!sgv.glucose || sgv.glucose < 20) {
       sgv.glucose = null;

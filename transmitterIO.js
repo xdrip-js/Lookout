@@ -137,7 +137,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     sgv.readDateMills = moment(sgv.readDate).valueOf();
 
-    checkSensorSession(sensorInsert, sgv, calibration.getTxmitterCal(), calibration.getExpiredCal());
+    checkSensorSession(sensorInsert, sgv, calibration.getTxmitterCal(storage), calibration.getExpiredCal(storage));
 
     glucoseHist = await storage.getItem('glucoseHist')
       .catch((err) => {

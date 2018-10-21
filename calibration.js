@@ -606,8 +606,8 @@ exports.validateCalibration = validateCalibration;
 
 exports.calibrateGlucose = async (storage, options, sensorInsert, glucoseHist, sgv) => {
 
-  let lastCal = getTxmitterCal();
-  let expiredCal = getExpiredCal();
+  let lastCal = getTxmitterCal(storage);
+  let expiredCal = getExpiredCal(storage);
 
   let bgChecks = await storage.getItem('bgChecks')
     .catch((err) => {

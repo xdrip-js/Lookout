@@ -318,7 +318,7 @@ describe('Test Stats', function() {
 
     glucoseHist.push(currSGV);
 
-    let noise = stats.calcSensorNoise(calibration, glucoseHist, lastCal);
+    let noise = stats.calcSensorNoise(calibration.calcGlucose, glucoseHist, lastCal);
 
     noise.should.be.greaterThan(0.016);
     noise.should.be.lessThan(0.017);
@@ -379,7 +379,7 @@ describe('Test Stats', function() {
 
     glucoseHist.push(currSGV);
 
-    let noise = stats.calcSensorNoise(calibration, glucoseHist, lastCal);
+    let noise = stats.calcSensorNoise(calibration.calcGlucose, glucoseHist, lastCal);
 
     noise.should.equal(0);
   });

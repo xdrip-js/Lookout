@@ -79,9 +79,14 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       console.log('Found sensor insert after transmitter start date. Stopping Sensor Session.');
       stopTransmitterSession();
       await stopSensorSession();
-    } else if (calibration.haveCalibration(storage) && !calibration.validateCalibration(storage, sensorInsert)) {
-      console.log('Transmitter not in session and found sensor insert after latest calibration and transmitter not in session. Stopping Sensor Session.');
-      await stopSensorSession();
+    } else {
+      let haveCal = await.haveCalibration(storage);
+      let haveValidCal = await calibration.validateCalibration(storage, sensorInsert);
+
+      if (haveCal && !haveValidCal) {
+        console.log('Transmitter not in session and found sensor insert after latest calibration and transmitter not in session. Stopping Sensor Session.');
+        await stopSensorSession();
+      }
     }
   };
 
@@ -137,7 +142,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     sgv.readDateMills = moment(sgv.readDate).valueOf();
 
-    await checkSensorSession(sensorInsert, sgv, calibration.getTxmitterCal(storage), calibration.getExpiredCal(storage));
+    await checkSensorSession(sensorInsert, sgv);
 
     glucoseHist = await storage.getItem('glucoseHist')
       .catch((err) => {
@@ -778,7 +783,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       stopSensorSession();
     },
 
-    inSensorSession: (sgv) => {
+    inSensorSession: async (sgv) => {
 
       if (sgv.inSession) {
         return true;

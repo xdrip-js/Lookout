@@ -511,8 +511,8 @@ const getLastG5Cal = (bgChecks) => {
 exports.getLastG5Cal = getLastG5Cal;
 
 const getActiveCal = async (options, storage) => {
-  let lastCal = getTxmitterCal(storage);
-  let lastExpiredCal = getExpiredCal(storage);
+  let lastCal = await getTxmitterCal(storage);
+  let lastExpiredCal = await getExpiredCal(storage);
 
   if (lastCal && (lastCal.type !== 'Unity')) {
     return lastCal;
@@ -595,9 +595,9 @@ const validateExpiredCalibration = (sensorInsert, lastExpiredCal) => {
   }
 };
 
-const validateCalibration = (storage, sensorInsert, bgChecks) => {
-  let lastCal = getTxmitterCal(storage);
-  let lastExpiredCal = getExpiredCal(storage);
+const validateCalibration = async (storage, sensorInsert, bgChecks) => {
+  let lastCal = await getTxmitterCal(storage);
+  let lastExpiredCal = await getExpiredCal(storage);
 
   return (validateTxmitterCalibration(sensorInsert, bgChecks, lastCal) || validateExpiredCalibration(sensorInsert, lastExpiredCal));
 };
@@ -606,8 +606,8 @@ exports.validateCalibration = validateCalibration;
 
 exports.calibrateGlucose = async (storage, options, sensorInsert, glucoseHist, sgv) => {
 
-  let lastCal = getTxmitterCal(storage);
-  let expiredCal = getExpiredCal(storage);
+  let lastCal = await getTxmitterCal(storage);
+  let expiredCal = await getExpiredCal(storage);
 
   let bgChecks = await storage.getItem('bgChecks')
     .catch((err) => {

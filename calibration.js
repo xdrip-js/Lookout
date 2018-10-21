@@ -642,7 +642,7 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, glucoseHist, s
     lastCal = newCal;
   }
 
-  if (!sgv.glucose && options.extend_sensor && validateTxmitterCalibration(storage, sensorInsert, bgChecks, lastCal)) {
+  if (!sgv.glucose && options.extend_sensor && validateTxmitterCalibration(sensorInsert, bgChecks, lastCal)) {
     sgv.glucose = calcGlucose(sgv, lastCal);
     sgv.inExpiredSession = true;
 
@@ -652,7 +652,7 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, glucoseHist, s
     sgv.g5calibrated = false;
   }
 
-  if (options.expired_cal && validateExpiredCalibration(storage, sensorInsert, expiredCal)) {
+  if (options.expired_cal && validateExpiredCalibration(sensorInsert, expiredCal)) {
     let expiredCalGlucose = calcGlucose(sgv, expiredCal);
 
     if (!sgv.glucose) {

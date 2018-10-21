@@ -436,7 +436,7 @@ const syncSGVs = async () => {
 const syncBGChecks = async (sensorInsert) => {
   let NSBGChecks = null;
   let nsQueryError = false;
-  let calculateExpiredCal = false;
+  let bgCheckFromNS = false;
   let sliceStart = 0;
 
   NSBGChecks = await xDripAPS.BGChecksSince(sensorInsert)
@@ -534,8 +534,8 @@ const syncBGChecks = async (sensorInsert) => {
 
       rigBGChecks.push(rigValue);
 
-      // we found a new BG check, trigger calculating new calibration
-      calculateExpiredCal = true;
+      // we found a new BG check
+      bgCheckFromNS = true;
     }
   }
 
@@ -583,8 +583,7 @@ const syncBGChecks = async (sensorInsert) => {
     }
   }
 
-  if (calculateExpiredCal) {
-    await calibration.expiredCalibration(storage, rigBGChecks, null, sensorInsert, null);
+  if (bgCheckFromNS) {
     transmitter.sendBgCheckToTxmitter(rigBGChecks[rigBGChecks.length-1]);
   }
 
@@ -615,6 +614,7 @@ const calcNextSyncTimeDelay = (sgv) => {
 
 const syncNS = async (storage_, storageLock_, transmitter_) => {
   let sensorInsert = null;
+  let sensorStart = null;
   let latestSGV = null;
 
   storage = storage_;
@@ -622,6 +622,12 @@ const syncNS = async (storage_, storageLock_, transmitter_) => {
   transmitter = transmitter_;
 
   sensorInsert = await syncSensorInsert();
+
+  sensorStart = await syncSensorStart();
+
+  if (!sensorInsert || (sensorStart && (sensorStart.valueOf() > sensorInsert.valueOf()))) {
+    sensorInsert = sensorStart;
+  }
 
   if (!sensorInsert) {
     console.log('syncNS - No known sensor insert -  Setting 5 minute timer to try again');

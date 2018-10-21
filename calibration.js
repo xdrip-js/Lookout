@@ -668,7 +668,7 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, glucoseHist, s
   if (newCal) {
     console.log('New calibration: slope = ' + newCal.slope + ', intercept = ' + newCal.intercept + ', scale = ' + newCal.scale);
 
-    saveTxmitterCal(newCal);
+    saveTxmitterCal(storage, newCal);
   }
 
   if (lastCal) {

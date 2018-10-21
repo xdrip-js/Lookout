@@ -552,10 +552,7 @@ exports.clearCalibration = async (storage) => {
   saveTxmitterCal(storage, newCal);
 };
 
-exports.haveCalibration = (storage) => {
-  let lastCal = getTxmitterCal(storage);
-  let lastExpiredCal = getExpiredCal(storage);
-
+exports.haveCalibration = async (storage) => {
   let bgChecks = await storage.getItem('bgChecks')
     .catch((err) => {
       console.log('Error getting bgChecks: ' + err);
@@ -595,12 +592,14 @@ const validateExpiredCalibration = (sensorInsert, lastExpiredCal) => {
   }
 };
 
-exports.validateCalibration = (storage, sensorInsert, bgChecks) => {
+const validateCalibration = (storage, sensorInsert, bgChecks) => {
   let lastCal = getTxmitterCal(storage);
   let lastExpiredCal = getExpiredCal(storage);
 
   return (validateTxmitterCalibration(sensorInsert, bgChecks, lastCal) || validateExpiredCalibration(sensorInsert, lastExpiredCal));
 };
+
+exports.validateCalibration = validateCalibration;
 
 exports.calibrateGlucose = async (storage, options, sensorInsert, glucoseHist, sgv) => {
 

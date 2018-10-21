@@ -326,7 +326,8 @@ const expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorInser
 
   if ((slopeDelta < 1) && (interceptDelta < 1)) {
     console.log('No calibration update: slopeDelta=' + Math.round(slopeDelta*10)/10 + ' interceptDelta=' + Math.round(interceptDelta*10)/10);
-    return null;
+
+    return lastExpiredCal;
   } else {
     if (calReturn) {
       console.log('New expired calibration with ' + calReturn.type + ' due to ' + calPairs.length + ' calibration pairs:\n', calReturn);
@@ -678,9 +679,9 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, glucoseHist, s
 
   if (lastCal) {
     // a valid calibration is available to use
-    sgv.trend = stats.calcTrend(glucoseHist, lastCal);
+    sgv.trend = stats.calcTrend(calibration.calcGlucose, glucoseHist, lastCal);
 
-    sgv.noise = stats.calcSensorNoise(glucoseHist, lastCal);
+    sgv.noise = stats.calcSensorNoise(calibration.calcGlucose, glucoseHist, lastCal);
   } else {
     // No way to calculate a trend since we don't know the calibration slope
     sgv.trend = 0;
@@ -689,8 +690,8 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, glucoseHist, s
     sgv.noise = .4;
   }
 
-  sgv.nsNoise = stats.calcNSNoise(exports, sgv.noise, glucoseHist);
-  sgv.noiseString = stats.NSNoiseString(exports, sgv.nsNoise),
+  sgv.nsNoise = stats.calcNSNoise(sgv.noise, glucoseHist);
+  sgv.noiseString = stats.NSNoiseString(sgv.nsNoise),
 
   console.log('Current sensor trend: ' + Math.round(sgv.trend*10)/10 + ' Sensor Noise: ' + Math.round(sgv.noise*1000)/1000 + ' NS Noise: ' + sgv.nsNoise);
 

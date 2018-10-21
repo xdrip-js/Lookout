@@ -120,8 +120,6 @@ const lsrCalibration = (calibrationPairs) => {
     slopeError=Math.sqrt(n / delta * vari);
   }
 
-  console.log('lsrCalibration: numPoints=' + n + ', slope=' + returnVal.slope + ', yIntercept=' + returnVal.yIntercept); 
-
   return returnVal;
 };
 
@@ -136,7 +134,6 @@ const singlePointCalibration = (calibrationPairs) => {
   let y=calibrationPairs[calibrationPairs.length-1].unfiltered;
   returnVal.yIntercept=0;
   returnVal.slope=y / x;
-  console.log('singlePointCalibration: x=' + x + ', y=' + y + ', slope=' + returnVal.slope + ', yIntercept=0'); 
 
   return returnVal;
 };
@@ -191,6 +188,8 @@ const calculateG5Calibration = (lastCal, lastG5CalTime, sensorInsert, glucoseHis
     if (((calErr > 5) && calPairs.length > 3) || (calPairs.length > 8)) {
       let calResult = lsrCalibration(calPairs);
 
+      console.log('CGM lsrCalibration: numPoints=' + calPairs.length + ', slope=' + calResult.slope + ', yIntercept=' + calResult.yIntercept); 
+
       if ((calResult.slope > MAXSLOPE) || (calResult.slope < MINSLOPE)) {
         // wait until the next opportunity
         console.log('CGM calculated calibration slope out of range: ' + calResult.slope);
@@ -207,6 +206,8 @@ const calculateG5Calibration = (lastCal, lastG5CalTime, sensorInsert, glucoseHis
     // Otherwise, only update if we have a calErr > 5
     } else if ((calErr > 5) && (calPairs.length > 0)) {
       let calResult = singlePointCalibration(calPairs);
+
+      console.log('CGM singlePointCalibration: glucose=' + calPairs[calPairs.length-1].glucose + ', unfiltered=' + calPairs[calPairs.length-1].unfiltered + ', slope=' + calResult.slope + ', yIntercept=0'); 
 
       calReturn = {
         date: currSGV.readDateMills,
@@ -283,6 +284,8 @@ const expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorInser
   if (calPairs.length >= 3) {
     let calResult = lsrCalibration(calPairs);
 
+    console.log('expired lsrCalibration: numPoints=' + calPairs.length + ', slope=' + calResult.slope + ', yIntercept=' + calResult.yIntercept); 
+
     if ((calResult.slope > MAXSLOPE) || (calResult.slope < MINSLOPE)) {
       // wait until the next opportunity
       console.log('Slope out of range to calibrate: ' + calResult.slope);
@@ -298,6 +301,8 @@ const expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorInser
     };
   } else if (calPairs.length > 0) {
     let calResult = singlePointCalibration(calPairs);
+
+    console.log('expired singlePointCalibration: glucose=' + calPairs[calPairs.length-1].glucose + ', unfiltered=' + calPairs[calPairs.length-1].unfiltered + ', slope=' + calResult.slope + ', yIntercept=0'); 
 
     calReturn = {
       date: calPairs[calPairs.length-1].readDateMills,
@@ -666,7 +671,7 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, glucoseHist, s
   }
 
   if (newCal) {
-    console.log('New calibration: slope = ' + newCal.slope + ', intercept = ' + newCal.intercept + ', scale = ' + newCal.scale);
+    console.log('New CGM calibration: slope = ' + newCal.slope + ', intercept = ' + newCal.intercept + ', scale = ' + newCal.scale);
 
     saveTxmitterCal(storage, newCal);
   }

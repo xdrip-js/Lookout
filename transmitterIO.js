@@ -154,7 +154,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       }
     }
 
-    sgv = calibration.calibrateGlucose(storage, options, sensorInsert, glucoseHist, sgv);
+    sgv = await calibration.calibrateGlucose(storage, options, sensorInsert, glucoseHist, sgv);
 
     sgv.stateString = stateString(sgv.state);
     sgv.stateStringShort = stateStringShort(sgv.state);
@@ -187,7 +187,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
   const sendCGMStatus = async (sgv) => {
 
-    let activeCal = calibration.getActiveCal(storage);
+    let activeCal = await calibration.getActiveCal(options, storage);
 
     let activeCalTime = (activeCal && activeCal.dateMills) || null;
 

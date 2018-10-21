@@ -324,8 +324,11 @@ const expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorInser
     return null;
   } else {
     if (calReturn) {
-      console.log('Expired calibration with ' + calReturn.type + ' due to ' + calPairs.length + ' calibration pairs:\n', calReturn);
+      console.log('New expired calibration with ' + calReturn.type + ' due to ' + calPairs.length + ' calibration pairs:\n', calReturn);
     }
+
+    saveExpiredCal(storage, calReturn);
+
     return calReturn;
   }
 };
@@ -604,7 +607,7 @@ exports.validateCalibration = validateCalibration;
 exports.calibrateGlucose = async (storage, options, sensorInsert, glucoseHist, sgv) => {
 
   let lastCal = getTxmitterCal();
-  let lastExpiredCal = getExpiredCal();
+  let expiredCal = getExpiredCal();
 
   let bgChecks = await storage.getItem('bgChecks')
     .catch((err) => {
@@ -613,7 +616,6 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, glucoseHist, s
 
   let lastG5CalTime = 0;
   let newCal = null;
-  let newExpiredCal = null;
 
   let lastG5Cal = getLastG5Cal(bgChecks);
 
@@ -629,7 +631,7 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, glucoseHist, s
   if (glucoseHist.length > 0) {
     newCal = calculateG5Calibration(lastCal, lastG5CalTime, sensorInsert, glucoseHist, sgv);
 
-    newExpiredCal = await expiredCalibration(storage, bgChecks, lastExpiredCal, sensorInsert, sgv);
+    expiredCal = await expiredCalibration(storage, bgChecks, expiredCal, sensorInsert, sgv);
 
     if (sgv.state != glucoseHist[glucoseHist.length-1].state) {
       xDripAPS.postAnnouncement('Sensor: ' + sgv.stateString);
@@ -638,10 +640,6 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, glucoseHist, s
 
   if (newCal) {
     lastCal = newCal;
-  }
-
-  if (newExpiredCal) {
-    lastExpiredCal = newExpiredCal;
   }
 
   if (!sgv.glucose && options.extend_sensor && validateTxmitterCalibration(storage, sensorInsert, bgChecks, lastCal)) {
@@ -654,8 +652,8 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, glucoseHist, s
     sgv.g5calibrated = false;
   }
 
-  if (options.expired_cal && validateExpiredCalibration(storage, sensorInsert, lastExpiredCal)) {
-    let expiredCalGlucose = calcGlucose(sgv, lastExpiredCal);
+  if (options.expired_cal && validateExpiredCalibration(storage, sensorInsert, expiredCal)) {
+    let expiredCalGlucose = calcGlucose(sgv, expiredCal);
 
     if (!sgv.glucose) {
       sgv.glucose = expiredCalGlucose;
@@ -667,7 +665,7 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, glucoseHist, s
       sgv.g5calibrated = false;
     } else {
       let calErr = expiredCalGlucose - sgv.glucose;
-      console.log('Current expired calibration error: ' + Math.round(calErr*10)/10 + ' calibrated value: ' + Math.round(expiredCalGlucose*10)/10 + ' slope: ' + Math.round(lastExpiredCal.slope*10)/10 + ' intercept: ' + Math.round(lastExpiredCal.intercept*10)/10 + ' type: ' + lastExpiredCal.type);
+      console.log('Current expired calibration error: ' + Math.round(calErr*10)/10 + ' calibrated value: ' + Math.round(expiredCalGlucose*10)/10 + ' slope: ' + Math.round(expiredCal.slope*10)/10 + ' intercept: ' + Math.round(expiredCal.intercept*10)/10 + ' type: ' + expiredCal.type);
     }
   }
 
@@ -675,11 +673,6 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, glucoseHist, s
     console.log('New calibration: slope = ' + newCal.slope + ', intercept = ' + newCal.intercept + ', scale = ' + newCal.scale);
 
     saveTxmitterCal(newCal);
-  }
-
-  if (newExpiredCal) {
-    console.log('New expired calibration: slope = ' + newExpiredCal.slope + ', intercept = ' + newExpiredCal.intercept + ', scale = ' + newExpiredCal.scale);
-    saveExpiredCal(storage, newExpiredCal);
   }
 
   if (lastCal) {

@@ -512,12 +512,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         console.log('Error saving bgChecks: ' + error);
       });
 
-    let newCal = await calibration.expiredCalibration(storage, bgChecks, null, sensorInsert, null);
-
-    await storage.setItem('expiredCal', newCal)
-      .catch((err) => {
-        console.log('Unable to store expiredCal: ' + err);
-      });
+    await calibration.expiredCalibration(storage, bgChecks, null, sensorInsert, null);
 
     storageLock.unlockStorage();
 

@@ -556,26 +556,36 @@ exports.haveCalibration = (storage) => {
   let lastCal = getTxmitterCal(storage);
   let lastExpiredCal = getExpiredCal(storage);
 
-  if ((lastCal && (lastCal.type !== 'Unity'))
-    || lastExpiredCal) {
-    return true;
-  } else {
-    return false;
+  let bgChecks = await storage.getItem('bgChecks')
+    .catch((err) => {
+      console.log('Error getting bgChecks: ' + err);
+    });
+
+  let sensorInsert = await storage.getItem('sensorInsert')
+    .catch(error => {
+      console.log('Error getting rig sensorInsert: ' + error);
+    });
+
+  if (sensorInsert) {
+    sensorInsert = moment(sensorInsert);
   }
+
+  return validateCalibration(storage, sensorInsert, bgChecks);
 };
 
-const validateTxmitterCalibration = (storage, sensorInsert, lastCal) => {
+const validateTxmitterCalibration = (sensorInsert, bgChecks, lastCal) => {
 
   if (!sensorInsert || !lastCal
     || (lastCal.type === 'Unity')
-    || (sensorInsert.diff(moment(lastCal.date).subtract(6, 'minutes')) > 0)) {
+    || (sensorInsert.diff(moment(lastCal.date).subtract(6, 'minutes')) > 0)
+    || (bgChecks && (bgChecks.length > 0) && (bgChecks[bgChecks.length-1].dateMills > lastCal.date))) {
     return false;
   } else {
     return true;
   }
 };
 
-const validateExpiredCalibration = (storage, sensorInsert, lastExpiredCal) => {
+const validateExpiredCalibration = (sensorInsert, lastExpiredCal) => {
 
   if (!sensorInsert || !lastExpiredCal
     || (sensorInsert.diff(moment(lastExpiredCal.date).subtract(6, 'minutes')) > 0)) {
@@ -585,11 +595,11 @@ const validateExpiredCalibration = (storage, sensorInsert, lastExpiredCal) => {
   }
 };
 
-exports.validateCalibration = (storage, sensorInsert) => {
+exports.validateCalibration = (storage, sensorInsert, bgChecks) => {
   let lastCal = getTxmitterCal(storage);
   let lastExpiredCal = getExpiredCal(storage);
 
-  return (validateTxmitterCalibration(storage, sensorInsert, lastCal) || validateExpiredCalibration(storage, sensorInsert, lastExpiredCal));
+  return (validateTxmitterCalibration(sensorInsert, bgChecks, lastCal) || validateExpiredCalibration(sensorInsert, lastExpiredCal));
 };
 
 exports.calibrateGlucose = async (storage, options, sensorInsert, glucoseHist, sgv) => {
@@ -635,7 +645,7 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, glucoseHist, s
     lastExpiredCal = newExpiredCal;
   }
 
-  if (!sgv.glucose && options.extend_sensor && validateTxmitterCalibration(storage, sensorInsert, lastCal)) {
+  if (!sgv.glucose && options.extend_sensor && validateTxmitterCalibration(storage, sensorInsert, bgChecks, lastCal)) {
     sgv.glucose = calcGlucose(sgv, lastCal);
     sgv.inExpiredSession = true;
 

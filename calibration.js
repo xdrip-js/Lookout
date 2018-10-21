@@ -1,9 +1,9 @@
 //Rule 1 - Clear calibration records upon CGM Sensor Change/Insert
 //Rule 2 - Don't allow any BG calibrations or take in any new calibrations 
 //         within 15 minutes of last sensor insert
-//Rule 3 - Only use Single Point Calibration for 1st 12 hours since Sensor insert
+//Rule 3 - Only use Single Point Calibration for 1st SENSOR_STABLE hours since Sensor insert
 //Rule 4 - Do not use LSR until we have 3 or more calibration points. 
-//         Use SinglePoint calibration only for less than 3 calibration points. 
+//         Use SinglePoint calibration only for less than MIN_LSR_PAIRS calibration points. 
 //         SinglePoint simply uses the latest calibration record and assumes 
 //         the yIntercept is 0.
 //Rule 5 - TODO: Drop back to SinglePoint calibration if slope is out of bounds 
@@ -21,6 +21,8 @@ var exports = module.exports = {};
 
 const MAXSLOPE = 12500;
 const MINSLOPE = 450;
+const SENSOR_STABLE = 2; // hours
+const MIN_LSR_PAIRS = 2;
 
 // calibrationPairs has three values for each array element:
 //   glucose => the "true" glucose value for the pair
@@ -182,10 +184,10 @@ const calculateG5Calibration = (lastCal, lastG5CalTime, sensorInsert, glucoseHis
       }
     }
 
-    // If we have at least 3 good pairs and we are off by more than 5
+    // If we have at least MIN_LSR_PAIRS good pairs and we are off by more than 5
     // OR we have at least 8 and our current cal type is SinglePoint
     // THEN use LSR
-    if (((calErr > 5) && calPairs.length > 3) || (calPairs.length > 8)) {
+    if (((calErr > 5) && calPairs.length > MIN_LSR_PAIRS) || (calPairs.length > 8)) {
       let calResult = lsrCalibration(calPairs);
 
       console.log('CGM lsrCalibration: numPoints=' + calPairs.length + ', slope=' + calResult.slope + ', yIntercept=' + calResult.yIntercept); 
@@ -267,12 +269,12 @@ const expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorInser
   // remove calPairs that are less than 12 hours from the sensor insert
   if (calPairs.length > 0) {
     for (let i=0; i < calPairs.length; ++i) {
-      if (!sensorInsert || ((calPairs[i].readDateMills - sensorInsert.valueOf()) < 12*60*60000)) {
+      if (!sensorInsert || ((calPairs[i].readDateMills - sensorInsert.valueOf()) < SENSOR_STABLE*60*60000)) {
         calPairsStart = i+1;
       }
     }
 
-    // If they are all less than 12 hours from the sensor insert, save the latest one
+    // If they are all less than SENSOR_STABLE hours from the sensor insert, save the latest one
     if (calPairsStart >= calPairs.length) {
       calPairsStart = calPairs.length - 1;
     }
@@ -281,7 +283,7 @@ const expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorInser
   }
 
   // If we have at least 3 good pairs, use LSR
-  if (calPairs.length >= 3) {
+  if (calPairs.length >= MIN_LSR_PAIRS) {
     let calResult = lsrCalibration(calPairs);
 
     console.log('expired lsrCalibration: numPoints=' + calPairs.length + ', slope=' + calResult.slope + ', yIntercept=' + calResult.yIntercept); 

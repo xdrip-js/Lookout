@@ -1,7 +1,6 @@
 'use strict';
 
 const moment = require('moment');
-const calibration = require('./calibration');
 
 var exports = module.exports = {};
 
@@ -65,7 +64,7 @@ const calcNoise = (sgvArr) => {
   return noise;
 };
 
-exports.calcSensorNoise = (glucoseHist, lastCal) => {
+exports.calcSensorNoise = (calibration, glucoseHist, lastCal) => {
   const MAXRECORDS=8;
   const MINRECORDS=4;
   let sgvArr = [];
@@ -92,7 +91,7 @@ exports.calcSensorNoise = (glucoseHist, lastCal) => {
 };
 
 // Return 10 minute trend total
-exports.calcTrend = (glucoseHist, lastCal) => {
+exports.calcTrend = (calibration, glucoseHist, lastCal) => {
   let sgvHist = null;
 
   let trend = 0;

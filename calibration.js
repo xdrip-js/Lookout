@@ -688,8 +688,8 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, glucoseHist, s
     sgv.noise = .4;
   }
 
-  sgv.nsNoise = stats.calcNSNoise(sgv.noise, glucoseHist);
-  sgv.noiseString = stats.NSNoiseString(sgv.nsNoise),
+  sgv.nsNoise = stats.calcNSNoise(exports, sgv.noise, glucoseHist);
+  sgv.noiseString = stats.NSNoiseString(exports, sgv.nsNoise),
 
   console.log('Current sensor trend: ' + Math.round(sgv.trend*10)/10 + ' Sensor Noise: ' + Math.round(sgv.noise*1000)/1000 + ' NS Noise: ' + sgv.nsNoise);
 

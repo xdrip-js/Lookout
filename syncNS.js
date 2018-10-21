@@ -171,12 +171,12 @@ const syncSensorStart = async () => {
 
   nsStart = await xDripAPS.latestSensorStarted()
     .catch(error => {
-      console.log('Unable to get latest sensor inserted record from NS: ' + error);
+      console.log('Unable to get latest sensor started record from NS: ' + error);
       nsQueryError = true;
     });
 
   if (nsStart) {
-    console.log('SyncNS NS sensor insert - date: ' + nsStart.format());
+    console.log('SyncNS NS sensor start - date: ' + nsStart.format());
   }
 
   await storageLock.lockStorage();
@@ -188,7 +188,7 @@ const syncSensorStart = async () => {
 
   if (rigStart) {
     rigStart = moment(rigStart);
-    console.log('SyncNS Rig sensor insert - date: ' + rigStart.format());
+    console.log('SyncNS Rig sensor start - date: ' + rigStart.format());
   }
 
   if (nsQueryError) {
@@ -200,35 +200,35 @@ const syncSensorStart = async () => {
 
   if (nsStart) {
     if (!rigStart) {
-      console.log('No rig sensor insert, storing NS sensor insert');
+      console.log('No rig sensor start, storing NS sensor start');
 
       await storage.setItem('sensorStart', nsStart.valueOf())
         .catch(() => {
-          console.log('Unable to store sensor insert');
+          console.log('Unable to store sensor start');
         });
     } else if (rigStart && (rigStart.valueOf() < nsStart.valueOf())) {
-      console.log('NS insert more recent than rig insert NS insert date: ' + nsStart.format() + ' Rig insert date: ' + rigStart.format());
+      console.log('NS insert more recent than rig start NS start date: ' + nsStart.format() + ' Rig start date: ' + rigStart.format());
 
       storage.setItem('sensorStart', nsStart.valueOf())
         .catch(() => {
-          console.log('Unable to store sensor insert');
+          console.log('Unable to store sensor start');
         });
     } else if (rigStart && (rigStart.valueOf() > nsStart.valueOf())) {
-      console.log('Rig sensor insert more recent than NS sensor insert NS sensor insert dte: ' + nsStart.format() + ' Rig sensor insert date: ' + rigStart.format());
-      console.log('Upoading rig sensor insert');
+      console.log('Rig sensor start more recent than NS sensor start NS sensor start dte: ' + nsStart.format() + ' Rig sensor start date: ' + rigStart.format());
+      console.log('Upoading rig sensor start');
 
       latestStart = rigStart;
       xDripAPS.postSensorStart(rigStart);
     } else {
-      console.log('Rig and NS sensor insert dates match - no sync needed');
+      console.log('Rig and NS sensor start dates match - no sync needed');
     }
   } else {
     if (rigStart) {
-      console.log('No NS sensor insert - uploading rig sensor insert');
+      console.log('No NS sensor start - uploading rig sensor start');
       latestStart = rigStart;
       xDripAPS.postSensorStart(rigStart);
     } else {
-      console.log('No rig or NS sensor insert');
+      console.log('No rig or NS sensor start');
     }
   }
 

@@ -653,7 +653,7 @@ module.exports = () => {
       return insertTime;
     },
 
-    latestSensorStart: async () => {
+    latestSensorStarted: async () => {
       let startTime = null;
 
       let sensorStart = await queryLatestSensorStarted();

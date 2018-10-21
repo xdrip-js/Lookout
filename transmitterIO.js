@@ -118,6 +118,21 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       console.log('SyncNS Rig sensor insert - date: ' + sensorInsert.format());
     }
 
+    let sensorStart = await storage.getItem('sensorStart')
+      .catch(error => {
+        console.log('Error getting rig sensorStart: ' + error);
+      });
+
+    if (sensorStart) {
+      sensorStart = moment(sensorStart);
+      console.log('SyncNS Rig sensor start - date: ' + sensorStart.format());
+
+      if (!sensorInsert || (sensorStart.valueOf() > sensorInsert.valueOf())) {
+        // allow the user to enter either to reset the session.
+        sensorInsert = sensorStart;
+      }
+    }
+
     await storageLock.lockStorage();
 
     sgv.readDateMills = moment(sgv.readDate).valueOf();
@@ -548,6 +563,15 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
           pending.push({type: 'BatteryStatus'});
         }
 
+        pending = pending.filter((msg) => {
+          // Don't send the transmitter calibration events older than 12 minutes
+          if ((msg.type == 'CalibrateSensor') && ((Date.now() - msg.date) > 12*60000)) {
+            return false;
+          }
+
+          return true;
+        });
+
         worker.send(pending);
         // NOTE: this will lead to missed messages if the rig
         // shuts down before acting on them, or in the
@@ -694,6 +718,12 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       stopTransmitterSession();
     },
 
+    sendBgCheckToTxmitter: (bgCheck) => {
+      pending.push({date: bgCheck.dateMills, type: 'CalibrateSensor', bgCheck.glucose});
+
+      client.newPending(pending);
+    },
+
     // calibrate the sensor
     calibrate: async (glucose) => {
       let timeValue = moment();
@@ -766,4 +796,6 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
   // Start the transmitter loop task
   listenToTransmitter(txId);
+
+  return transmitterIO;
 };

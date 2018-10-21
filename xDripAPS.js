@@ -269,7 +269,37 @@ const queryLatestSensorInserted = () => {
   let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/treatments.json?';
   let oldestTime = moment().utc().subtract(2400, 'hours');
 
-  let ns_query = 'find[created_at][$gte]=' + oldestTime.format() + '&find[eventType][$regex]=Sensor&count=1';
+  let ns_query = 'find[created_at][$gte]=' + oldestTime.format() + '&find[eventType][$regex]=Sensor.Change&count=1';
+
+  let ns_headers = {
+    'Content-Type': 'application/json'
+  };
+
+  if (secret.startsWith('token=')) {
+    ns_url = ns_url + secret + '&';
+  } else {
+    ns_headers['API-SECRET'] = secret;
+  }
+
+  ns_url = ns_url + ns_query;
+
+  let optionsNS = {
+    url: ns_url,
+    timeout: 30*1000,
+    method: 'GET',
+    headers: ns_headers,
+    json: true
+  };
+
+  return requestPromise(optionsNS);
+};
+
+const queryLatestSensorStarted = () => {
+  const secret = process.env.API_SECRET;
+  let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/treatments.json?';
+  let oldestTime = moment().utc().subtract(2400, 'hours');
+
+  let ns_query = 'find[created_at][$gte]=' + oldestTime.format() + '&find[eventType][$regex]=Sensor.Start&count=1';
 
   let ns_headers = {
     'Content-Type': 'application/json'
@@ -621,6 +651,18 @@ module.exports = () => {
       }
 
       return insertTime;
+    },
+
+    latestSensorStart: async () => {
+      let startTime = null;
+
+      let sensorStart = await queryLatestSensorStarted();
+
+      if (sensorStart && (sensorStart.length > 0)) {
+        startTime = moment(sensorStart[0].created_at);
+      }
+
+      return startTime;
     },
 
     convertEntryToNS: (glucose) => {

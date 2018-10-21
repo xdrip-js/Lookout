@@ -89,10 +89,10 @@ const init = async (options) => {
   const fakeMeter = require('./fakemeter')(options, storage, client);
 
   // Start the transmitter loop task
-  TransmitterIO(options, storage, storageLock, client, fakeMeter);
+  let transmitter = TransmitterIO(options, storage, storageLock, client, fakeMeter);
 
   // Start the Nightscout synchronization loop task
-  syncNS(storage, storageLock);
+  syncNS(storage, storageLock, transmitter);
 };
 
 init(options);

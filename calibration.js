@@ -632,10 +632,6 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, glucoseHist, s
     newCal = calculateG5Calibration(lastCal, lastG5CalTime, sensorInsert, glucoseHist, sgv);
 
     expiredCal = await expiredCalibration(storage, bgChecks, expiredCal, sensorInsert, sgv);
-
-    if (sgv.state != glucoseHist[glucoseHist.length-1].state) {
-      xDripAPS.postAnnouncement('Sensor: ' + sgv.stateString);
-    }
   }
 
   if (newCal) {

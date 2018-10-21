@@ -147,7 +147,9 @@ exports.calcNSNoise = (noise, glucoseHist) => {
     }
   }
 
-  if (currSGV.glucose > 400) {
+  if (!currSGV) {
+    nsNoise = 1;
+  } else if (currSGV.glucose > 400) {
     console.log('Glucose ' + currSGV.glucose + ' > 400 - setting noise level Heavy');
     nsNoise = 4;
   } else if (currSGV.glucose < 40) {

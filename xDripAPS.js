@@ -94,6 +94,11 @@ const postToNS = (entry) => {
     ns_headers['API-SECRET'] = secret;
   }
 
+  if (!entry.glucose) {
+    // Set to 5 so NS will plot the unfiltered glucose values
+    entry.glucose = 5;
+  }
+
   const optionsNS = {
     url: ns_url,
     timeout: 30*1000,

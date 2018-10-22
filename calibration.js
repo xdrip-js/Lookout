@@ -21,7 +21,7 @@ var exports = module.exports = {};
 
 const MAXSLOPE = 12500;
 const MINSLOPE = 450;
-const SENSOR_STABLE = 2; // hours
+const SENSOR_STABLE = 12; // hours
 const MIN_LSR_PAIRS = 2;
 
 // calibrationPairs has three values for each array element:
@@ -266,17 +266,17 @@ const expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorInser
     }
   }
 
-  // remove calPairs that are less than 12 hours from the sensor insert
+  // remove calPairs that are less than SENSOR_STABLE hours from the sensor insert
   if (calPairs.length > 0) {
-    for (let i=0; i < calPairs.length; ++i) {
+    for (let i=0; i < (calPairs.length - 1); ++i) {
       if (!sensorInsert || ((calPairs[i].readDateMills - sensorInsert.valueOf()) < SENSOR_STABLE*60*60000)) {
         calPairsStart = i+1;
       }
     }
 
-    // If they are all less than SENSOR_STABLE hours from the sensor insert, save the latest one
-    if (calPairsStart >= calPairs.length) {
-      calPairsStart = calPairs.length - 1;
+    // save at least two if we have two
+    if (calPairsStart >= (calPairs.length - 1)) {
+      calPairsStart = Math.max(calPairs.length - 2, 0);
     }
 
     calPairs = calPairs.slice(calPairsStart);

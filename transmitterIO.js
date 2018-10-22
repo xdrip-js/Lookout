@@ -75,7 +75,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
   // the latest sensor insert record.
   const checkSensorSession = async (sensorInsert, sgv) => {
     if (!sgv) {
-      sgv = getGlucose();
+      sgv = await getGlucose();
     }
 
     if (sgv && sgv.inSession && ((sensorInsert.valueOf() - (moment(sgv.sessionStartDate).valueOf() + 2*60*60000)) > 0)) {
@@ -166,7 +166,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     sgv.txStatusStringShort = txStatusStringShort(sgv.status);
 
     if (glucoseHist.length > 0) {
-      let prevSgv = getGlucose();
+      let prevSgv = await getGlucose();
 
       if (!prevSgv || (sgv.state != prevSgv.state)) {
         xDripAPS.postAnnouncement('Sensor: ' + sgv.stateString);
@@ -665,7 +665,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     }, 6 * 60000);
   };
 
-  const getGlucose = () => {
+  const getGlucose = async () => {
     let glucoseHist = await storage.getItem('glucoseHist');
 
     if (glucoseHist) {
@@ -805,7 +805,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       return calibration.haveCalibration(storage);
     },
 
-    checkSensorSession = async (sensorInsert) => {
+    checkSensorSession: async (sensorInsert) => {
       checkSensorSession(sensorInsert, null);
     }
 

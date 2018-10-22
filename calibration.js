@@ -22,6 +22,7 @@ var exports = module.exports = {};
 const MAXSLOPE = 12500;
 const MINSLOPE = 450;
 const SENSOR_STABLE = 12; // hours
+const SENSOR_WARM = 12; // hours
 const MIN_LSR_PAIRS = 2;
 
 // calibrationPairs has three values for each array element:
@@ -684,6 +685,11 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, glucoseHist, s
     sgv.trend = stats.calcTrend(calcGlucose, glucoseHist, lastCal, sgv);
 
     sgv.noise = stats.calcSensorNoise(calcGlucose, glucoseHist, lastCal, sgv);
+
+    if ((sgv.noise < .4) && sensorInsert && ((sgv.readDateMills - sensorInsert.valueOf()) < SENSOR_WARM*60*60000)) {
+      // put in light noise to account for warm up
+      sgv.noise=.4;
+    }
   } else {
     // No way to calculate a trend since we don't know the calibration slope
     sgv.trend = 0;

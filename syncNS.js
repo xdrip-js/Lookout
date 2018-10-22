@@ -100,6 +100,10 @@ const syncSensorInsert = async () => {
       nsQueryError = true;
     });
 
+  if (nsQueryError) {
+    return null;
+  }
+
   if (nsInsert) {
     console.log('SyncNS NS sensor insert - date: ' + nsInsert.format());
   }
@@ -174,6 +178,10 @@ const syncSensorStart = async () => {
       console.log('Unable to get latest sensor started record from NS: ' + error);
       nsQueryError = true;
     });
+
+  if (nsQueryError) {
+    return null;
+  }
 
   if (nsStart) {
     console.log('SyncNS NS sensor start - date: ' + nsStart.format());

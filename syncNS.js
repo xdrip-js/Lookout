@@ -648,6 +648,9 @@ const syncNS = async (storage_, storageLock_, transmitter_) => {
     return;
   }
 
+  // have transmitterIO check if the sensor session should be ended.
+  transmitter.checkSensorSession(sensorInsert);
+
   // For each of these, we catch any errors and then
   // call resolve so the Promise.all works as it
   // should and doesn't trigger early because of an error

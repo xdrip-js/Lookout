@@ -74,9 +74,13 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
   // Checks whether the current sensor session should end based on
   // the latest sensor insert record.
   const checkSensorSession = async (sensorInsert, sgv) => {
-    if (sgv.inSession && ((sensorInsert.valueOf() - (moment(sgv.sessionStartDate).valueOf() + 2*60*60000)) > 0)) {
+    if (!sgv) {
+      sgv = getGlucose();
+    }
+
+    if (sgv && sgv.inSession && ((sensorInsert.valueOf() - (moment(sgv.sessionStartDate).valueOf() + 2*60*60000)) > 0)) {
       // give a 2 hour play between the sensor insert record and the session start date from the transmitter
-      console.log('Found sensor insert after transmitter start date. Stopping Sensor Session.');
+      console.log('Found sensor change, start, or stop after transmitter start date. Stopping Sensor Session.');
       stopTransmitterSession();
       await stopSensorSession();
     } else {
@@ -84,7 +88,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       let haveValidCal = await calibration.validateCalibration(storage, sensorInsert);
 
       if (haveCal && !haveValidCal) {
-        console.log('Transmitter not in session and found sensor insert after latest calibration and transmitter not in session. Stopping Sensor Session.');
+        console.log('Transmitter not in session and found sensor change, start, or stop after latest calibration and transmitter not in session. Stopping Sensor Session.');
         await stopSensorSession();
       }
     }
@@ -162,7 +166,9 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     sgv.txStatusStringShort = txStatusStringShort(sgv.status);
 
     if (glucoseHist.length > 0) {
-      if (sgv.state != glucoseHist[glucoseHist.length-1].state) {
+      let prevSgv = getGlucose();
+
+      if (!prevSgv || (sgv.state != prevSgv.state)) {
         xDripAPS.postAnnouncement('Sensor: ' + sgv.stateString);
       }
     }
@@ -175,10 +181,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       sendSGV = false;
     }
 
-    // Store it regardless for state change history
-    glucoseHist.push(sgv);
-
-    await storeNewGlucose(glucoseHist)
+    await storeNewGlucose(glucoseHist, sgv)
       .catch(() => {
         console.log('Unable to store new glucose');
       });
@@ -200,7 +203,9 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
   };
 
   // Store the last hour of glucose readings
-  const storeNewGlucose = async (glucoseHist) => {
+  const storeNewGlucose = async (glucoseHist, sgv) => {
+
+    glucoseHist.push(sgv);
 
     glucoseHist = _.sortBy(glucoseHist, ['readDateMills']);
 
@@ -660,6 +665,16 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     }, 6 * 60000);
   };
 
+  const getGlucose = () => {
+    let glucoseHist = await storage.getItem('glucoseHist');
+
+    if (glucoseHist) {
+      return glucoseHist[glucoseHist.length-1];
+    } else {
+      return null;
+    }
+  };
+
   // Create an object that can be used
   // to interact with the transmitter.
   const transmitterIO = {
@@ -675,13 +690,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     // provide the most recent glucose reading
     getGlucose: async () => {
-      let glucoseHist = await storage.getItem('glucoseHist');
-
-      if (glucoseHist) {
-        return glucoseHist[glucoseHist.length-1];
-      } else {
-        return null;
-      }
+      return getGlucose();
     },
 
     // provide the glucose history
@@ -794,6 +803,10 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       // If the transmitter is not in a session, return whether
       // we have a valid set of calibration values
       return calibration.haveCalibration(storage);
+    },
+
+    checkSensorSession = async (sensorInsert) => {
+      checkSensorSession(sensorInsert, null);
     }
 
   };

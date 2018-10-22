@@ -572,8 +572,10 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         }
 
         pending = pending.filter((msg) => {
-          // Don't send the transmitter calibration events older than 12 minutes
-          if ((msg.type == 'CalibrateSensor') && ((Date.now() - msg.date) > 12*60000)) {
+          // Don't send certain events older than 12 minutes
+          if (((Date.now() - msg.date) > 12*60000) && 
+            ((msg.type == 'CalibrateSensor')
+            || (msg.type == 'StopSensor'))) {
             return false;
           }
 

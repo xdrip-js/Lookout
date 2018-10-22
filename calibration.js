@@ -681,9 +681,9 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, glucoseHist, s
 
   if (lastCal) {
     // a valid calibration is available to use
-    sgv.trend = stats.calcTrend(calcGlucose, glucoseHist, lastCal);
+    sgv.trend = stats.calcTrend(calcGlucose, glucoseHist, lastCal, sgv);
 
-    sgv.noise = stats.calcSensorNoise(calcGlucose, glucoseHist, lastCal);
+    sgv.noise = stats.calcSensorNoise(calcGlucose, glucoseHist, lastCal, sgv);
   } else {
     // No way to calculate a trend since we don't know the calibration slope
     sgv.trend = 0;

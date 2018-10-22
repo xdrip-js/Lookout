@@ -64,12 +64,12 @@ const calcNoise = (sgvArr) => {
   return noise;
 };
 
-exports.calcSensorNoise = (calcGlucose, glucoseHist, lastCal) => {
+exports.calcSensorNoise = (calcGlucose, glucoseHist, lastCal, sgv) => {
   const MAXRECORDS=8;
   const MINRECORDS=4;
   let sgvArr = [];
 
-  let numRecords = Math.max(glucoseHist.length-MAXRECORDS-1, 0);
+  let numRecords = Math.max(glucoseHist.length-MAXRECORDS, 0);
 
   for (let i = numRecords; i < glucoseHist.length; ++i) {
     // Only use values that are > 30 to filter out invalid values.
@@ -83,6 +83,13 @@ exports.calcSensorNoise = (calcGlucose, glucoseHist, lastCal) => {
     }
   }
 
+  if (sgv) {
+    sgvArr.push({
+      'glucose': calcGlucose(sgv, lastCal),
+      'readDate': sgv.readDateMills
+    });
+  }
+
   if (sgvArr.length < MINRECORDS) {
     return 0;
   } else {
@@ -91,13 +98,13 @@ exports.calcSensorNoise = (calcGlucose, glucoseHist, lastCal) => {
 };
 
 // Return 10 minute trend total
-exports.calcTrend = (calcGlucose, glucoseHist, lastCal) => {
+exports.calcTrend = (calcGlucose, glucoseHist, lastCal, sgv) => {
   let sgvHist = null;
 
   let trend = 0;
 
 
-  if (glucoseHist.length > 1) {
+  if (glucoseHist.length > 0) {
     let maxDate = null;
     let sliceStart = 0;
     let timeSpan = 0;
@@ -112,6 +119,10 @@ exports.calcTrend = (calcGlucose, glucoseHist, lastCal) => {
     }
 
     sgvHist = glucoseHist.slice(sliceStart);
+
+    if (sgv) {
+      sgvHist.push(sgv);
+    }
 
     if (sgvHist.length > 1) {
       minDate = sgvHist[0].readDateMills;

@@ -78,8 +78,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       sgv = await getGlucose();
     }
 
-    let sensorStartDelta = sensorInsert.valueOf() - moment(sgv.sessionStartDate).valueOf() + 2*60*60000;
-    let sensorStopDelta = sensorStop.valueOf() - moment(sgv.sessionStartDate).valueOf() + 2*60*60000;
+    let sensorStartDelta = (sensorInsert && (sensorInsert.valueOf() - moment(sgv.sessionStartDate).valueOf() + 2*60*60000)) || 0;
+    let sensorStopDelta = (sensorStop && (sensorStop.valueOf() - moment(sgv.sessionStartDate).valueOf() + 2*60*60000)) || 0;
 
     if (sgv && sgv.inSession && (sensorStartDelta > 0 || sensorStopDelta > 0)) {
       // give a 2 hour play between the sensor insert record and the session start date from the transmitter

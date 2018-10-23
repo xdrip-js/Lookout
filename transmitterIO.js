@@ -31,7 +31,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
   const rebootRig = () => {
     console.log('============================\nRebooting rig due to too many read failures: ' + txFailedReads + ' failures.\n============================');
 
-    cp.exec('shutdown -r now', (err, stdout, stderr) => {
+    cp.exec('bash -c "wall Rebooting Due to Transmitter Read Errors; sleep 5; shutdown -r now"', (err, stdout, stderr) => {
       if (err) {
         console.log('Unable to reboot rig: - ' + err);
         return;

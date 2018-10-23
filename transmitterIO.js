@@ -78,14 +78,16 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       sgv = await getGlucose();
     }
 
-    let sensorStartDelta = (sensorInsert && (sensorInsert.valueOf() - moment(sgv.sessionStartDate).valueOf() + 2*60*60000)) || 0;
-    let sensorStopDelta = (sensorStop && (sensorStop.valueOf() - moment(sgv.sessionStartDate).valueOf() + 2*60*60000)) || 0;
+    let sessionStart = moment(sgv.sessionStartDate);
+    let sensorStartDelta = (sensorInsert && (sensorInsert.valueOf() - sessionStart.valueOf() + 2*60*60000)) || 0;
+    let sensorStopDelta = (sensorStop && (sensorStop.valueOf() - sessionStart.valueOf() + 2*60*60000)) || 0;
 
     if (sgv && sgv.inSession && (sensorStartDelta > 0 || sensorStopDelta > 0)) {
       // give a 2 hour play between the sensor insert record and the session start date from the transmitter
       console.log('Found sensor change, start, or stop after transmitter start date. Stopping Sensor Session.');
-      stopTransmitterSession();
-      await stopSensorSession();
+      console.log('Session Start: ' + sessionStart + ' sensorStart: ' + sensorInsert + ' sensorStop: ' + sensorStop);
+      //stopTransmitterSession();
+      //await stopSensorSession();
     } else {
       let haveCal = await calibration.haveCalibration(storage);
       let haveValidCal = await calibration.validateCalibration(storage, sensorInsert, sensorStop, sgv);
@@ -111,7 +113,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     client.newPending(pending);
   };
 
-  const stopSensorSession = async (storage) => {
+  const stopSensorSession = async () => {
     await storage.del('glucoseHist');
     await calibration.clearCalibration(storage);
   };

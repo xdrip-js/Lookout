@@ -78,14 +78,17 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       sgv = await getGlucose();
     }
 
-    if (sgv && sgv.inSession && ((sensorInsert.valueOf() - (moment(sgv.sessionStartDate).valueOf() + 2*60*60000)) > 0)) {
+    let sensorStartDelta = sensorInsert.valueOf() - moment(sgv.sessionStartDate).valueOf() + 2*60*60000;
+    let sensorStopDelta = sensorStop.valueOf() - moment(sgv.sessionStartDate).valueOf() + 2*60*60000;
+
+    if (sgv && sgv.inSession && (sensorStartDelta > 0 || sensorStopDelta > 0)) {
       // give a 2 hour play between the sensor insert record and the session start date from the transmitter
       console.log('Found sensor change, start, or stop after transmitter start date. Stopping Sensor Session.');
       stopTransmitterSession();
       await stopSensorSession();
     } else {
       let haveCal = await calibration.haveCalibration(storage);
-      let haveValidCal = await calibration.validateCalibration(storage, sensorInsert);
+      let haveValidCal = await calibration.validateCalibration(storage, sensorInsert, sensorStop, sgv);
 
       if (haveCal && !haveValidCal) {
         console.log('Transmitter not in session and found sensor change, start, or stop after latest calibration and transmitter not in session. Stopping Sensor Session.');
@@ -167,7 +170,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       glucoseHist = [];
     }
 
-    sgv = await calibration.calibrateGlucose(storage, options, sensorInsert, glucoseHist, sgv);
+    sgv = await calibration.calibrateGlucose(storage, options, sensorInsert, sensorStop, glucoseHist, sgv);
 
     sgv.stateString = stateString(sgv.state);
     sgv.stateStringShort = stateStringShort(sgv.state);

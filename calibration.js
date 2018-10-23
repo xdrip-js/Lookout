@@ -565,55 +565,52 @@ exports.clearCalibration = async (storage) => {
 };
 
 exports.haveCalibration = async (storage) => {
-  let bgChecks = await storage.getItem('bgChecks')
-    .catch((err) => {
-      console.log('Error getting bgChecks: ' + err);
-    });
-
-  let sensorInsert = await storage.getItem('sensorInsert')
-    .catch(error => {
-      console.log('Error getting rig sensorInsert: ' + error);
-    });
-
-  if (sensorInsert) {
-    sensorInsert = moment(sensorInsert);
-  }
-
-  return validateCalibration(storage, sensorInsert, bgChecks);
-};
-
-const validateTxmitterCalibration = (sensorInsert, bgChecks, lastCal) => {
-
-  if (!sensorInsert || !lastCal
-    || (lastCal.type === 'Unity')
-    || (sensorInsert.diff(moment(lastCal.date).subtract(6, 'minutes')) > 0)
-    || (bgChecks && (bgChecks.length > 0) && (bgChecks[bgChecks.length-1].dateMills > lastCal.date))) {
-    return false;
-  } else {
-    return true;
-  }
-};
-
-const validateExpiredCalibration = (sensorInsert, lastExpiredCal) => {
-
-  if (!sensorInsert || !lastExpiredCal
-    || (sensorInsert.diff(moment(lastExpiredCal.date).subtract(6, 'minutes')) > 0)) {
-    return false;
-  } else {
-    return true;
-  }
-};
-
-const validateCalibration = async (storage, sensorInsert, bgChecks) => {
   let lastCal = await getTxmitterCal(storage);
   let lastExpiredCal = await getExpiredCal(storage);
 
-  return (validateTxmitterCalibration(sensorInsert, bgChecks, lastCal) || validateExpiredCalibration(sensorInsert, lastExpiredCal));
+  return ((lastCal && (lastCal.type !== 'Unity')) || lastExpiredCal);
+};
+
+const validateTxmitterCalibration = (sensorInsert, sensorStop, sgv, lastCal) => {
+
+  let sensorInsertDelta = (sensorInsert && sensorInsert.diff(moment(lastCal.date).subtract(6, 'minutes'))) || 0;
+  let sensorStopDelta = (sensorStop && sensorStop.diff(moment(lastCal.date).subtract(6, 'minutes'))) || 0;
+
+  if (!sensorInsert || !lastCal
+    || (lastCal.type === 'Unity')
+    || (sensorInsertDelta > 0)
+    || (sensorStopDelta > 0)
+    || (sgv && (sgv.dateMills > lastCal.date))) {
+    return false;
+  } else {
+    return true;
+  }
+};
+
+const validateExpiredCalibration = (sensorInsert, sensorStop, lastExpiredCal) => {
+
+  let sensorInsertDelta = (sensorInsert && sensorInsert.diff(moment(lastExpiredCal.date).subtract(6, 'minutes'))) || 0;
+  let sensorStopDelta = (sensorStop && sensorStop.diff(moment(lastExpiredCal.date).subtract(6, 'minutes'))) || 0;
+
+  if (!sensorInsert || !lastExpiredCal
+    || (sensorInsertDelta > 0)
+    || (sensorStopDelta > 0)) {
+    return false;
+  } else {
+    return true;
+  }
+};
+
+const validateCalibration = async (storage, sensorInsert, sensorStop, sgv) => {
+  let lastCal = await getTxmitterCal(storage);
+  let lastExpiredCal = await getExpiredCal(storage);
+
+  return (validateTxmitterCalibration(sensorInsert, sensorStop, sgv, lastCal) || validateExpiredCalibration(sensorInsert, sensorStop, lastExpiredCal));
 };
 
 exports.validateCalibration = validateCalibration;
 
-exports.calibrateGlucose = async (storage, options, sensorInsert, glucoseHist, sgv) => {
+exports.calibrateGlucose = async (storage, options, sensorInsert, sensorStop, glucoseHist, sgv) => {
 
   let lastCal = await getTxmitterCal(storage);
   let expiredCal = await getExpiredCal(storage);
@@ -647,7 +644,7 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, glucoseHist, s
     lastCal = newCal;
   }
 
-  if (!sgv.glucose && options.extend_sensor && validateTxmitterCalibration(sensorInsert, bgChecks, lastCal)) {
+  if (!sgv.glucose && options.extend_sensor && validateTxmitterCalibration(sensorInsert, sensorStop, bgChecks, lastCal)) {
     sgv.glucose = calcGlucose(sgv, lastCal);
     sgv.inExpiredSession = true;
 
@@ -657,7 +654,7 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, glucoseHist, s
     sgv.g5calibrated = false;
   }
 
-  if (options.expired_cal && validateExpiredCalibration(sensorInsert, expiredCal)) {
+  if (options.expired_cal && validateExpiredCalibration(sensorInsert, sensorStop, expiredCal)) {
     let expiredCalGlucose = calcGlucose(sgv, expiredCal);
 
     if (!sgv.glucose) {

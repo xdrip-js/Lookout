@@ -89,14 +89,16 @@ const syncCal = async (sensorInsert) => {
   console.log('syncCal complete');
 };
 
-const syncSensorInsert = async () => {
-  let rigInsert = null;
-  let nsInsert = null;
+const syncEvent = async (itemName, eventType) => {
+  let rigItem = null;
+  let nsEvent = null;
   let nsQueryError = false;
 
-  nsInsert = await xDripAPS.latestSensorInserted()
+  console.log('Syncing rig ' + itemName + ' and NS ' + eventType);
+
+  nsEvent = await xDripAPS.latestEvent(eventType)
     .catch(error => {
-      console.log('Unable to get latest sensor inserted record from NS: ' + error);
+      console.log('Unable to get latest ' + eventType + ' record from NS: ' + error);
       nsQueryError = true;
     });
 
@@ -104,147 +106,68 @@ const syncSensorInsert = async () => {
     return null;
   }
 
-  if (nsInsert) {
-    console.log('SyncNS NS sensor insert - date: ' + nsInsert.format());
+  if (nsEvent) {
+    console.log('SyncNS NS ' + eventType + '- date: ' + nsEvent.format());
   }
 
   await storageLock.lockStorage();
 
-  rigInsert = await storage.getItem('sensorInsert')
+  rigItem = await storage.getItem(itemName)
     .catch(error => {
-      console.log('Error getting rig sensorInsert: ' + error);
+      console.log('Error getting rig ' + itemName + ': ' + error);
     });
 
-  if (rigInsert) {
-    rigInsert = moment(rigInsert);
-    console.log('SyncNS Rig sensor insert - date: ' + rigInsert.format());
+  if (rigItem) {
+    rigItem = moment(rigItem);
+    console.log('SyncNS Rig ' + itemName + '- date: ' + rigItem.format());
   }
 
   if (nsQueryError) {
     // ns query failed, so just return the rig sensor insert
-    return rigInsert;
+    return rigItem;
   }
 
-  let latestInsert = rigInsert;
+  let latestEvent = rigItem;
 
-  if (nsInsert) {
-    if (!rigInsert) {
-      console.log('No rig sensor insert, storing NS sensor insert');
+  if (nsEvent) {
+    if (!rigItem) {
+      console.log('No rig ' + itemName + ', storing NS ' + eventType);
 
-      await storage.setItem('sensorInsert', nsInsert.valueOf())
+      await storage.setItem(itemName, nsEvent.valueOf())
         .catch(() => {
-          console.log('Unable to store sensor insert');
+          console.log('Unable to store ' + itemName);
         });
-    } else if (rigInsert && (rigInsert.valueOf() < nsInsert.valueOf())) {
-      console.log('NS insert more recent than rig insert NS insert date: ' + nsInsert.format() + ' Rig insert date: ' + rigInsert.format());
+    } else if (rigItem && (rigItem.valueOf() < nsEvent.valueOf())) {
+      console.log('NS ' + eventType + ' more recent than rig ' + itemName + ' NS date: ' + nsEvent.format() + ' Rig date: ' + rigItem.format());
 
-      storage.setItem('sensorInsert', nsInsert.valueOf())
+      storage.setItem(itemName, nsEvent.valueOf())
         .catch(() => {
-          console.log('Unable to store sensor insert');
+          console.log('Unable to store ' + itemName);
         });
-    } else if (rigInsert && (rigInsert.valueOf() > nsInsert.valueOf())) {
-      console.log('Rig sensor insert more recent than NS sensor insert NS sensor insert dte: ' + nsInsert.format() + ' Rig sensor insert date: ' + rigInsert.format());
-      console.log('Upoading rig sensor insert');
+    } else if (rigItem && (rigItem.valueOf() > nsEvent.valueOf())) {
+      console.log('Rig ' + itemName + ' more recent than NS ' + eventType + ' NS date: ' + nsEvent.format() + ' Rig date: ' + rigItem.format());
+      console.log('Uploading rig ' + itemName);
 
-      latestInsert = rigInsert;
-      xDripAPS.postSensorInsert(rigInsert);
+      latestEvent = rigItem;
+      xDripAPS.postEvent(eventType, rigItem);
     } else {
-      console.log('Rig and NS sensor insert dates match - no sync needed');
+      console.log('Rig and NS dates match - no sync needed');
     }
   } else {
-    if (rigInsert) {
-      console.log('No NS sensor insert - uploading rig sensor insert');
-      latestInsert = rigInsert;
-      xDripAPS.postSensorInsert(rigInsert);
+    if (rigItem) {
+      console.log('No NS ' + eventType + ' - uploading rig sensor insert');
+      latestEvent = rigItem;
+      xDripAPS.postEvent(eventType, rigItem);
     } else {
-      console.log('No rig or NS sensor insert');
+      console.log('No rig ' + itemName + ' or NS ' + eventType);
     }
   }
 
   storageLock.unlockStorage();
 
-  console.log('syncSensorInsert complete');
+  console.log('Syncing rig ' + itemName + ' and NS ' + eventType + ' complete');
 
-  return latestInsert;
-};
-
-const syncSensorStart = async () => {
-  let rigStart = null;
-  let nsStart = null;
-  let nsQueryError = false;
-
-  nsStart = await xDripAPS.latestSensorStarted()
-    .catch(error => {
-      console.log('Unable to get latest sensor started record from NS: ' + error);
-      nsQueryError = true;
-    });
-
-  if (nsQueryError) {
-    return null;
-  }
-
-  if (nsStart) {
-    console.log('SyncNS NS sensor start - date: ' + nsStart.format());
-  }
-
-  await storageLock.lockStorage();
-
-  rigStart = await storage.getItem('sensorStart')
-    .catch(error => {
-      console.log('Error getting rig sensorStart: ' + error);
-    });
-
-  if (rigStart) {
-    rigStart = moment(rigStart);
-    console.log('SyncNS Rig sensor start - date: ' + rigStart.format());
-  }
-
-  if (nsQueryError) {
-    // ns query failed, so just return the rig sensor insert
-    return rigStart;
-  }
-
-  let latestStart = rigStart;
-
-  if (nsStart) {
-    if (!rigStart) {
-      console.log('No rig sensor start, storing NS sensor start');
-
-      await storage.setItem('sensorStart', nsStart.valueOf())
-        .catch(() => {
-          console.log('Unable to store sensor start');
-        });
-    } else if (rigStart && (rigStart.valueOf() < nsStart.valueOf())) {
-      console.log('NS insert more recent than rig start NS start date: ' + nsStart.format() + ' Rig start date: ' + rigStart.format());
-
-      storage.setItem('sensorStart', nsStart.valueOf())
-        .catch(() => {
-          console.log('Unable to store sensor start');
-        });
-    } else if (rigStart && (rigStart.valueOf() > nsStart.valueOf())) {
-      console.log('Rig sensor start more recent than NS sensor start NS sensor start dte: ' + nsStart.format() + ' Rig sensor start date: ' + rigStart.format());
-      console.log('Upoading rig sensor start');
-
-      latestStart = rigStart;
-      xDripAPS.postSensorStart(rigStart);
-    } else {
-      console.log('Rig and NS sensor start dates match - no sync needed');
-    }
-  } else {
-    if (rigStart) {
-      console.log('No NS sensor start - uploading rig sensor start');
-      latestStart = rigStart;
-      xDripAPS.postSensorStart(rigStart);
-    } else {
-      console.log('No rig or NS sensor start');
-    }
-  }
-
-  storageLock.unlockStorage();
-
-  console.log('syncSensorStart complete');
-
-  return latestStart;
+  return latestEvent;
 };
 
 const syncSGVs = async () => {
@@ -592,7 +515,7 @@ const syncBGChecks = async (sensorInsert) => {
   }
 
   if (bgCheckFromNS) {
-    transmitter.sendBgCheckToTxmitter(rigBGChecks[rigBGChecks.length-1]);
+    transmitter && transmitter.sendBgCheckToTxmitter(rigBGChecks[rigBGChecks.length-1]);
   }
 
   console.log('syncBGChecks complete');
@@ -623,19 +546,22 @@ const calcNextSyncTimeDelay = (sgv) => {
 const syncNS = async (storage_, storageLock_, transmitter_) => {
   let sensorInsert = null;
   let sensorStart = null;
+  let sensorStop = null;
   let latestSGV = null;
 
   storage = storage_;
   storageLock = storageLock_;
   transmitter = transmitter_;
 
-  sensorInsert = await syncSensorInsert();
+  sensorInsert = await syncEvent('sensorInsert', 'Sensor Change');
 
-  sensorStart = await syncSensorStart();
+  sensorStart = await syncEvent('sensorStart', 'Sensor Start');
 
   if (!sensorInsert || (sensorStart && (sensorStart.valueOf() > sensorInsert.valueOf()))) {
     sensorInsert = sensorStart;
   }
+
+  sensorStop = await syncEvent('sensorStop', 'Sensor Stop');
 
   if (!sensorInsert) {
     console.log('syncNS - No known sensor insert -  Setting 5 minute timer to try again');
@@ -649,7 +575,7 @@ const syncNS = async (storage_, storageLock_, transmitter_) => {
   }
 
   // have transmitterIO check if the sensor session should be ended.
-  transmitter.checkSensorSession(sensorInsert);
+  transmitter && transmitter.checkSensorSession(sensorInsert, sensorStop, null);
 
   // For each of these, we catch any errors and then
   // call resolve so the Promise.all works as it

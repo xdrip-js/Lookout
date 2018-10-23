@@ -72,8 +72,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
   };
 
   // Checks whether the current sensor session should end based on
-  // the latest sensor insert record.
-  const checkSensorSession = async (sensorInsert, sgv) => {
+  // the latest sensor stop and sensor insert records.
+  const checkSensorSession = async (sensorInsert, sensorStop, sgv) => {
     if (!sgv) {
       sgv = await getGlucose();
     }
@@ -142,11 +142,21 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       }
     }
 
+    let sensorStop = await storage.getItem('sensorStop')
+      .catch(error => {
+        console.log('Error getting rig sensorStop: ' + error);
+      });
+
+    if (sensorStop) {
+      sensorStop = moment(sensorStop);
+      console.log('SyncNS Rig sensor stop - date: ' + sensorStop.format());
+    }
+
     await storageLock.lockStorage();
 
     sgv.readDateMills = moment(sgv.readDate).valueOf();
 
-    await checkSensorSession(sensorInsert, sgv);
+    await checkSensorSession(sensorInsert, sensorStop, sgv);
 
     glucoseHist = await storage.getItem('glucoseHist')
       .catch((err) => {
@@ -805,8 +815,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       return calibration.haveCalibration(storage);
     },
 
-    checkSensorSession: async (sensorInsert) => {
-      checkSensorSession(sensorInsert, null);
+    checkSensorSession: async (sensorInsert, sensorStop) => {
+      checkSensorSession(sensorInsert, sensorStop, null);
     }
 
   };

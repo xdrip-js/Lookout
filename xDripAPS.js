@@ -269,42 +269,12 @@ const querySGVsSince = (startTime, count) => {
   return requestPromise(optionsNS);
 };
 
-const queryLatestSensorInserted = () => {
+const queryLatestEvent = (type) => {
   const secret = process.env.API_SECRET;
   let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/treatments.json?';
   let oldestTime = moment().utc().subtract(2400, 'hours');
 
-  let ns_query = 'find[created_at][$gte]=' + oldestTime.format() + '&find[eventType][$regex]=Sensor.Change&count=1';
-
-  let ns_headers = {
-    'Content-Type': 'application/json'
-  };
-
-  if (secret.startsWith('token=')) {
-    ns_url = ns_url + secret + '&';
-  } else {
-    ns_headers['API-SECRET'] = secret;
-  }
-
-  ns_url = ns_url + ns_query;
-
-  let optionsNS = {
-    url: ns_url,
-    timeout: 30*1000,
-    method: 'GET',
-    headers: ns_headers,
-    json: true
-  };
-
-  return requestPromise(optionsNS);
-};
-
-const queryLatestSensorStarted = () => {
-  const secret = process.env.API_SECRET;
-  let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/treatments.json?';
-  let oldestTime = moment().utc().subtract(2400, 'hours');
-
-  let ns_query = 'find[created_at][$gte]=' + oldestTime.format() + '&find[eventType][$regex]=Sensor.Start&count=1';
+  let ns_query = 'find[created_at][$gte]=' + oldestTime.format() + '&find[eventType][$regex]=' + type + '&count=1';
 
   let ns_headers = {
     'Content-Type': 'application/json'
@@ -604,6 +574,46 @@ module.exports = () => {
       });
     },
 
+    postEvent: (eventType, eventTime) => {
+
+      const entry = [{
+        'enteredBy': 'xdripjs://' + os.hostname(),
+        'eventType': eventType,
+        'created_at': new Date(eventTime.valueOf()).toISOString(),
+      }];
+
+      const secret = process.env.API_SECRET;
+      let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json';
+      let ns_headers = {
+        'Content-Type': 'application/json'
+      };
+
+      if (secret.startsWith('token=')) {
+        ns_url = ns_url + '?' + secret;
+      } else {
+        ns_headers['API-SECRET'] = secret;
+      }
+
+      const optionsNS = {
+        url: ns_url,
+        timeout: 30*1000,
+        method: 'POST',
+        headers: ns_headers,
+        body: entry,
+        json: true
+      };
+
+      /*eslint-disable no-unused-vars*/
+      request(optionsNS, function (error, response, body) {
+      /*eslint-enable no-unused-vars*/
+        if (error) {
+          console.error('error posting json: ', error);
+        } else {
+          console.log('uploaded new calibration to NS, statusCode = ' + response.statusCode);
+        }
+      });
+    },
+
     latestCal: async () => {
       let formattedCal = null;
 
@@ -646,28 +656,16 @@ module.exports = () => {
       return queryBGChecksSince(startTime);
     },
 
-    latestSensorInserted: async () => {
-      let insertTime = null;
+    latestEvent: async (type) => {
+      let eventTime = null;
 
-      let sensorInsert = await queryLatestSensorInserted();
+      let eventRecord = await queryLatestEvent(type);
 
-      if (sensorInsert && (sensorInsert.length > 0)) {
-        insertTime = moment(sensorInsert[0].created_at);
+      if (eventRecord && (eventRecord.length > 0)) {
+        eventTime = moment(eventRecord[0].created_at);
       }
 
-      return insertTime;
-    },
-
-    latestSensorStarted: async () => {
-      let startTime = null;
-
-      let sensorStart = await queryLatestSensorStarted();
-
-      if (sensorStart && (sensorStart.length > 0)) {
-        startTime = moment(sensorStart[0].created_at);
-      }
-
-      return startTime;
+      return eventTime;
     },
 
     convertEntryToNS: (glucose) => {

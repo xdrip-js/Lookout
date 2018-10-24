@@ -82,7 +82,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       sessionStart = moment(sgv.sessionStartDate);
 
       // Give 6 minutes extra time
-      sensorStartDelta = (sensorInsert && (sensorInsert.valueOf() - sessionStart.valueOf() + 6*60000)) || 0;
+      sensorStartDelta = (sensorInsert && (sensorInsert.valueOf() - sessionStart.valueOf() - 6*60000)) || 0;
 
       sensorStopDelta = (sensorStop && (sensorStop.valueOf() - sessionStart.valueOf())) || 0;
     }

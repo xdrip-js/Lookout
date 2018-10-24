@@ -79,7 +79,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     let sensorStopDelta = 0;
 
     if (sgv && ('inSession' in sgv) && sgv.inSession) {
-      let sessionStart = moment(sgv.sessionStartDate);
+      sessionStart = moment(sgv.sessionStartDate);
 
       // Give 6 minutes extra time
       sensorStartDelta = (sensorInsert && (sensorInsert.valueOf() - sessionStart.valueOf() + 6*60000)) || 0;

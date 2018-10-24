@@ -587,25 +587,34 @@ const validateTxmitterCalibration = (sensorInsert, sensorStop, sgv, lastCal) => 
   }
 };
 
-const validateExpiredCalibration = (sensorInsert, sensorStop, lastExpiredCal) => {
+const validateExpiredCalibration = (sensorInsert, sensorStop, bgChecks, lastExpiredCal) => {
 
-  let sensorInsertDelta = (sensorInsert && sensorInsert.diff(moment(lastExpiredCal.date).subtract(6, 'minutes'))) || 0;
-  let sensorStopDelta = (sensorStop && sensorStop.diff(moment(lastExpiredCal.date).subtract(6, 'minutes'))) || 0;
+  let lastExpiredCalTime = moment(lastExpiredCal.date).subtract(6, 'minutes');
+
+  let sensorInsertDelta = (sensorInsert && sensorInsert.diff(lastExpiredCalTime)) || 0;
+  let sensorStopDelta = (sensorStop && sensorStop.diff(lastExpiredCalTime)) || 0;
+
+  let bgCheckDelta = 0;
+
+  if (bgChecks.length > 0) {
+    bgCheckDelta = moment(bgChecks[bgChecks.length-1].dateMills).diff(lastExpiredCalTime);
+  }
 
   if (!sensorInsert || !lastExpiredCal
     || (sensorInsertDelta > 0)
-    || (sensorStopDelta > 0)) {
+    || (sensorStopDelta > 0)
+    || (bgCheckDelta > 0)) {
     return false;
   } else {
     return true;
   }
 };
 
-const validateCalibration = async (storage, sensorInsert, sensorStop, sgv) => {
+const validateCalibration = async (storage, sensorInsert, sensorStop, bgChecks, sgv) => {
   let lastCal = await getTxmitterCal(storage);
   let lastExpiredCal = await getExpiredCal(storage);
 
-  return (validateTxmitterCalibration(sensorInsert, sensorStop, sgv, lastCal) || validateExpiredCalibration(sensorInsert, sensorStop, lastExpiredCal));
+  return (validateTxmitterCalibration(sensorInsert, sensorStop, sgv, lastCal) || validateExpiredCalibration(sensorInsert, sensorStop, bgChecks, lastExpiredCal));
 };
 
 exports.validateCalibration = validateCalibration;
@@ -619,6 +628,10 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, sensorStop, gl
     .catch((err) => {
       console.log('Error getting bgChecks: ' + err);
     });
+
+  if (!bgChecks) {
+    bgChecks = [ ];
+  }
 
   let lastG5CalTime = 0;
   let newCal = null;
@@ -644,7 +657,7 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, sensorStop, gl
     lastCal = newCal;
   }
 
-  if (!sgv.glucose && options.extend_sensor && validateTxmitterCalibration(sensorInsert, sensorStop, bgChecks, lastCal)) {
+  if (!sgv.glucose && options.extend_sensor && validateTxmitterCalibration(sensorInsert, sensorStop, sgv, lastCal)) {
     sgv.glucose = calcGlucose(sgv, lastCal);
     sgv.inExpiredSession = true;
 
@@ -654,7 +667,7 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, sensorStop, gl
     sgv.g5calibrated = false;
   }
 
-  if (options.expired_cal && validateExpiredCalibration(sensorInsert, sensorStop, expiredCal)) {
+  if (options.expired_cal && validateExpiredCalibration(sensorInsert, sensorStop, bgChecks, expiredCal)) {
     let expiredCalGlucose = calcGlucose(sgv, expiredCal);
 
     if (!sgv.glucose) {

@@ -73,11 +73,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
   // Checks whether the current sensor session should end based on
   // the latest sensor stop and sensor insert records.
-  const checkSensorSession = async (sensorInsert, sensorStop, sgv) => {
-    if (!sgv) {
-      sgv = await getGlucose();
-    }
-
+  const checkSensorSession = async (sensorInsert, sensorStop, bgChecks, sgv) => {
     let sessionStart = 0;
     let sensorStartDelta = 0;
     let sensorStopDelta = 0;
@@ -86,20 +82,20 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       let sessionStart = moment(sgv.sessionStartDate);
 
       // Give 6 minutes extra time
-      let sensorStartDelta = (sensorInsert && (sensorInsert.valueOf() - sessionStart.valueOf() - 6*60000)) || 0;
+      sensorStartDelta = (sensorInsert && (sensorInsert.valueOf() - sessionStart.valueOf() - 6*60000)) || 0;
 
-      let sensorStopDelta = (sensorStop && (sensorStop.valueOf() - sessionStart.valueOf())) || 0;
+      sensorStopDelta = (sensorStop && (sensorStop.valueOf() - sessionStart.valueOf())) || 0;
     }
 
     if (sgv && sgv.inSession && (sensorStartDelta > 0 || sensorStopDelta > 0)) {
       // give a 2 hour play between the sensor insert record and the session start date from the transmitter
       console.log('Found sensor change, start, or stop after transmitter start date. Stopping Sensor Session.');
       console.log('Session Start: ' + sessionStart + ' sensorStart: ' + sensorInsert + ' sensorStop: ' + sensorStop);
-      //stopTransmitterSession();
-      //await stopSensorSession();
+      stopTransmitterSession();
+      await stopSensorSession();
     } else {
       let haveCal = await calibration.haveCalibration(storage);
-      let haveValidCal = await calibration.validateCalibration(storage, sensorInsert, sensorStop, sgv);
+      let haveValidCal = await calibration.validateCalibration(storage, sensorInsert, sensorStop, bgChecks, sgv);
 
       if (haveCal && !haveValidCal) {
         console.log('Transmitter not in session and found sensor change, start, or stop after latest calibration and transmitter not in session. Stopping Sensor Session.');
@@ -170,7 +166,16 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     sgv.readDateMills = moment(sgv.readDate).valueOf();
 
-    await checkSensorSession(sensorInsert, sensorStop, sgv);
+    let bgChecks = await storage.getItem('bgChecks')
+      .catch(error => {
+        console.log('Error getting bgChecks: ' + error);
+      });
+
+    if (!bgChecks) {
+      bgChecks = [];
+    }
+
+    await checkSensorSession(sensorInsert, sensorStop, bgChecks, sgv);
 
     glucoseHist = await storage.getItem('glucoseHist')
       .catch((err) => {
@@ -829,8 +834,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       return calibration.haveCalibration(storage);
     },
 
-    checkSensorSession: async (sensorInsert, sensorStop) => {
-      checkSensorSession(sensorInsert, sensorStop, null);
+    checkSensorSession: async (sensorInsert, sensorStop, bgChecks, sgv) => {
+      checkSensorSession(sensorInsert, sensorStop, bgChecks, sgv);
     }
 
   };

@@ -519,6 +519,8 @@ const syncBGChecks = async (sensorInsert) => {
   }
 
   console.log('syncBGChecks complete');
+
+  return rigBGChecks;
 };
 
 const calcNextSyncTimeDelay = (sgv) => {
@@ -548,6 +550,7 @@ const syncNS = async (storage_, storageLock_, transmitter_) => {
   let sensorStart = null;
   let sensorStop = null;
   let latestSGV = null;
+  let bgChecks = null;
 
   storage = storage_;
   storageLock = storageLock_;
@@ -574,9 +577,6 @@ const syncNS = async (storage_, storageLock_, transmitter_) => {
     return;
   }
 
-  // have transmitterIO check if the sensor session should be ended.
-  transmitter && transmitter.checkSensorSession(sensorInsert, sensorStop, null);
-
   // For each of these, we catch any errors and then
   // call resolve so the Promise.all works as it
   // should and doesn't trigger early because of an error
@@ -591,7 +591,7 @@ const syncNS = async (storage_, storageLock_, transmitter_) => {
   });
 
   let syncBGChecksPromise = new timeLimitedPromise(4*60*1000, async (resolve) => {
-    await syncBGChecks(sensorInsert);
+    bgChecks = await syncBGChecks(sensorInsert);
     resolve();
   });
 
@@ -599,6 +599,9 @@ const syncNS = async (storage_, storageLock_, transmitter_) => {
     .catch(error => {
       console.log('syncNS error: ' + error);
     });
+
+  // have transmitterIO check if the sensor session should be ended.
+  transmitter && transmitter.checkSensorSession(sensorInsert, sensorStop, bgChecks, latestSGV);
 
   let timeDelay = calcNextSyncTimeDelay(latestSGV);
   console.log('syncNS complete - setting ' + Math.round(timeDelay/6000)/10 + ' minute timer');

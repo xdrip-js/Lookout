@@ -447,8 +447,8 @@ const interpolateUnfiltered = (SGVBefore, SGVAfter, valueTime) => {
   console.log('SGVBefore Time: ' + SGVBefore.readDateMills + ' SGVBefore Unfiltered: ' + SGVBefore.unfiltered);
   console.log(' SGVAfter Time: ' + SGVAfter.readDateMills + '  SGVAfter Unfiltered: ' + SGVAfter.unfiltered);
 
-  if (totalTime > 10*60000) {
-    console.log('Total time exceeds 10 minutes: ' + totalTime + 'ms');
+  if (totalTime > 12*60000) {
+    console.log('Total time exceeds 12 minutes: ' + totalTime + 'ms');
     console.log('Not interpolating unfiltered values.');
 
     return null;

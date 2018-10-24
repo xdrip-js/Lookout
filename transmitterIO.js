@@ -78,7 +78,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     let sensorStartDelta = 0;
     let sensorStopDelta = 0;
 
-    if (sgv && sgv.inSession) {
+    if (sgv && ('inSession' in sgv) && sgv.inSession) {
       let sessionStart = moment(sgv.sessionStartDate);
 
       // Give 6 minutes extra time
@@ -87,7 +87,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       sensorStopDelta = (sensorStop && (sensorStop.valueOf() - sessionStart.valueOf())) || 0;
     }
 
-    if (sgv && sgv.inSession && (sensorStartDelta > 0 || sensorStopDelta > 0)) {
+    if (sgv && ('inSession' in sgv) && sgv.inSession && (sensorStartDelta > 0 || sensorStopDelta > 0)) {
       // give a 2 hour play between the sensor insert record and the session start date from the transmitter
       console.log('Found sensor change, start, or stop after transmitter start date. Stopping Sensor Session.');
       console.log('Session Start: ' + sessionStart + ' sensorStart: ' + sensorInsert + ' sensorStop: ' + sensorStop);

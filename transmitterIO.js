@@ -95,7 +95,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       await stopSensorSession();
     } else {
       let haveCal = await calibration.haveCalibration(storage);
-      let haveValidCal = await calibration.validateCalibration(storage, sensorInsert, sensorStop, bgChecks, sgv);
+      let haveValidCal = await calibration.validateCalibration(storage, sensorInsert, sensorStop, bgChecks);
 
       if (haveCal && !haveValidCal) {
         console.log('Transmitter not in session and found sensor change, start, or stop after latest calibration and transmitter not in session. Stopping Sensor Session.');

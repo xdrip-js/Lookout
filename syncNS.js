@@ -121,6 +121,8 @@ const syncSGVs = async () => {
     rigSGVs = [];
   }
 
+  // make sure they all have readDateMills
+  // for easy math
   rigSGVs = rigSGVs.map((sgv) => {
     if (!sgv.hasOwnProperty('readDateMills')) {
       sgv.readDateMills = moment(sgv.readDate).valueOf();
@@ -132,16 +134,22 @@ const syncSGVs = async () => {
   let now = moment().valueOf();
   let minDate = moment().subtract(24, 'hours').valueOf();
 
+  // remote items older than 24 hours
   rigSGVs = rigSGVs.filter((sgv) => {
     return sgv.readDateMills >= minDate;
   });
 
+  // get the list of which SGVs we have
+  // that haven't been verified to be in NS
   let nsMisses = rigSGVs.filter((sgv) => {
     return ! sgv.inNS;
   });
 
   let nsGaps = [ ];
 
+  // Assemble the list of overall gaps that account
+  // for consecutive misses as one gap to minimize
+  // the number of NS queries
   if (nsMisses.length > 0) {
     let gapStart = nsMisses[0].readDateMills;
     let prevTime = nsMisses[0].readDateMills;
@@ -160,15 +168,22 @@ const syncSGVs = async () => {
   console.log('nsGaps: ', nsGaps);
 
   await Promise.all(_.map(nsGaps, async (nsGap) => {
+    let nsQueryError = false;
 
     // get the NS entries that are in the gap
     nsSGVs = await xDripAPS.SGVsBetween(nsGap.gapStart, nsGap.gapEnd, Math.round((nsGap.gapEnd.valueOf() - nsGap.gapStart.valueOf()) / 5*60000) + 1 )
       .catch(error => {
         console.log('Unable to get NS SGVs to match unfiltered with BG Check: ' + error);
+        nsQueryError = true;
       });
 
     if (!nsSGVs) {
       nsSGVs = [];
+    }
+
+    // if the ns query failed, just bail out of this gap
+    if (nsQueryError) {
+      return;
     }
 
     // give them all a dateMills to make comparison's easier

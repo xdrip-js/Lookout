@@ -106,42 +106,9 @@ const syncCal = async (sensorInsert, expiredCal) => {
 };
 
 const syncSGVs = async () => {
-  let timeSince = null;
-
   let rigSGVs = null;
   let nsSGVs = null;
   let nsQueryError = false;
-
-  timeSince = moment().subtract(24, 'hours');
-
-  nsSGVs = await xDripAPS.SGVsSince(timeSince, 12*24*3)
-    .catch(error => {
-      console.log('Error getting NS SGVs: ' + error);
-      nsQueryError = true;
-      return;
-    });
-
-  if (nsQueryError) {
-    return;
-  }
-
-  if (!nsSGVs) {
-    nsSGVs = [];
-  }
-
-  console.log('SyncNS NS SGVs: ' + nsSGVs.length);
-
-  nsSGVs = nsSGVs.map((sgv) => {
-    sgv.dateMills = moment(sgv.date).valueOf();
-    return sgv;
-  });
-
-  nsSGVs = _.sortBy(nsSGVs, ['dateMills']);
-
-  if (nsSGVs.length > 0) {
-    let sgv = nsSGVs[nsSGVs.length-1];
-    console.log('Most recent NS SGV - date: ' + moment(sgv.date).format() + ' sgv: ' + sgv.sgv + ' unfiltered: ' + sgv.unfiltered);
-  }
 
   await storageLock.lockStorage();
 
@@ -162,49 +129,115 @@ const syncSGVs = async () => {
     return sgv;
   });
 
+  let now = moment().valueOf();
   let minDate = moment().subtract(24, 'hours').valueOf();
-  let sliceStart = 0;
 
-  // only review the last 24 hours of glucose
-  for (let i=0; i < rigSGVs.length; ++i) {
-    if (rigSGVs[i].readDateMills < minDate) {
-      sliceStart = i+1;
+  rigSGVs = rigSGVs.filter((sgv) => {
+    return sgv.readDateMills >= minDate;
+  });
+
+  let nsMisses = rigSGVs.filter((sgv) => {
+    return ! sgv.inNS;
+  });
+
+  let nsGaps = [ ];
+
+  if (nsMisses.length > 0) {
+    let gapStart = nsMisses[0].readDateMills;
+    let prevTime = nsMisses[0].readDateMills;
+    let gapSGVs = [ nsMisses[0] ];
+
+    for (let i = 1; i < nsMisses.length; ++i) {
+      if ((nsMisses[i].readDateMills - prevTime) > 6) {
+        nsGaps.push( { gapStart: moment(gapStart), gapEnd: moment(prevTime), gapSGVs: gapSGVs } );
+        gapSGVs = [ nsMisses[i] ];
+      } else {
+        gapSGVs.push(nsMisses[i]);
+      }
     }
   }
 
-  rigSGVs = rigSGVs.slice(sliceStart);
+  console.log(nsGaps);
 
-  console.log('SyncNS Rig SGVs: ' + rigSGVs.length);
+  _.each(nsGaps, async (nsGap) => {
 
-  // we can assume the rigSGVs are sorted since we sort before
-  // storing them
+    // get the NS entries that are in the gap
+    nsSGVs = await xDripAPS.SGVsBetween(nsGap.gapStart, nsGap.gapEnd, Math.round((nsGap.gapEnd.valueOf() - nsGap.gapStart.valueOf()) / 5*60000) + 1 )
+      .catch(error => {
+        console.log('Unable to get NS SGVs to match unfiltered with BG Check: ' + error);
+      });
 
-  let rigSGVsLength = rigSGVs.length;
-  let rigIndex = 0;
+    if (!nsSGVs) {
+      nsSGVs = [];
+    }
 
-  if (rigSGVsLength > 0) {
-    let sgv = rigSGVs[rigSGVsLength-1];
-    console.log('Most recent rig SGV - date: ' + moment(sgv.readDate).format() + ' sgv: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered);
-  }
+    // give them all a dateMills to make comparison's easier
+    nsSGVs = nsSGVs.map((sgv) => {
+      sgv.dateMills = moment(sgv.date).valueOf();
+      return sgv;
+    });
 
-  for (let i = 0; i < nsSGVs.length; ++i) {
-    let nsSGV = nsSGVs[i];
-    let rigSGV = null;
+    nsSGVs = _.sortBy(nsSGVs, ['dateMills']);
 
-    for (; rigIndex < rigSGVsLength; ++rigIndex) {
-      let timeDiff = nsSGV.dateMills - rigSGVs[rigIndex].readDateMills;
+    // mark any matches we have so we don't re-upload them
+    _.each(nsSGVs, (nsSGV) => {
+      let matches = nsGap.gapSGVs.filter( (sgv) => {
+        return Math.abs(sgv.readDateMills - nsSGV.dateMills) < 60000;
+      });
 
-      if (Math.abs(timeDiff) < 60*1000) {
-        rigSGV = rigSGVs[rigIndex];
-        break;
-      } else if (timeDiff < 0) {
-        // bail when rig value is later in time than NS value
-        break;
+      if (matches.length > 0) {
+        matches[0].inNS = true;
+      }
+    });
+
+    // upload any gapSGVs to NS that we haven't found a NS match
+    _.each(nsGap.gapSGVs, (gapSGV) => {
+      if (gapSGV.glucose && !gapSGV.inNS) {
+        console.log('Uploading to NS: ', gapSGV);
+        //xDripAPS.post(gapSGV, false);
+      }
+    });
+  });
+
+  let rigGaps = [ ];
+
+  if (rigSGVs.length > 0) {
+    let prevTime = rigSGVs[0].readDateMills;
+
+    for (let i = 1; i < rigSGVs.length; ++i) {
+      if ((rigSGVs[i].readDateMills - rigSGVs) > 6) {
+        rigGaps.push( { gapStart: moment(prevTime), gapEnd: moment(rigSGVs[i].readDateMills) } );
       }
     }
 
-    if (!rigSGV) {
-      rigSGV = {
+    if ((now - prevTime) > 5) {
+      rigGaps.push( { gapStart: moment(prevTime), gapEnd: moment(now) } );
+    }
+  } else {
+    rigGaps.push( { gapStart: moment(minDate), gapEnd: moment(now) } );
+  }
+
+  console.log(rigGaps);
+
+  _.each(rigGaps, async (gap) => {
+    nsSGVs = await xDripAPS.SGVsBetween(gap.gapStart, gap.gapEnd, Math.round((gap.gapEnd.valueOf() - gap.gapStart.valueOf()) / 5*60000) + 1 )
+      .catch(error => {
+        console.log('Unable to get NS SGVs to match unfiltered with BG Check: ' + error);
+      });
+
+    if (!nsSGVs) {
+      nsSGVs = [];
+    }
+
+    nsSGVs = nsSGVs.map((sgv) => {
+      sgv.dateMills = moment(sgv.date).valueOf();
+      return sgv;
+    });
+
+    nsSGVs = _.sortBy(nsSGVs, ['dateMills']);
+
+    _.each(nsSGVs, (nsSGV) => {
+      let rigSGV = {
         'readDate': nsSGV.dateString,
         'readDateMills': nsSGV.dateMills,
         'filtered': nsSGV.filtered,
@@ -213,12 +246,14 @@ const syncSGVs = async () => {
         'nsNoise': nsSGV.noise,
         'trend': nsSGV.trend,
         'state': 0x00, // Set state to None
-        'g5calibrated': false
+        'g5calibrated': false,
+        'inNS': true
       };
 
+      console('Storing locally SGV: ', rigSGV);
       rigSGVs.push(rigSGV);
-    }
-  }
+    });
+  });
 
   rigSGVs = _.sortBy(rigSGVs, ['readDateMills']);
 
@@ -228,34 +263,6 @@ const syncSGVs = async () => {
     });
 
   storageLock.unlockStorage();
-
-  let nsIndex = 0;
-
-  for (let rigIndex = 0; rigIndex < rigSGVs.length; ++rigIndex) {
-    let rigSGV = rigSGVs[rigIndex];
-    let nsSGV = null;
-
-    if (!rigSGV.glucose) {
-      // Do not attempt to send an invalid glucose to NS
-      continue;
-    }
-
-    for (; nsIndex < nsSGVs.length; ++nsIndex) {
-      let timeDiff = nsSGVs[nsIndex].dateMills - rigSGV.readDateMills;
-
-      if (Math.abs(timeDiff) < 60*1000) {
-        nsSGV = nsSGVs[nsIndex];
-        break;
-      } else if (timeDiff > 0) {
-        // Bail when NS value is later in time than rig value
-        break;
-      }
-    }
-
-    if (!nsSGV) {
-      xDripAPS.post(rigSGV, false);
-    }
-  }
 
   console.log('syncSGVs complete');
 };

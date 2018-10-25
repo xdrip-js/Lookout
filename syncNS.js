@@ -148,7 +148,7 @@ const syncSGVs = async () => {
     let gapSGVs = [ nsMisses[0] ];
 
     for (let i = 1; i < nsMisses.length; ++i) {
-      if ((nsMisses[i].readDateMills - prevTime) > 6) {
+      if ((nsMisses[i].readDateMills - prevTime) > 6*60000) {
         nsGaps.push( { gapStart: moment(gapStart), gapEnd: moment(prevTime), gapSGVs: gapSGVs } );
         gapSGVs = [ nsMisses[i] ];
       } else {
@@ -157,9 +157,9 @@ const syncSGVs = async () => {
     }
   }
 
-  console.log(nsGaps);
+  console.log('nsGaps: ', nsGaps);
 
-  _.each(nsGaps, async (nsGap) => {
+  await Promise.all(_.map(nsGaps, async (nsGap) => {
 
     // get the NS entries that are in the gap
     nsSGVs = await xDripAPS.SGVsBetween(nsGap.gapStart, nsGap.gapEnd, Math.round((nsGap.gapEnd.valueOf() - nsGap.gapStart.valueOf()) / 5*60000) + 1 )
@@ -193,11 +193,10 @@ const syncSGVs = async () => {
     // upload any gapSGVs to NS that we haven't found a NS match
     _.each(nsGap.gapSGVs, (gapSGV) => {
       if (gapSGV.glucose && !gapSGV.inNS) {
-        console.log('Uploading to NS: ', gapSGV);
-        //xDripAPS.post(gapSGV, false);
+        xDripAPS.post(gapSGV, false);
       }
     });
-  });
+  }));
 
   let rigGaps = [ ];
 
@@ -205,21 +204,23 @@ const syncSGVs = async () => {
     let prevTime = rigSGVs[0].readDateMills;
 
     for (let i = 1; i < rigSGVs.length; ++i) {
-      if ((rigSGVs[i].readDateMills - rigSGVs) > 6) {
+      if ((rigSGVs[i].readDateMills - prevTime) > 6*60000) {
         rigGaps.push( { gapStart: moment(prevTime), gapEnd: moment(rigSGVs[i].readDateMills) } );
       }
+
+      prevTime = rigSGVs[i].readDateMills;
     }
 
-    if ((now - prevTime) > 5) {
+    if ((now - prevTime) > 6*60000) {
       rigGaps.push( { gapStart: moment(prevTime), gapEnd: moment(now) } );
     }
   } else {
     rigGaps.push( { gapStart: moment(minDate), gapEnd: moment(now) } );
   }
 
-  console.log(rigGaps);
+  console.log('rigGaps: ', rigGaps);
 
-  _.each(rigGaps, async (gap) => {
+  await Promise.all(_.map(rigGaps, async (gap) => {
     nsSGVs = await xDripAPS.SGVsBetween(gap.gapStart, gap.gapEnd, Math.round((gap.gapEnd.valueOf() - gap.gapStart.valueOf()) / 5*60000) + 1 )
       .catch(error => {
         console.log('Unable to get NS SGVs to match unfiltered with BG Check: ' + error);
@@ -250,10 +251,9 @@ const syncSGVs = async () => {
         'inNS': true
       };
 
-      console('Storing locally SGV: ', rigSGV);
       rigSGVs.push(rigSGV);
     });
-  });
+  }));
 
   rigSGVs = _.sortBy(rigSGVs, ['readDateMills']);
 

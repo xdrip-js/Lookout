@@ -588,8 +588,10 @@ const validateTxmitterCalibration = (sensorInsert, sensorStop, bgChecks, lastCal
     || (sensorInsertDelta > 0)
     || (sensorStopDelta > 0)
     || (bgCheckDelta > 0)) {
+    console.log('No valid Transmitter Calibration');
     return false;
   } else {
+    console.log('Have valid Transmitter Calibration');
     return true;
   }
 };
@@ -604,8 +606,10 @@ const validateExpiredCalibration = (sensorInsert, sensorStop, lastExpiredCal) =>
   if (!sensorInsert || !lastExpiredCal
     || (sensorInsertDelta > 0)
     || (sensorStopDelta > 0)) {
+    console.log('No valid Expired Calibration');
     return false;
   } else {
+    console.log('Have valid Expired Calibration');
     return true;
   }
 };

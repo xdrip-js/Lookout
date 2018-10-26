@@ -108,7 +108,6 @@ const syncCal = async (sensorInsert, expiredCal) => {
 const syncSGVs = async () => {
   let rigSGVs = null;
   let nsSGVs = null;
-  let nsQueryError = false;
 
   await storageLock.lockStorage();
 
@@ -170,7 +169,7 @@ const syncSGVs = async () => {
     }
 
     if (gapSGVs.length > 0) {
-      rigGaps.push( { gapStart: moment(gapStart), gapEnd: moment(prevTime) } );
+      nsGaps.push( { gapStart: moment(gapStart), gapEnd: moment(prevTime), gapSGVs: gapSGVs } );
     }
   }
 

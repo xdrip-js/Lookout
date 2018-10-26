@@ -402,15 +402,6 @@ const syncBGChecks = async (sensorInsert, expiredCal) => {
 
   rigBGChecks = rigBGChecks.slice(sliceStart);
 
-  // Add unfiltered values if any are missing
-  for (let i=0; i < rigBGChecks.length; ++i) {
-    let rigValue = rigBGChecks[i];
-
-    if (!('unfiltered' in rigValue) || !rigValue.unfiltered) {
-      rigValue.unfiltered = await calibration.getUnfiltered(storage, moment(rigValue.dateMills));
-    }
-  }
-
   await storage.setItem('bgChecks', rigBGChecks)
     .catch((err) => {
       console.log('Unable to store bgChecks: ' + err);

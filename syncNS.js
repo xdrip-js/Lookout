@@ -5,7 +5,7 @@ const moment = require('moment');
 const timeLimitedPromise = require('./timeLimitedPromise');
 const calibration = require('./calibration');
 
-var _ = require('lodash');
+const _ = require('lodash');
 
 var storage = null;
 var storageLock = null;
@@ -156,8 +156,10 @@ const syncSGVs = async () => {
     let gapSGVs = [ nsMisses[0] ];
 
     for (let i = 1; i < nsMisses.length; ++i) {
+      let gap = { gapStart: moment(gapStart), gapEnd: moment(prevTime), gapSGVs: gapSGVs };
+
       if ((nsMisses[i].readDateMills - prevTime) > 6*60000) {
-        nsGaps.push( { gapStart: moment(gapStart), gapEnd: moment(prevTime), gapSGVs: gapSGVs } );
+        nsGaps.push(gap);
         gapSGVs = [ nsMisses[i] ];
       } else {
         gapSGVs.push(nsMisses[i]);
@@ -171,7 +173,7 @@ const syncSGVs = async () => {
     let nsQueryError = false;
 
     // get the NS entries that are in the gap
-    nsSGVs = await xDripAPS.SGVsBetween(nsGap.gapStart, nsGap.gapEnd, Math.round((nsGap.gapEnd.valueOf() - nsGap.gapStart.valueOf()) / 5*60000) + 1 )
+    nsSGVs = await xDripAPS.SGVsBetween(nsGap.gapStart, nsGap.gapEnd, Math.round((nsGap.gapEnd.valueOf() - nsGap.gapStart.valueOf()) * 2 / 5*60000) + 1 )
       .catch(error => {
         console.log('Unable to get NS SGVs to match unfiltered with BG Check: ' + error);
         nsQueryError = true;
@@ -219,8 +221,9 @@ const syncSGVs = async () => {
     let prevTime = rigSGVs[0].readDateMills;
 
     for (let i = 1; i < rigSGVs.length; ++i) {
+      let gap = { gapStart: moment(prevTime), gapEnd: moment(rigSGVs[i].readDateMills) };
       if ((rigSGVs[i].readDateMills - prevTime) > 6*60000) {
-        rigGaps.push( { gapStart: moment(prevTime), gapEnd: moment(rigSGVs[i].readDateMills) } );
+        rigGaps.push(gap);
       }
 
       prevTime = rigSGVs[i].readDateMills;
@@ -485,7 +488,7 @@ const syncNS = async (storage_, storageLock_, expiredCal) => {
   // For each of these, we catch any errors and then
   // call resolve so the Promise.all works as it
   // should and doesn't trigger early because of an error
-  var syncCalPromise = new timeLimitedPromise(4*60*1000, async (resolve) => {
+  let syncCalPromise = new timeLimitedPromise(4*60*1000, async (resolve) => {
     await syncCal(sensorInsert, expiredCal);
     resolve();
   });

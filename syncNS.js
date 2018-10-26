@@ -164,10 +164,12 @@ const syncSGVs = async () => {
       } else {
         gapSGVs.push(nsMisses[i]);
       }
+
+      prevTime = nsMisses[i].readDateMills;
     }
   }
 
-  console.log('nsGaps: ', nsGaps);
+  console.log('nsGaps: ', nsGaps.length);
 
   await Promise.all(_.map(nsGaps, async (nsGap) => {
     let nsQueryError = false;

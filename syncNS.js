@@ -173,7 +173,10 @@ const syncSGVs = async () => {
     }
   }
 
-  console.log('nsGaps: ', nsGaps.length);
+  console.log('nsGaps: ');
+  _.each(nsGaps, (gap) => {
+    console.log('gapStart: ' + gap.gapStart + ' gapEnd: ' + gap.gapEnd);
+  });
 
   await Promise.all(_.map(nsGaps, async (nsGap) => {
     let nsQueryError = false;

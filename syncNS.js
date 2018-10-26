@@ -160,12 +160,17 @@ const syncSGVs = async () => {
 
       if ((nsMisses[i].readDateMills - prevTime) > 6*60000) {
         nsGaps.push(gap);
+        gapStart = nsMisses[i].readDateMills;
         gapSGVs = [ nsMisses[i] ];
       } else {
         gapSGVs.push(nsMisses[i]);
       }
 
       prevTime = nsMisses[i].readDateMills;
+    }
+
+    if (gapSGVs.length > 0) {
+      rigGaps.push( { gapStart: moment(gapStart), gapEnd: moment(prevTime) } );
     }
   }
 

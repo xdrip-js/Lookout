@@ -175,7 +175,7 @@ const syncSGVs = async () => {
 
   console.log('nsGaps: ');
   _.each(nsGaps, (gap) => {
-    console.log('    gapStart: ' + moment(gap.gapStart) + ' gapEnd: ' + moment(gap.gapEnd));
+    console.log('    gapStart: ' + moment(gap.gapStart).format() + ' gapEnd: ' + moment(gap.gapEnd).format());
   });
 
   await Promise.all(_.map(nsGaps, async (nsGap) => {

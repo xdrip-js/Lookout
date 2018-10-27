@@ -3,7 +3,6 @@
 const xDripAPS = require('./xDripAPS')();
 const moment = require('moment');
 const timeLimitedPromise = require('./timeLimitedPromise');
-const calibration = require('./calibration');
 
 const _ = require('lodash');
 

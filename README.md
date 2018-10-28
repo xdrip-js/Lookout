@@ -30,6 +30,27 @@ A failure mode on the rig can prevent Lookout from completing the interaction wi
 
 The CGM transmitter enters sleep mode between each glucose read event to conserve power. Lookout only communicates with the transmitter during the brief moments it is awake during the glucose read event.  Commands entered by the user are are queued in the "Pending" queue to be sent to the transmitter when it is ready to receive messages at the next event. The Pending queue can be viewed using a browser or the `lookout` command. If the user enters an unintended command, the Pending queue can be flushed by restarting the rig before it sends the commands to the CGM transmitter.
 
+### Official Calibration Mode
+Official calibration mode is the default Lookout operating mode.  Lookout will only report calibrated glucose values received from the CGM transmitter. It not report glucose values from raw glucose values when the CGM Transmitter does not report a calibrated value due to events such as excessive noise, a stopped sensor session, or an expired transmitter.
+
+### Extended Calibration Mode
+Extended calibration mode is enabled with the `--extend_sensor` command line option.  In this mode, Lookout will report calibrated glucose values received from the CGM transmitter.  Lookout will also calculate the calibration offset and slope values using the calibrated and unfiltered raw value pairs. When the CGM Transmitter does not report a calibrated value due to events such as excessive noise, a stopped sensor session, or an expired transmitteri, Lookout will calibrate the unfiltered raw value with the calibration values it calculated when the CGM Transmitter was reporting calibrated values. To stop Lookout from continuing to report glucose values at the end of a sensor session, the user must do one of the items listed below:
+* Execute `lookout stop` on command line
+* Enter Sensor Stop in Browser Menu
+* Enter a Sensor Stop in Nightscout
+* Enter a Sensor Start in Nightscout --non-preferred method--
+* Enter a Sensor Insert in Nightscout --non-preferred method--
+
+### Expired Calibration Mode
+Expired calibration mode is enabled with the `--expired_cal` command line option.  In this mode, Lookout will use a built-in algorithm to calibrate the unfiltered raw glucose values based on calibration offset and slope calculated from user entered BG Checks provided in either Nightscout or the Lookout calibration entry methods. When the CGM Transmitter does not report a calibrated value due to events such as excessive noise, a stopped sensor session, or an expired transmitteri, Lookout will calibrate the unfiltered raw value and report the calibrated glucose result. To stop Lookout from continuing to report glucose values at the end of a sensor session, the user must do one of the items listed below:
+* Execute `lookout stop` on command line
+* Enter Sensor Stop in Browser Menu
+* Enter a Sensor Stop in Nightscout
+* Enter a Sensor Start in Nightscout --non-preferred method--
+* Enter a Sensor Insert in Nightscout --non-preferred method--
+
+**INFO** Expired calibration mode is in testing phase only and is NOT recommended. It is included in the code at this time so the user can monitor in the log file the delta between the official calibration values and the expired mode calculated calibration values.
+
 ## Pre-installation
 You must update your rig's NodeJS based on https://github.com/xdrip-js/xdrip-js/wiki (only use the "Updating NodeJS" section of those instructions, you should not install xdrip-js manually, it will be installed in the next step as part of Lookout.)
 As of 13-Jun-2018, these steps are:

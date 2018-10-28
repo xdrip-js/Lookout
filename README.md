@@ -20,11 +20,15 @@ Lookout provides a rig-based interface to a Dexcom G5 CGM using Bluetooth Low En
 - report raw unfiltered values to Nightscout during warmup for trend visibility
 - report detail transmitter and device status to Nightscout (requires Nightscout xdrip-js plugin to be enabled)
 
-Lookout is intended for use with the unexpired G5 transmitters and relies on the official calibration built into the transmitter to calibrate the raw sensor values.  Lookout provides the user with the ability to reset expired transmitters allowing them to be used past their normal expiration dates.
+Lookout can be used with unexpired G5 transmitters relying on the official calibration built into the transmitter to calibrate the raw sensor values.  Lookout provides the user with the ability to reset expired transmitters allowing them to be used past their normal expiration dates.  Lokout can also be used with expired transmitters, providing a least squares regression calibration method to calculate calibration values for raw sensor values based on user entered glucose checks.
+
+Lookout can be monitored and controlled via a web-based graphical interface, the `lookout` command line interface, or Nightscout.
 
 Typically, Lookout can be run in parallel with a Dexcom receiver.  There are reported cases where Lookout did not interact well with a Dexcom receiver so YMMV.  It cannot run in parallel with a Dexcom or xDrip app on a phone as only one of the devices will connect to a transmitter at a time. Swapping devices requires approximately 15 minutes of the transmitter being unable to communicate with the device it was talking with before it will begin to talk to a new device.
 
 A failure mode on the rig can prevent Lookout from completing the interaction with the transmitter to successfully read glucose values.  Lookout will automatically reboot the rig if it connects to the transmitter, but is unable to successfully retrieve a glucose value 2 times in a row.
+
+The CGM transmitter enters sleep mode between each glucose read event to conserve power. Lookout only communicates with the transmitter during the brief moments it is awake during the glucose read event.  Commands entered by the user are are queued in the "Pending" queue to be sent to the transmitter when it is ready to receive messages at the next event. The Pending queue can be viewed using a browser or the `lookout` command. If the user enters an unintended command, the Pending queue can be flushed by restarting the rig before it sends the commands to the CGM transmitter.
 
 ## Pre-installation
 You must update your rig's NodeJS based on https://github.com/xdrip-js/xdrip-js/wiki (only use the "Updating NodeJS" section of those instructions, you should not install xdrip-js manually, it will be installed in the next step as part of Lookout.)
@@ -90,16 +94,70 @@ To view the app, open a browser and navigate to `http://<local IP address>:3000`
 ![app](images/home.png)
 
 ## Using the browser to control your CGM
-Once the browser is open to your Lookout page (see above steps), you can start the sensor and calibrate through it. (Note that you can also continue using the Dexcom receiver alongside Lookout to do these things as well. Both the receiver and Lookout will get the latest updates from the CGM transmitter after a reading or two, provided they are in range and connected.)
+Once the browser is open to your Lookout page (see above steps), you can:
+* pair a transmitter
+* set the fakemeter id
+* reset the paired transmitter
+* view transmitter status
+* start a sensor session
+* stop a sensor session
+* calibrate
 
-* click "Menu" (bottom right button) on the Lookout page, then `CGM` and `Transmitter`, then `Pair new`, and enter your transmitter ID (note it is case-sensitive), then `Save`
-* put the sensor/transmitter on your body, if you haven't already, and press the "Home"/person button at the bottom left of the lookout page, then click `Start sensor` (this part is identical to the receiver, which you can also use at the same time, alternatively, to start the sensor).
-* wait 5 minutes and press the `Menu` button, then `CGM` and `Sensor`, the `State` should show as `Warmup`. Press the "Home" screen (bottom left, person button), you will also see this state here after a while.
-* after 2 hours the state will change to `First calibration` - enter the first calibration by clicking the `Calibration` button and entering the value from a finger stick.
-* after 5 minutes the state will change to `Second calibration` - enter the second calibration by clicking the `Calibration` button and entering the value from a finger stick.
-* after 5 minutes the state will change to `OK` and dexcom-calibrated BG values will be displayed.
+**Note** You can continue using the Dexcom receiver alongside Lookout to do these things as well. Both the receiver and Lookout will get the latest updates from the CGM transmitter after a reading or two, provided they are in range and connected.
 
-**NOTE** There is a second button on the "Home" screen, Start sensor 2 hours ago, that can be used to send a start message backdated by 2 hours.  This allows the user to pre-soak a sensor while the ongoing session continues.  When the ongoing session ends, move the transmitter to the new sensor and use the "Start sensor 2 hours ago" button to start the new session.  This will normally provide the user with a First calibration request within 5 to 10 minutes instead of 2 hours of down time.
+### Using the browser to pair Lookout to a transmitter
+1. Click `Menu` (bottom right button) on the Lookout page
+2. Click `CGM` and then `Transmitter`
+3. Click `Pair New`
+4. Enter your transmitter ID (note it is case-sensitive)
+5. Click `Save`
+
+### Using the browser to start a CGM sensor session
+1. Put the sensor/transmitter on your body, if you haven't already
+2. Click the "Home" button (looks like a person) at the bottom left of the Lookout page
+3. Click `Start sensor` (starting a sensor can be done either from the receiver or Lookout and it will show started on both)
+4. Click the `Menu` button, then `CGM` and `Sensor`
+5. Within 5 minutes the `State` should show as `Warmup`
+6. Click the "Home" screen (bottom left, person button), you will also see Warmup on the Home screen
+7. After 2 hours the state will change to `First calibration`
+8. Click the `Calibrate` button to enter the first calibration
+9. Enter the value from a finger stick and click `Save`
+10. Click the "Home" screen
+11. Click the `Calibrate` button to enter the second (you can wait for the state to change in 5 minutes, or enter it right after the first calibration)
+12. Enter the value from a second finger stick and click `Save`
+13. After 5 minutes the state will change to `OK` and calibrated BG values will be displayed.
+
+**NOTE** There is a second button on the "Home" screen, `Start sensor 2 hours ago`, that can be used to send a start message backdated by 2 hours from the current time.  This allows the user to pre-soak a sensor while the ongoing session continues.  When the ongoing session ends, move the transmitter to the new sensor and use the `Start sensor 2 hours ago` button to start the new session.  This will normally provide the user with a First calibration request within 5 to 10 minutes instead of 2 hours.
+
+### Using the browser to calibrate
+1. Click the "Home" button (looks like a person) at the bottom left of the Lookout page
+2. Click the `Calibrate` button to enter a finget stick calibration value
+3. Enter the value from a finger stick and click `Save`
+
+### Using the browser to stop a CGM sensor session
+1. Click the `Menu` button, then `CGM` and `Sensor`
+2. Click the `Stop Sensor` button
+3. Click the `Stop` button to confirm
+4. After 5 minutes, the sensor state will change to `Stopped`
+
+### Using the browser to view the Pending command list
+1. Click the `Menu` button, then `CGM` and `Sensor`
+2. Click the `Pending` button
+
+### Using the browser to reset the transmitter
+1. Ensure the transmitter is paired as described above
+2. Ensure the transmitter is not currently in a sensor session. Stop session if necessary.
+3. Click the `Menu` button, then `CGM` and `Transmitter`
+4. Click the `Reset Transmitter` button
+5. Click the `Reset` button to confirm
+6. Wait 5 minutes and press the "Menu" button, then `CGM` and `Transmitter`
+7. Verify the `Age` is now less than a day.
+
+### Using the browser to set the fakemeter meter id
+1. Click the `Menu` button, then `CGM` and `Transmitter`
+2. Click the `Set Fake Meter ID` button
+3. Enter the ID, and click the `Save` button
+4. Set a meter ID on the pump to match
 
 ## Using the command line to control your CGM
 The commands below can be entered on the rig command line to control the CGM. Regardless of which command is entered, after executing the command the command will enter a status loop indefinately printing the CGM status at each glucose read event. Enter `Ctrl-C` to exit the command.
@@ -119,17 +177,6 @@ Use `-m` option for mmol instead of mg/dL. For example, `lookout -m cal 4.1` wil
 ## Nightscout CGM Status Pill
 This feature requires Nightscout 0.10.3 or later. Lookout provides devicestatus records to Nightscout which will display the CGM status in a CGM pill if the Nightscout xdrip-js plugin is enabled. See the Nightscout README for details on enabling the plugin and settings.
 
-## Reset a Transmitter
-* Ensure the transmitter ID is entered as described above.
-* Ensure the transmitter is not currently in a sensor session. Stop session if necessary.
-* Click "Menu" on the Lookout page, then `CGM` and `Transmitter`, then `Reset Transmitter`, then `Reset`
-* wait 5 minutes and press the "Menu" button, then `CGM` and `Transmitter`, the `Age` should show as less than a day.
-* After successfully resetting the transmitter, follow the instructions above to start a sensor session.
-
-## Setup fakemeter
-* Set a meter ID in the CGM/Transmitter menu or using `lookout meterid` command (default value is 000000)
-* Set meter ID on the pump to match
-
 ## Making it permanent
 So far in the above you've only run Lookout from the command line - the next time you close your terminal, or reboot your rig, it will only run if you add it to your crontab:
 ```
@@ -143,7 +190,7 @@ So far in the above you've only run Lookout from the command line - the next tim
 To look at the Lookout log, for debug purposes, type `cat /var/log/openaps/xdrip-js.log` or `tail -n 100 -F /var/log/openaps/xdrip-js.log`.
 * If your xdrip-js.log file contains messages similar to `Error: /root/Lookout/node_modules/bluetooth-hci-socket/build/Release/binding.node: undefined symbol: _ZN2v816FunctionTemplate3NewEPNS_7IsolateEPFvRKNS_20FunctionCallbackInfoINS_5ValueEEEENS_5LocalIS4_EENSA_INS_9SignatureEEEi` run the following command: `cd ~/Lookout; npm rebuild`
 
-## Options
+## Lookout Command Line Options
 * `--extend_sensor`: Enables using the calibrated and unfiltered values reported by the CGM to calculate the running calibration slope and intercept values whenever the current calibration values it has produces a calibrated value that is more than 5 mg/dL away from the CGM reported calibrated value.  Lookout will apply the most recent calculated calibration to the CGM's unfiltered value if the transmitter does not report a calibrated glucose.  This enables Lookout to continue reporting glucose values after the sensor session is ended, providing greater flexibility on when the user changes the site.  This is not intended to extend a sensor life past 24 hours due to the lack of an ongoing calibration update mechanism.
 
 **WARNING** If running in extended sensor mode, the user must enter a `Sensor Insert` in Nightscout to notify Lookout to stop reporting glucose values.

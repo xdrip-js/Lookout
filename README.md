@@ -106,7 +106,7 @@ Once the browser is open to your Lookout page (see above steps), you can:
 **Note** You can continue using the Dexcom receiver alongside Lookout to do these things as well. Both the receiver and Lookout will get the latest updates from the CGM transmitter after a reading or two, provided they are in range and connected.
 
 ### Using the browser to pair Lookout to a transmitter
-1. Click `Menu` (bottom right button) on the Lookout page
+1. Click "Menu" button (bottom right button) on the Lookout page
 2. Click `CGM` and then `Transmitter`
 3. Click `Pair New`
 4. Enter your transmitter ID (note it is case-sensitive)
@@ -116,7 +116,7 @@ Once the browser is open to your Lookout page (see above steps), you can:
 1. Put the sensor/transmitter on your body, if you haven't already
 2. Click the "Home" button (looks like a person) at the bottom left of the Lookout page
 3. Click `Start sensor` (starting a sensor can be done either from the receiver or Lookout and it will show started on both)
-4. Click the `Menu` button, then `CGM` and `Sensor`
+4. Click the "Menu" button, then `CGM` and `Sensor`
 5. Within 5 minutes the `State` should show as `Warmup`
 6. Click the "Home" screen (bottom left, person button), you will also see Warmup on the Home screen
 7. After 2 hours the state will change to `First calibration`
@@ -135,26 +135,26 @@ Once the browser is open to your Lookout page (see above steps), you can:
 3. Enter the value from a finger stick and click `Save`
 
 ### Using the browser to stop a CGM sensor session
-1. Click the `Menu` button, then `CGM` and `Sensor`
+1. Click the "Menu" button, then `CGM` and `Sensor`
 2. Click the `Stop Sensor` button
 3. Click the `Stop` button to confirm
 4. After 5 minutes, the sensor state will change to `Stopped`
 
 ### Using the browser to view the Pending command list
-1. Click the `Menu` button, then `CGM` and `Sensor`
+1. Click the "Menu" button, then `CGM` and `Sensor`
 2. Click the `Pending` button
 
 ### Using the browser to reset the transmitter
 1. Ensure the transmitter is paired as described above
 2. Ensure the transmitter is not currently in a sensor session. Stop session if necessary.
-3. Click the `Menu` button, then `CGM` and `Transmitter`
+3. Click the "Menu" button, then `CGM` and `Transmitter`
 4. Click the `Reset Transmitter` button
 5. Click the `Reset` button to confirm
 6. Wait 5 minutes and press the "Menu" button, then `CGM` and `Transmitter`
 7. Verify the `Age` is now less than a day.
 
 ### Using the browser to set the fakemeter meter id
-1. Click the `Menu` button, then `CGM` and `Transmitter`
+1. Click the "Menu" button, then `CGM` and `Transmitter`
 2. Click the `Set Fake Meter ID` button
 3. Enter the ID, and click the `Save` button
 4. Set a meter ID on the pump to match

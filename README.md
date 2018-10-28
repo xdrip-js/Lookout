@@ -131,7 +131,7 @@ Once the browser is open to your Lookout page (see above steps), you can:
 
 ### Using the browser to calibrate
 1. Click the "Home" button (looks like a person) at the bottom left of the Lookout page
-2. Click the `Calibrate` button to enter a finget stick calibration value
+2. Click the `Calibrate` button to enter a finger stick calibration value
 3. Enter the value from a finger stick and click `Save`
 
 ### Using the browser to stop a CGM sensor session

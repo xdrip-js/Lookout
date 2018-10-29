@@ -443,7 +443,7 @@ module.exports = () => {
           'txStatusString': sgv.txStatusString,
           'txStatusStringShort': sgv.txStatusStringShort,
           'txActivation': sgv.transmitterStartDate,
-          'mode': 'not expired',  // 'expired' or 'not expired'
+          'mode': sgv.mode,
           'timestamp': sgv.readDateMills,
           'rssi': sgv.rssi,
           'unfiltered': sgv.unfiltered,

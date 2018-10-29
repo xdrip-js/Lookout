@@ -188,6 +188,14 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     sgv = await calibration.calibrateGlucose(storage, options, sensorInsert, sensorStop, glucoseHist, sgv);
 
+    if (sgv.inExtendedSession) {
+      sgv.mode = 'extended cal';
+    } else if (sgv.inExpiredSession) {
+      sgv.mode = 'expired cal';
+    } else {
+      sgv.mode = 'txmitter cal';
+    }
+
     sgv.stateString = stateString(sgv.state);
     sgv.stateStringShort = stateStringShort(sgv.state);
 

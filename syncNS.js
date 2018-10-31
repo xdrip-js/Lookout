@@ -230,7 +230,8 @@ const syncSGVs = async () => {
     let prevTime = rigSGVs[0].readDateMills;
 
     for (let i = 1; i < rigSGVs.length; ++i) {
-      let gap = { gapStart: moment(prevTime), gapEnd: moment(rigSGVs[i].readDateMills) };
+      // Add 1 minute to gapStart and subtract 1 minute from gapEnd to prevent duplicats
+      let gap = { gapStart: moment(prevTime+60000), gapEnd: moment(rigSGVs[i].readDateMills-60000) };
       if ((rigSGVs[i].readDateMills - prevTime) > 6*60000) {
         rigGaps.push(gap);
       }
@@ -239,10 +240,12 @@ const syncSGVs = async () => {
     }
 
     if ((now - prevTime) > 6*60000) {
-      rigGaps.push( { gapStart: moment(prevTime), gapEnd: moment(now) } );
+      // Add 1 minute to gapStart to prevent duplicats
+      rigGaps.push( { gapStart: moment(prevTime+60000), gapEnd: moment(now) } );
     }
   } else {
-    rigGaps.push( { gapStart: moment(minDate), gapEnd: moment(now) } );
+    // Add 1 minute to gapStart to prevent duplicats
+    rigGaps.push( { gapStart: moment(minDate+60000), gapEnd: moment(now) } );
   }
 
   console.log('rigGaps: ', rigGaps);

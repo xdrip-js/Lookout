@@ -363,13 +363,18 @@ const syncSGVs = async () => {
   return ((rigSGVs.length > 0) && rigSGVs[rigSGVs.length-1]) || null;
 };
 
-const syncBGChecks = async (sensorInsert) => {
+const syncBGChecks = async (sensorInsert, sensorStop) => {
   let NSBGChecks = null;
   let nsQueryError = false;
   let bgCheckFromNS = false;
   let sliceStart = 0;
+  let validBGCheckStartTime = sensorInsert;
 
-  NSBGChecks = await xDripAPS.BGChecksSince(sensorInsert)
+  if (!sensorInsert || (sensorStop && sensorStop.valueOf() > sensorInsert.valueOf())) {
+    validBGCheckStartTime = sensorStop;
+  }
+
+  NSBGChecks = await xDripAPS.BGChecksSince(validBGCheckStartTime)
     .catch(error => {
       // Bail out since we can't sync if we don't have NS access
       console.log('Error getting NS BG Checks: ' + error);
@@ -401,7 +406,7 @@ const syncBGChecks = async (sensorInsert) => {
   sliceStart = 0;
 
   for (let i = 0; i < NSBGChecks.length; ++i) {
-    if (moment(NSBGChecks[i].created_at).diff(sensorInsert) < 0) {
+    if (moment(NSBGChecks[i].created_at).diff(validBGCheckStartTime) < 0) {
       sliceStart = i+1;
     }
   }
@@ -476,7 +481,7 @@ const syncBGChecks = async (sensorInsert) => {
   // Remove any cal data we have
   // that predates the last sensor insert
   for (let i=0; i < rigBGChecks.length; ++i) {
-    if (rigBGChecks[i].dateMills < sensorInsert.valueOf()) {
+    if (rigBGChecks[i].dateMills < validBGCheckStartTime.valueOf()) {
       sliceStart = i+1;
     }
   }
@@ -590,7 +595,7 @@ const syncNS = async (storage_, storageLock_, transmitter_) => {
   });
 
   let syncBGChecksPromise = new timeLimitedPromise(4*60*1000, async (resolve) => {
-    bgChecks = await syncBGChecks(sensorInsert);
+    bgChecks = await syncBGChecks(sensorInsert, sensorStop);
     resolve();
   });
 

@@ -119,6 +119,15 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
   };
 
   const stopSensorSession = async () => {
+    let now = moment();
+
+    await storage.setItem('sensorStop', now.valueOf())
+      .catch((err) => {
+        console.log('Unable to store sensorStop: ' + err);
+      });
+
+    xDripAPS.postEvent('Sensor Stop', now);
+
     await storage.del('glucoseHist');
     await calibration.clearCalibration(storage);
   };

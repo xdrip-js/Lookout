@@ -598,6 +598,10 @@ const validateTxmitterCalibration = (sensorInsert, sensorStop, bgChecks, lastCal
 
 const validateExpiredCalibration = (sensorInsert, sensorStop, lastExpiredCal) => {
 
+  if (!lastExpiredCal) {
+    return false;
+  }
+
   let lastExpiredCalTime = moment(lastExpiredCal.date).subtract(6, 'minutes');
 
   let sensorInsertDelta = (sensorInsert && sensorInsert.diff(lastExpiredCalTime)) || 0;

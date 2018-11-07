@@ -22,7 +22,7 @@ var exports = module.exports = {};
 const MAXSLOPE = 12500;
 const MINSLOPE = 450;
 const SENSOR_STABLE = 12; // hours
-const SENSOR_WARM = 12; // hours
+const SENSOR_WARM = 2; // hours
 const MIN_LSR_PAIRS = 2;
 
 // calibrationPairs has three values for each array element:
@@ -706,6 +706,7 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, sensorStop, gl
 
     if ((sgv.noise < .4) && sensorInsert && ((sgv.readDateMills - sensorInsert.valueOf()) < SENSOR_WARM*60*60000)) {
       // put in light noise to account for warm up
+      console.log('Setting noise to light because SGV date (' + moment(sgv.readDateMills).format() + ' - ' + sensorInsert.format() + ' < ' + SENSOR_WARM + ' hours');
       sgv.noise=.4;
     }
   } else {

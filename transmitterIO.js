@@ -500,7 +500,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     }
   };
 
-  const processG5CalData = async (calData) => {
+  const processTxmitterCalData = async (calData) => {
     let bgChecks = null;
     let bgCheckIdx = -1;
 
@@ -509,7 +509,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     console.log('Last calibration: ' + Math.round((Date.now() - calData.dateMills)/1000/60/60*10)/10 + ' hours ago');
 
     if (calData.glucose > 400 || calData.glucose < 20) {
-      console.log('G5 Last Calibration Data glucose out of range - ignoring');
+      console.log('Txmitter Last Calibration Data glucose out of range - ignoring');
       return;
     }
 
@@ -536,7 +536,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       return;
     }
 
-    calData.type = 'G5';
+    calData.type = 'Txmitter';
 
     await storageLock.lockStorage();
 
@@ -553,7 +553,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     // have this BG Check
     for (let i = (bgChecks.length-1); i >= 0; --i) {
       if (Math.abs(bgChecks[i].dateMills - calData.dateMills) < 2*60*1000) {
-        // The G5 transmitter report varies the time around
+        // The Txmitter transmitter report varies the time around
         // the real time a little between read events.
         // If they are within two minutes, assume it's the same
         // check and bail out.
@@ -681,7 +681,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         pending.shift();
         client.newPending(pending);
       } else if (m.msg == 'calibrationData') {
-        processG5CalData(m.data);
+        processTxmitterCalData(m.data);
       } else if (m.msg == 'batteryStatus') {
         processBatteryStatus(m.data);
       } else if (m.msg == 'sawTransmitter') {
@@ -796,7 +796,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       });
     },
 
-    // provide the most recent G5 calibration
+    // provide the most recent Txmitter calibration
     getLastCal: async () => {
       return calibration.getLastCal(storage);
     },

@@ -10,7 +10,7 @@ angular.module('AngularOpenAPS.cgm', [
     });
   })
 
-  .service('G5', ['socketFactory', function (socketFactory) {
+  .service('CGM', ['socketFactory', function (socketFactory) {
     const socket = socketFactory({
       ioSocket: io.connect('/cgm')
     });

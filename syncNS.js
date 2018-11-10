@@ -33,7 +33,7 @@ const syncCal = async (sensorInsert) => {
 
   await storageLock.lockStorage();
 
-  // Always synchronize only the G5 calibration
+  // Always synchronize only the transmitter calibration
   // The expired cal is always able to be calculated
   // form the BG Checks and glucose values in NS
   rigCalStr = 'g5Calibration';

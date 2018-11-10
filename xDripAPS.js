@@ -335,7 +335,7 @@ const convertBGCheck = (BGCheck) => {
     'eventType': 'BG Check',
     'glucose': BGCheck.glucose,
     'glucoseType': 'Finger',
-    'reason': 'G5 Calibration',
+    'reason': 'Txmitter Calibration',
     'duration': 0,
     'units': 'mg/dl',
     'created_at': moment(BGCheck.date).format()
@@ -431,7 +431,7 @@ module.exports = () => {
       });
     },
 
-    postStatus: (txId, sgv, txStatus, cal, lastG5CalTime) => {
+    postStatus: (txId, sgv, txStatus, cal, lastTxmitterCalTime) => {
       const entry = [{
         'device': 'xdripjs://' + os.hostname(),
         'xdripjs': {
@@ -453,7 +453,7 @@ module.exports = () => {
           'slope': (cal && cal.slope) || 1,
           'intercept': (cal && cal.intercept) || 0,
           'calType': (cal && cal.type) || 'None', // 'LeastSquaresRegression' or 'SinglePoint' or 'Unity'
-          'lastCalibrationDate': lastG5CalTime,
+          'lastCalibrationDate': lastTxmitterCalTime,
           'sessionStart': sgv.sessionStartDate,
           'batteryTimestamp': (txStatus && txStatus.timestamp.valueOf()) || null,
           'voltagea': (txStatus && txStatus.voltagea) || null,

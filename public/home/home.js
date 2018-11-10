@@ -10,12 +10,12 @@ angular.module('AngularOpenAPS.home', [
     });
   })
 
-  .controller('HomeController', ['$scope', '$interval', '$document', '$location', 'G5', 'OpenAPS', function ($scope, $interval, $document, $location, G5, OpenAPS) {
-    $scope.sensor = G5.sensor;
+  .controller('HomeController', ['$scope', '$interval', '$document', '$location', 'CGM', 'OpenAPS', function ($scope, $interval, $document, $location, CGM, OpenAPS) {
+    $scope.sensor = CGM.sensor;
     $scope.loop = OpenAPS.loop;
 
     const tick = function() {
-      const glucose = G5.sensor.glucose;
+      const glucose = CGM.sensor.glucose;
       $scope.glucoseAge = glucose ? (Date.now() - glucose.readDateMills) / 1000 : null;
       const enacted = OpenAPS.loop.enacted;
       $scope.enactedAge = enacted ? (Date.now() - enacted.date) / 1000 : null;
@@ -26,7 +26,7 @@ angular.module('AngularOpenAPS.home', [
     $scope.arrow = function() {
     // TODO: we could handle this with ng-if statements in the template
     // rather than using ng-bind as we do here
-      const trend = G5.sensor.glucose.trend;
+      const trend = CGM.sensor.glucose.trend;
       if (trend <= -30) {
         return '<i class=\'fa fa-long-arrow-down text-primary\'></i><i class=\'fa fa-long-arrow-down text-primary\'></i>';
       } else if (trend <= -20) {
@@ -45,17 +45,17 @@ angular.module('AngularOpenAPS.home', [
     };
 
     $scope.start = function () {
-      G5.sensor.start();
+      CGM.sensor.start();
       $location.path('/cgm/sensor/pending');
     };
 
     $scope.backstart = function () {
-      G5.sensor.backstart();
+      CGM.sensor.backstart();
       $location.path('/cgm/sensor/pending');
     };
   }])
 
-  .directive('glucoseChart', ['$interval', 'SharedState', 'G5', function($interval, SharedState, G5) {
+  .directive('glucoseChart', ['$interval', 'SharedState', 'CGM', function($interval, SharedState, CGM) {
     return {
       
       restrict: 'E',
@@ -85,7 +85,7 @@ angular.module('AngularOpenAPS.home', [
           const now = Date.now();
           const latestSGV = scope.data[0][scope.data[0].length - 1];
           const latestSGVReadDate = latestSGV && latestSGV.readDate || null;
-          const hist = G5.sensor.history;
+          const hist = CGM.sensor.history;
 
           if (hist) {
             for (let i=0; i < hist.length; ++i) {

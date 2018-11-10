@@ -25,8 +25,8 @@ angular.module('AngularOpenAPS.cgm.sensor', [
     });
   })
 
-  .controller('SensorController', ['$scope', 'SharedState', '$interval', '$location', 'G5', function ($scope, SharedState, $interval, $location, G5) {
-    $scope.sensor = G5.sensor;
+  .controller('SensorController', ['$scope', 'SharedState', '$interval', '$location', 'CGM', function ($scope, SharedState, $interval, $location, CGM) {
+    $scope.sensor = CGM.sensor;
 
     let units = SharedState.get('glucoseUnits');
 
@@ -42,7 +42,7 @@ angular.module('AngularOpenAPS.cgm.sensor', [
     }
 
     const tick = function() {
-      const sessionStartDate = G5.sensor.sessionStartDate;
+      const sessionStartDate = CGM.sensor.sessionStartDate;
       $scope.age = sessionStartDate ? (Date.now() - sessionStartDate.valueOf()) / 1000 : null;
     };
     tick();
@@ -50,7 +50,7 @@ angular.module('AngularOpenAPS.cgm.sensor', [
 
     $scope.calibrate = function(value) {
       if (value) {
-        G5.sensor.calibrate(value);
+        CGM.sensor.calibrate(value);
         $location.path('/cgm/sensor/pending');
       } else {
         console.log('Not sending invalid CGM calibration value.');
@@ -58,7 +58,7 @@ angular.module('AngularOpenAPS.cgm.sensor', [
     };
 
     $scope.stopSensor = function() {
-      G5.sensor.stop();
+      CGM.sensor.stop();
       $location.path('/cgm/sensor/pending');
     };
   }])

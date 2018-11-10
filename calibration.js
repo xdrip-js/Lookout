@@ -142,7 +142,7 @@ const singlePointCalibration = (calibrationPairs) => {
   return returnVal;
 };
 
-const calculateG5Calibration = (lastCal, lastG5CalTime, sensorInsert, glucoseHist, currSGV) => {
+const calculateTxmitterCalibration = (lastCal, lastTxmitterCalTime, sensorInsert, glucoseHist, currSGV) => {
   // set it to a high number so we upload a new cal
   // if we don't have a previous calibration
 
@@ -174,14 +174,14 @@ const calculateG5Calibration = (lastCal, lastG5CalTime, sensorInsert, glucoseHis
     // Suitable values need to be:
     //   less than 300 mg/dl
     //   greater than 80 mg/dl
-    //   calibrated via G5, not Lookout
-    //   12 minutes after the last G5 calibration time (it takes up to 2 readings to reflect calibration updates)
+    //   calibrated via Txmitter, not Lookout
+    //   12 minutes after the last Txmitter calibration time (it takes up to 2 readings to reflect calibration updates)
     //   After the latest sensorInsert (ignore sensorInsert if we didn't get one)
     for (i=(glucoseHist.length-1); ((i >= 0) && (calPairs.length < 10)); --i) {
       // Only use up to 10 of the most recent suitable readings
       let sgv = glucoseHist[i];
 
-      if ((sgv.readDateMills > (lastG5CalTime + 12*60*1000)) && (sgv.glucose < 300) && (sgv.glucose > 80) && sgv.g5calibrated && (!sensorInsert || (sgv.readDateMills > sensorInsert.valueOf()))) {
+      if ((sgv.readDateMills > (lastTxmitterCalTime + 12*60*1000)) && (sgv.glucose < 300) && (sgv.glucose > 80) && sgv.g5calibrated && (!sensorInsert || (sgv.readDateMills > sensorInsert.valueOf()))) {
         calPairs.unshift(sgv);
       }
     }
@@ -235,7 +235,7 @@ const calculateG5Calibration = (lastCal, lastG5CalTime, sensorInsert, glucoseHis
   return calReturn;
 };
 
-exports.calculateG5Calibration = calculateG5Calibration;
+exports.calculateTxmitterCalibration = calculateTxmitterCalibration;
 
 const calcGlucose = (sgv, calibration) => {
   let glucose = Math.round((sgv.unfiltered-calibration.intercept)/calibration.slope);
@@ -369,7 +369,7 @@ const getUnfiltered = async (storage, valueTime, sgv) => {
     // we can assume they are already sorted
     // since we sort before storing them
     // Search from the end since in the normal case
-    // the G5 cal is processed within 2 readings
+    // the Txmitter cal is processed within 2 readings
     // of the event.
     for (let i=(rigSGVs.length-2); i >= 0; --i) {
       // Is the next SGV after valueTime
@@ -503,22 +503,22 @@ const saveTxmitterCal = async (storage, newCal) => {
 
 exports.saveTxmitterCal = saveTxmitterCal;
 
-const getLastG5Cal = (bgChecks) => {
-  let lastG5Cal = null;
+const getLastTxmitterCal = (bgChecks) => {
+  let lastTxmitterCal = null;
 
   if (bgChecks) {
     for (let ii=(bgChecks.length-1); ii >= 0; --ii) {
-      if ((bgChecks[ii].type == 'G5') || (bgChecks[ii].type == 'Unity')) {
-        lastG5Cal = bgChecks[ii];
+      if ((bgChecks[ii].type == 'Txmitter') || (bgChecks[ii].type == 'Unity')) {
+        lastTxmitterCal = bgChecks[ii];
         break;
       }
     }
   }
 
-  return lastG5Cal;
+  return lastTxmitterCal;
 };
 
-exports.getLastG5Cal = getLastG5Cal;
+exports.getLastTxmitterCal = getLastTxmitterCal;
 
 const getActiveCal = async (options, storage) => {
   let lastCal = await getTxmitterCal(storage);
@@ -535,16 +535,16 @@ const getActiveCal = async (options, storage) => {
 
 exports.getActiveCal = getActiveCal;
 
-// provide the most recent G5 calibration
+// provide the most recent Txmitter calibration
 const getLastCal = async (storage) => {
   let bgChecks = await storage.getItem('bgChecks')
     .catch(error => {
       console.log('Unable to get bgChecks storage item: ' + error);
     });
 
-  let lastG5Cal = getLastG5Cal(bgChecks);
+  let lastTxmitterCal = getLastTxmitterCal(bgChecks);
 
-  return lastG5Cal;
+  return lastTxmitterCal;
 };
 
 exports.getLastCal = getLastCal;
@@ -642,13 +642,13 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, sensorStop, gl
     bgChecks = [ ];
   }
 
-  let lastG5CalTime = 0;
+  let lastTxmitterCalTime = 0;
   let newCal = null;
 
-  let lastG5Cal = getLastG5Cal(bgChecks);
+  let lastTxmitterCal = getLastTxmitterCal(bgChecks);
 
-  if (lastG5Cal) {
-    lastG5CalTime = lastG5Cal.dateMills;
+  if (lastTxmitterCal) {
+    lastTxmitterCalTime = lastTxmitterCal.dateMills;
   }
 
   sgv.g5calibrated = true;
@@ -657,7 +657,7 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, sensorStop, gl
   sgv.inExpiredSession = false;
 
   if (glucoseHist.length > 0) {
-    newCal = calculateG5Calibration(lastCal, lastG5CalTime, sensorInsert, glucoseHist, sgv);
+    newCal = calculateTxmitterCalibration(lastCal, lastTxmitterCalTime, sensorInsert, glucoseHist, sgv);
 
     expiredCal = await expiredCalibration(storage, bgChecks, expiredCal, sensorInsert, sgv);
   }
@@ -670,7 +670,7 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, sensorStop, gl
     sgv.glucose = calcGlucose(sgv, lastCal);
     sgv.inExpiredSession = true;
 
-    console.log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value from G5 calibration algorithm');
+    console.log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value from Txmitter calibration algorithm');
     console.log('Calibrated SGV: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered + ' slope: ' + lastCal.slope + ' intercept: ' + lastCal.intercept);
 
     sgv.g5calibrated = false;

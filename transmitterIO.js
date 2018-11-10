@@ -109,10 +109,29 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
   const startSession = async (startTime) => {
     let sgv = await getGlucose();
 
-    if (!transmitterInSession(sgv)) {
-      pending.push({date: startTime, type: 'StartSensor'});
+    if (!inSensorSession(sgv)) {
+      // Only enter a sensorStart if we aren't
+      // in either a transmitter session, extend session, or expired session
+      await storage.setItem('sensorStart', Date.now())
+        .catch(error => {
+          console.log('Error getting rig sensorStart: ' + error);
+        });
+    }
 
-      client.newPending(pending);
+    if (!transmitterInSession(sgv)) {
+      let startPending = false;
+
+      _.each(pending, (cmd) => {
+        if (cmd.type == 'StartSensor') {
+          startPending = true;
+        }
+      });
+
+      if (!startPending) {
+        pending.push({date: startTime, type: 'StartSensor'});
+
+        client.newPending(pending);
+      }
     }
   };
 
@@ -792,6 +811,11 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     // Start a sensor session
     startSensor: () => {
       startSession(Date.now());
+    },
+
+    // Start a sensor session at time
+    startSensorTime: (startTime) => {
+      startSession(startTime.valueOf());
     },
 
     // Start a sensor session back started 2 hours

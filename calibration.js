@@ -6,8 +6,9 @@
 //         Use SinglePoint calibration only for less than MIN_LSR_PAIRS calibration points. 
 //         SinglePoint simply uses the latest calibration record and assumes 
 //         the yIntercept is 0.
-//Rule 5 - TODO: Drop back to SinglePoint calibration if slope is out of bounds 
+//Rule 5 - Drop back to SinglePoint calibration if slope is out of bounds
 //         (>MAXSLOPE or <MINSLOPE)
+//         only applies to expired calibration
 //Rule 6 - TODO: Drop back to SinglePoint calibration if yIntercept is out of bounds 
 //         (> minimum unfiltered value in calibration record set or 
 //          < - minimum unfiltered value in calibration record set)
@@ -289,20 +290,20 @@ const expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorInser
 
     console.log('expired lsrCalibration: numPoints=' + calPairs.length + ', slope=' + calResult.slope + ', yIntercept=' + calResult.yIntercept); 
 
-    if ((calResult.slope > MAXSLOPE) || (calResult.slope < MINSLOPE)) {
-      // wait until the next opportunity
-      console.log('Slope out of range to calibrate: ' + calResult.slope);
-      return null;
+    if ((calResult.slope < MAXSLOPE) && (calResult.slope > MINSLOPE)) {
+      calReturn = {
+        date: calPairs[calPairs.length-1].readDateMills,
+        scale: 1,
+        intercept: calResult.yIntercept,
+        slope: calResult.slope,
+        type: calResult.calibrationType
+      };
+    } else {
+      console.log('Falling back to single point cal due to slope out of range: ' + calResult.slope);
     }
+  }
 
-    calReturn = {
-      date: calPairs[calPairs.length-1].readDateMills,
-      scale: 1,
-      intercept: calResult.yIntercept,
-      slope: calResult.slope,
-      type: calResult.calibrationType
-    };
-  } else if (calPairs.length > 0) {
+  if (!calReturn && (calPairs.length > 0)) {
     let calResult = singlePointCalibration(calPairs);
 
     console.log('expired singlePointCalibration: glucose=' + calPairs[calPairs.length-1].glucose + ', unfiltered=' + calPairs[calPairs.length-1].unfiltered + ', slope=' + calResult.slope + ', yIntercept=0'); 

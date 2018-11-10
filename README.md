@@ -195,6 +195,21 @@ The commands below can be entered on the rig command line to control the CGM. Re
 
 Use `-m` option for mmol instead of mg/dL. For example, `lookout -m cal 4.1` will calibrate with 4.1 mmol.
 
+## Using Nightscout to control your CGM
+Entering records in Nightscout can also be used to control your CGM. Lookout synchronizes with Nightscout 30 seconds prior to every transmitter read event. Therefore, the entries described below must be inserted into Nightscout at least 30 seconds prior to the next read event or it will not be executed until the following event.
+
+### CGM Sensor Start
+Enter a CGM Sensor Start into Nightscout to start a sensor session if one is not running. A sensor start will also cause Lookout to delete the extended and expired calibration values if they exist which will effectively end any extended or expired sensor sessions. If the transmitter does not have an active sensor session, Lookout will cease reporting calibrated glucose values.
+
+### CGM Sensor Insert
+Entering a CGM Sensor Insert will also cause Lookout to delete the extend and expired calibration values if they exist which will effectively end any extended or expired sensor sessions. If the transmitter does not have an active sensor session, Lookout will cease reporting calibrated glucose values.
+
+### CGM Sensor Stop
+Enter a sensor stop into Nightscout to stop a sensor session. 
+
+### BG Check
+Enter a BG Check into Nightscout to calibrate the transmitter and the expired calibration algorithm.
+
 ## Nightscout CGM Status Pill
 This feature requires Nightscout 0.10.3 or later. Lookout provides devicestatus records to Nightscout which will display the CGM status in a CGM pill if the Nightscout xdrip-js plugin is enabled. See the Nightscout README for details on enabling the plugin and settings.
 

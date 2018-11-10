@@ -77,8 +77,10 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     let sessionStart = 0;
     let sensorStartDelta = 0;
     let sensorStopDelta = 0;
+    let txmitterInSession = transmitterInSession(sgv);
 
-    if (sgv && ('inSession' in sgv) && sgv.inSession) {
+    if (txmitterInSession) {
+      // this is only true if we are the controlling rig AND the transmitter has an active session
       sessionStart = moment(sgv.sessionStartDate);
 
       // Give 6 minutes extra time
@@ -87,7 +89,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       sensorStopDelta = (sensorStop && (sensorStop.valueOf() - sessionStart.valueOf())) || 0;
     }
 
-    if (sgv && ('inSession' in sgv) && sgv.inSession && (sensorStartDelta > 0 || sensorStopDelta > 0)) {
+    if (txmitterInSession && (sensorStartDelta > 0 || sensorStopDelta > 0)) {
       // give a 2 hour play between the sensor insert record and the session start date from the transmitter
       console.log('Found sensor change, start, or stop after transmitter start date. Stopping Sensor Session.');
       console.log('Session Start: ' + sessionStart + ' sensorStart: ' + sensorInsert + ' sensorStop: ' + sensorStop);
@@ -104,10 +106,14 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     }
   };
 
-  const startTransmitterSession = () => {
-    pending.push({date: Date.now(), type: 'StartSensor'});
+  const startSession = async (startTime) => {
+    let sgv = await getGlucose();
 
-    client.newPending(pending);
+    if (!transmitterInSession(sgv)) {
+      pending.push({date: startTime, type: 'StartSensor'});
+
+      client.newPending(pending);
+    }
   };
 
   const stopTransmitterSession = () => {
@@ -623,10 +629,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         }
 
         pending = pending.filter((msg) => {
-          // Don't send certain events older than 12 minutes
-          if (((Date.now() - msg.date) > 12*60000) && 
-            ((msg.type == 'CalibrateSensor')
-            || (msg.type == 'StopSensor'))) {
+          // Don't send certain messages older than 12 minutes
+          if ((Date.now() - msg.date) > 12*60000) {
             return false;
           }
 
@@ -721,6 +725,24 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     }
   };
 
+  const transmitterInSession = (sgv) => {
+    if (sgv && ('inSession' in sgv) && sgv.inSession) {
+      return true;
+    } else {
+      return false;
+    }
+  };
+
+  const inSensorSession = (sgv) => {
+    if (transmitterInSession(sgv)) {
+      return true;
+    }
+
+    // If the transmitter is not in a session, return whether
+    // we have a valid set of calibration values
+    return calibration.haveCalibration(storage);
+  };
+
   // Create an object that can be used
   // to interact with the transmitter.
   const transmitterIO = {
@@ -769,18 +791,22 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     // Start a sensor session
     startSensor: () => {
-      startTransmitterSession();
+      startSession(Date.now());
     },
 
     // Start a sensor session back started 2 hours
     backStartSensor: () => {
-      pending.push({date: Date.now() - 2*60*60*1000, type: 'StartSensor'});
-
-      client.newPending(pending);
+      startSession(Date.now() - 2*60*60*1000);
     },
 
-    stopSensor: () => {
-      stopTransmitterSession();
+    stopSensor: async () => {
+      await stopSensorSession();
+
+      let sgv = await getGlucose();
+
+      if (transmitterInSession(sgv)) {
+        stopTransmitterSession();
+      }
     },
 
     sendBgCheckToTxmitter: (bgCheck) => {
@@ -836,23 +862,14 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       client.txId(value);
     },
 
-    stopSensorSession: () => {
-      stopSensorSession();
-    },
-
-    inSensorSession: async (sgv) => {
-
-      if (sgv.inSession) {
-        return true;
-      }
-
-      // If the transmitter is not in a session, return whether
-      // we have a valid set of calibration values
-      return calibration.haveCalibration(storage);
-    },
-
     checkSensorSession: async (sensorInsert, sensorStop, bgChecks, sgv) => {
       checkSensorSession(sensorInsert, sensorStop, bgChecks, sgv);
+    },
+
+    inSensorSession: async () => {
+      let sgv = getGlucose();
+
+      return inSensorSession(sgv);
     }
 
   };

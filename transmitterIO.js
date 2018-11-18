@@ -701,6 +701,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
           let glucose = bgChecks[bgChecks.length-1].glucose;
           console.log('Sending calibration value to transmitter: ' + glucose + ' at time: ' + moment(latestBGCheckTime).format());
           pending.push({date: latestBGCheckTime, type: 'CalibrateSensor', glucose});
+          pendingCalTime = latestBGCheckTime;
         }
 
         pending = pending.filter((msg) => {

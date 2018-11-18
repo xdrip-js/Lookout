@@ -596,7 +596,7 @@ const validateTxmitterCalibration = (sensorInsert, sensorStop, bgChecks, lastCal
     || (sensorInsertDelta > 0)
     || (sensorStopDelta > 0)
     || (bgCheckDelta > 0)) {
-    console.log('No valid Transmitter Calibration - sensorInsert: ' + sensorInsert + ' lastCal: ' + lastCal + ' sensorInsertDelta: ' + sensorInsertDelta + ' sensorStopDelta: ' + sensorStopDelta + ' bgCheckDelta: ' + bgCheckDelta);
+    console.log('No valid Transmitter Calibration - sensorInsert: ' + moment(sensorInsert).format() + ' lastCal: ' + moment(lastCal.date).format() + ' sensorInsertDelta: ' + sensorInsertDelta + ' sensorStopDelta: ' + sensorStopDelta + ' bgCheckDelta: ' + bgCheckDelta);
     return false;
   } else {
     console.log('Have valid Transmitter Calibration');

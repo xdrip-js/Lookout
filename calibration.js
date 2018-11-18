@@ -322,7 +322,9 @@ const expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorInser
       slope: calResult.slope,
       type: calResult.calibrationType
     };
-  } else {
+  }
+
+  if (!calReturn) {
     console.log('No suitable glucose pairs found for expired calibration.');
   }
 

@@ -194,6 +194,11 @@ const calculateTxmitterCalibration = (lastCal, lastTxmitterCalTime, sensorInsert
 
       console.log('CGM lsrCalibration: numPoints=' + calPairs.length + ', slope=' + calResult.slope + ', yIntercept=' + calResult.yIntercept); 
 
+      if (!calResult) {
+        console.log('CGM calculated calibration calculated denominator of zero');
+        return null;
+      }
+
       if ((calResult.slope > MAXSLOPE) || (calResult.slope < MINSLOPE)) {
         // wait until the next opportunity
         console.log('CGM calculated calibration slope out of range: ' + calResult.slope);
@@ -288,9 +293,9 @@ const expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorInser
   if (calPairs.length >= MIN_LSR_PAIRS) {
     let calResult = lsrCalibration(calPairs);
 
-    console.log('expired lsrCalibration: numPoints=' + calPairs.length + ', slope=' + calResult.slope + ', yIntercept=' + calResult.yIntercept); 
+    if (calResult && (calResult.slope < MAXSLOPE) && (calResult.slope > MINSLOPE)) {
+      console.log('expired lsrCalibration: numPoints=' + calPairs.length + ', slope=' + calResult.slope + ', yIntercept=' + calResult.yIntercept); 
 
-    if ((calResult.slope < MAXSLOPE) && (calResult.slope > MINSLOPE)) {
       calReturn = {
         date: calPairs[calPairs.length-1].readDateMills,
         scale: 1,
@@ -298,8 +303,10 @@ const expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorInser
         slope: calResult.slope,
         type: calResult.calibrationType
       };
-    } else {
+    } else if (calResult) {
       console.log('Falling back to single point cal due to slope out of range: ' + calResult.slope);
+    } else {
+      console.log('Falling back to single point cal due to calibration result denominator of zero');
     }
   }
 

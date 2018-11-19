@@ -555,7 +555,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     // have this BG Check
     for (let i = (bgChecks.length-1); i >= 0; --i) {
       if (Math.abs(bgChecks[i].dateMills - calData.dateMills) < 2*60*1000) {
-        // The Txmitter transmitter report varies the time around
+        // The CGM transmitter report varies the time around
         // the real time a little between read events.
         // If they are within two minutes, assume it's the same
         // check and bail out.
@@ -606,6 +606,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       bgChecks.push(calData);
 
       bgChecks = _.sortBy(bgChecks, ['dateMills']);
+
+      client.newCal(calData);
     }
 
     storage.setItem('bgChecks', bgChecks)
@@ -613,11 +615,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         console.log('Error saving bgChecks: ' + error);
       });
 
-    await calibration.expiredCalibration(storage, bgChecks, null, sensorInsert, null);
-
     storageLock.unlockStorage();
-
-    client.newCal(calData);
   };
 
   const processBatteryStatus = (batteryStatus) => {

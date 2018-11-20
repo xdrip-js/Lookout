@@ -626,6 +626,64 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     console.log('Got battery status message: ', txStatus);
   };
 
+  // test to see if we have a BG Check that needs
+  // to be entered into the pending messages
+  // as a calibration.
+  // Add it to pending if required.
+  const calibrateFromNS = async () => {
+    let latestBGCheckTime = null;
+    let pendingCalTime = 0;
+
+    let bgChecks = await storage.getItem('bgChecks')
+      .catch(error => {
+        console.log('Error getting bgChecks: ' + error);
+      });
+
+    if (!bgChecks) {
+      bgChecks = [];
+    }
+
+    if (bgChecks.length > 0) {
+      latestBGCheckTime = bgChecks[bgChecks.length-1].dateMills;
+    }
+
+    let latestTxmitterCal = await calibration.getLastCal(storage);
+    let latestTxmitterCalTime = 0;
+
+    if (latestTxmitterCal) {
+      latestTxmitterCalTime = latestTxmitterCal.dateMills;
+    }
+
+    let deltaTime = latestBGCheckTime - latestTxmitterCalTime;
+    let timeSinceTxmitterControl = Date.now() - lastSuccessfulRead;
+
+    let deltaFromLastCalSent = 5*60000; // initialize to a large value
+
+    _.each(pending, (msg) => {
+      if (msg.type === 'CalibrateSensor') {
+        pendingCalTime = msg.date;
+      }
+    });
+
+    if (lastSuccessfulTxmitterCalTime) {
+      deltaFromLastCalSent = Math.abs(lastSuccessfulTxmitterCalTime - pendingCalTime);
+    }
+
+    // If the following things are true, then add a calibration record to pending
+    //   There is not already a pending calibration
+    //   We have a transmitter calibration time from the transmitter
+    //   The time between the last BG Check and the last transmitter calibration time is more than 5 minutes
+    //   The time since this rig last successfully connected and read the transmitter is less than 15 minutes
+    //   The last successful calibration send to the transmitter is not the same as the last BG Check (prevents resending it on the next read)
+    if (!pendingCalTime && (deltaTime > 5*60000) && (timeSinceTxmitterControl < 15*60000) && latestTxmitterCalTime && (deltaFromLastCalSent > 2*60000)) {
+      let glucose = bgChecks[bgChecks.length-1].glucose;
+      console.log('Sending calibration value to transmitter: ' + glucose + ' at time: ' + moment(latestBGCheckTime).format());
+      pending.push({date: latestBGCheckTime, type: 'CalibrateSensor', glucose});
+      pendingCalTime = latestBGCheckTime;
+    }
+
+  };
+
   const listenToTransmitter = (id) => {
     if (!id) {
       console.log('Unable to listen to invalid Transmitter ID');
@@ -649,58 +707,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
           pending.push({type: 'BatteryStatus'});
         }
 
-        // Determine if we need to send the latest BG Check as a calibration
-        pendingCalTime = null;
-
-        _.each(pending, (msg) => {
-          if (msg.type === 'CalibrateSensor') {
-            pendingCalTime = msg.date;
-          }
-        });
-
-        let latestBGCheckTime = null;
-
-        let bgChecks = await storage.getItem('bgChecks')
-          .catch(error => {
-            console.log('Error getting bgChecks: ' + error);
-          });
-
-        if (!bgChecks) {
-          bgChecks = [];
-        }
-
-        if (bgChecks.length > 0) {
-          latestBGCheckTime = bgChecks[bgChecks.length-1].dateMills;
-        }
-
-        let latestTxmitterCal = await calibration.getLastCal(storage);
-        let latestTxmitterCalTime = 0;
-
-        if (latestTxmitterCal) {
-          latestTxmitterCalTime = latestTxmitterCal.dateMills;
-        }
-
-        let deltaTime = latestBGCheckTime - latestTxmitterCalTime;
-        let timeSinceTxmitterControl = Date.now() - lastSuccessfulRead;
-
-        let deltaFromLastCalSent = 5*60000; // initialize to a large value
-
-        if (lastSuccessfulTxmitterCalTime) {
-          deltaFromLastCalSent = Math.abs(lastSuccessfulTxmitterCalTime - pendingCalTime);
-        }
-
-        // If the following things are true, then add a calibration record to pending
-        //   There is not already a pending calibration
-        //   We have a transmitter calibration time from the transmitter
-        //   The time between the last BG Check and the last transmitter calibration time is more than 5 minutes
-        //   The time since this rig last successfully connected and read the transmitter is less than 15 minutes
-        //   The last successful calibration send to the transmitter is not the same as the last BG Check (prevents resending it on the next read)
-        if (!pendingCalTime && (deltaTime > 5*60000) && (timeSinceTxmitterControl < 15*60000) && latestTxmitterCalTime && (deltaFromLastCalSent > 2*60000)) {
-          let glucose = bgChecks[bgChecks.length-1].glucose;
-          console.log('Sending calibration value to transmitter: ' + glucose + ' at time: ' + moment(latestBGCheckTime).format());
-          pending.push({date: latestBGCheckTime, type: 'CalibrateSensor', glucose});
-          pendingCalTime = latestBGCheckTime;
-        }
+        pendingCalTime = await calibrateFromNS(pendingCalTime);
 
         pending = pending.filter((msg) => {
           // Don't send certain messages older than 12 minutes

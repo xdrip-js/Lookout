@@ -125,7 +125,7 @@ describe('Test Calibration', function() {
       'stateString': 'Need calibration',
     };
 
-    let lastCal = calibration.calculateTxmitterCalibration(null, 0, null, glucoseHist, currSGV);
+    let lastCal = calibration.calculateTxmitterCalibration(null, 0, null, null, glucoseHist, currSGV);
 
     lastCal.slope.should.be.greaterThan(800);
     lastCal.slope.should.be.lessThan(810);
@@ -168,7 +168,7 @@ describe('Test Calibration', function() {
       'stateString': 'Need calibration',
     };
 
-    let lastCal = calibration.calculateTxmitterCalibration(null, 0, null, glucoseHist, currSGV);
+    let lastCal = calibration.calculateTxmitterCalibration(null, 0, null, null, glucoseHist, currSGV);
 
     lastCal.slope.should.be.greaterThan(1050);
     lastCal.slope.should.be.lessThan(1060);

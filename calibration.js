@@ -142,7 +142,7 @@ const singlePointCalibration = (calibrationPairs) => {
   return returnVal;
 };
 
-const calculateTxmitterCalibration = (lastCal, lastTxmitterCalTime, sensorInsert, glucoseHist, currSGV) => {
+const calculateTxmitterCalibration = (lastCal, lastTxmitterCalTime, latestBgCheckTime, sensorInsert, glucoseHist, currSGV) => {
   // set it to a high number so we upload a new cal
   // if we don't have a previous calibration
 
@@ -233,6 +233,10 @@ const calculateTxmitterCalibration = (lastCal, lastTxmitterCalTime, sensorInsert
 
   if (calReturn) {
     console.log('Calculated new CGM calculated calibration with ' + calReturn.type + ' due to ' + calPairs.length + ' calibration pairs:\n', calReturn);
+  } else if (lastCal && latestBgCheckTime && (latestBgCheckTime.diff(moment(lastCal.date)) > 0)) {
+    console.log('BG Check occurred, but no CGM calculated calibration update needed. Setting calibration date to be after latest BG check time.');
+    lastCal.date = latestBgCheckTime.valueOf();
+    calReturn = lastCal;
   } else {
     console.log('No CGM calculated calibration update needed.');
   }
@@ -665,20 +669,20 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, sensorStop, gl
   sgv.inExtendedSession = false;
   sgv.inExpiredSession = false;
 
+  let latestBgCheckTime = null;
+
+  if (bgChecks.length > 0) {
+    latestBgCheckTime = moment(bgChecks[bgChecks.length-1].dateMills);
+  }
+
   if (glucoseHist.length > 0) {
-    newCal = calculateTxmitterCalibration(lastCal, lastTxmitterCalTime, sensorInsert, glucoseHist, sgv);
+    newCal = calculateTxmitterCalibration(lastCal, lastTxmitterCalTime, latestBgCheckTime, sensorInsert, glucoseHist, sgv);
 
     expiredCal = await expiredCalibration(storage, bgChecks, expiredCal, sensorInsert, sgv);
   }
 
   if (newCal) {
     lastCal = newCal;
-  }
-
-  let latestBgCheckTime = null;
-
-  if (bgChecks.length > 0) {
-    latestBgCheckTime = moment(bgChecks[bgChecks.length-1].dateMills);
   }
 
   if (!sgv.glucose && options.extend_sensor && validateTxmitterCalibration(sensorInsert, sensorStop, latestBgCheckTime, lastCal)) {

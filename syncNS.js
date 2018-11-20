@@ -581,7 +581,7 @@ const syncNS = async (storage_, storageLock_, transmitter_) => {
     return;
   }
 
-  if ((Date.now() - sensorStart.valueOf()) < 12*60000) {
+  if (sensorStart && (Date.now() - sensorStart.valueOf()) < 12*60000) {
     // if we just received a sensor start, go ahead
     // and see if we need to start a sensor session
     if (!transmitter.inSensorSession()) {

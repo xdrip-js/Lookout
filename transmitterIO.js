@@ -99,7 +99,14 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       await stopSensorSession();
     } else {
       let haveCal = await calibration.haveCalibration(storage);
-      let haveValidCal = await calibration.validateCalibration(storage, sensorInsert, sensorStop, bgChecks);
+
+      let latestBgCheckTime = null;
+
+      if (bgChecks.length > 0) {
+        latestBgCheckTime = moment(bgChecks[bgChecks.length-1].dateMills);
+      }
+
+      let haveValidCal = await calibration.validateCalibration(storage, sensorInsert, sensorStop, latestBgCheckTime);
 
       if (haveCal && !haveValidCal) {
         console.log('Transmitter not in session and found sensor change, start, or stop after latest calibration and transmitter not in session. Stopping Sensor Session.');

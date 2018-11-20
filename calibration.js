@@ -581,13 +581,13 @@ exports.haveCalibration = async (storage) => {
   return ((lastCal && (lastCal.type !== 'Unity')) || lastExpiredCal);
 };
 
-const validateTxmitterCalibration = (sensorInsert, sensorStop, bgChecks, lastCal) => {
+const validateTxmitterCalibration = (sensorInsert, sensorStop, latestBgCheckTime, lastCal) => {
 
   let bgCheckDelta = 0;
   let lastCalTime = moment(lastCal.date).subtract(6, 'minutes');
 
-  if (bgChecks.length > 0) {
-    bgCheckDelta = moment(bgChecks[bgChecks.length-1].dateMills).diff(lastCalTime);
+  if (latestBgCheckTime) {
+    bgCheckDelta = latestBgCheckTime.diff(lastCalTime);
   }
 
   let sensorInsertDelta = (sensorInsert && sensorInsert.diff(lastCalTime)) || 0;
@@ -628,11 +628,11 @@ const validateExpiredCalibration = (sensorInsert, sensorStop, lastExpiredCal) =>
   }
 };
 
-const validateCalibration = async (storage, sensorInsert, sensorStop, bgChecks) => {
+const validateCalibration = async (storage, sensorInsert, sensorStop, latestBgCheckTime) => {
   let lastCal = await getTxmitterCal(storage);
   let lastExpiredCal = await getExpiredCal(storage);
 
-  return (validateTxmitterCalibration(sensorInsert, sensorStop, bgChecks, lastCal) || validateExpiredCalibration(sensorInsert, sensorStop, lastExpiredCal));
+  return (validateTxmitterCalibration(sensorInsert, sensorStop, latestBgCheckTime, lastCal) || validateExpiredCalibration(sensorInsert, sensorStop, lastExpiredCal));
 };
 
 exports.validateCalibration = validateCalibration;
@@ -675,7 +675,13 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, sensorStop, gl
     lastCal = newCal;
   }
 
-  if (!sgv.glucose && options.extend_sensor && validateTxmitterCalibration(sensorInsert, sensorStop, bgChecks, lastCal)) {
+  let latestBgCheckTime = null;
+
+  if (bgChecks.length > 0) {
+    latestBgCheckTime = moment(bgChecks[bgChecks.length-1].dateMills);
+  }
+
+  if (!sgv.glucose && options.extend_sensor && validateTxmitterCalibration(sensorInsert, sensorStop, latestBgCheckTime, lastCal)) {
     sgv.glucose = calcGlucose(sgv, lastCal);
     sgv.inExpiredSession = true;
 

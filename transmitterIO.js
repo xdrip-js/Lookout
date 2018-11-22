@@ -733,7 +733,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         let now = moment();
 
         _.each(gaps, (gap) => {
-          if (!minGapDate || ((minGapDate.diff(gap.gapStart) < 0) && (gap.gapStart.diff(now, 'minutes') > 120))) {
+          if (!minGapDate || ((minGapDate.diff(gap.gapStart) < 0) && (now.diff(gap.gapStart, 'minutes') < 120))) {
             minGapDate = gap.gapStart;
           }
 

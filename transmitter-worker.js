@@ -37,4 +37,8 @@ transmitter.on('sawTransmitter', data => {
   process.send({msg: 'sawTransmitter', data});
 });
 
+transmitter.on('backfillData', data => {
+  process.send({msg: 'backfillData', data});
+});
+
 transmitter.on('disconnect', process.exit);

@@ -701,6 +701,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     }
 
     let deltaTime = latestBGCheckTime - latestTxmitterCalTime;
+    let bgCheckAge = Date.now() - latestBGCheckTime;
     let timeSinceTxmitterControl = Date.now() - lastSuccessfulRead;
 
     let deltaFromLastCalSent = 5*60000; // initialize to a large value
@@ -721,7 +722,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     //   The time between the last BG Check and the last transmitter calibration time is more than 5 minutes
     //   The time since this rig last successfully connected and read the transmitter is less than 15 minutes
     //   The last successful calibration send to the transmitter is not the same as the last BG Check (prevents resending it on the next read)
-    if (!pendingCalTime && (deltaTime > 5*60000) && (timeSinceTxmitterControl < 15*60000) && latestTxmitterCalTime && (deltaFromLastCalSent > 2*60000)) {
+    //   The BG Check occurred in the last 30 minutes
+    if (!pendingCalTime && (deltaTime > 5*60000) && (bgCheckAge < 15*60000) && (timeSinceTxmitterControl < 15*60000) && latestTxmitterCalTime && (deltaFromLastCalSent > 2*60000)) {
       let glucose = bgChecks[bgChecks.length-1].glucose;
       console.log('Sending calibration value to transmitter: ' + glucose + ' at time: ' + moment(latestBGCheckTime).format());
       pending.push({date: latestBGCheckTime, type: 'CalibrateSensor', glucose});

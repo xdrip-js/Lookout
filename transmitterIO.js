@@ -643,10 +643,13 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     _.each(backfillData, (glucose) => {
       let sgvDate = moment(glucose.time);
 
+      console.log('Received backfill glucose: ' + glucose.glucose + ' time: ' + sgvDate.format());
+
       if (glucose.type == 7) {
         _.each(gaps, (gap) => {
           glucose.readDateMills = moment(glucose.readDate).valueOf();
-          if ((gap.gapStart.diff(sgvDate) > 0) && (gap.gapEnd.diff(sgvDate) < 0)) {
+          if ((gap.gapStart.diff(sgvDate) < 0) && (gap.gapEnd.diff(sgvDate) > 0)) {
+            console.log('Storing backfill glucose: ' + glucose.glucose + ' time: ' + sgvDate.format());
             glucoseHist.push({
               'readDateMills': sgvDate.valueOf()
               , 'glucose': glucose.glucose
@@ -822,7 +825,6 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         // times we saw the transmitter
         ++txFailedReads;
       } else if (m.msg == 'backfillData') {
-        console.log('backfillData Received: ', m);
         processBackfillData(m.data);
       }
     });
@@ -983,6 +985,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     // Start a sensor session at time
     startSensorTime: (startTime) => {
       startSession(startTime.valueOf());
+    }
     },
 
     // Start a sensor session back started 2 hours

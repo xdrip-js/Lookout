@@ -282,7 +282,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     xDripAPS.postStatus(txId, sgv, txStatus, activeCal, activeCalTime);
   };
 
-  // Store the last hour of glucose readings
+  // Store the last 24 hours of glucose readings
   const storeNewGlucose = async (glucoseHist, sgv) => {
 
     glucoseHist.push(sgv);
@@ -633,6 +633,42 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     console.log('Got battery status message: ', txStatus);
   };
 
+  const processBackfillData = async (backfillData) => {
+
+    await storageLock.lockStorage();
+
+    let glucoseHist = await storage.getItem('glucoseHist');
+    let gaps = sgvGaps(glucoseHist);
+    
+    _.each(backfillData, (glucose) => {
+      let sgvDate = moment(glucose.time);
+
+      if (glucose.type == 7) {
+        _.each(gaps, (gap) => {
+          glucose.readDateMills = moment(glucose.readDate).valueOf();
+          if ((gap.gapStart.diff(sgvDate) > 0) && (gap.gapEnd.diff(sgvDate) < 0)) {
+            glucoseHist.push({
+              'readDateMills': sgvDate.valueOf()
+              , 'glucose': glucose.glucose
+              , 'readDate': sgvDate.format()
+              , 'inSession': true
+              , 'g5calibrated': true
+            });
+          }
+        });
+      }
+    });
+
+    glucoseHist = _.sortBy(glucoseHist, ['readDateMills']);
+
+    await storage.setItem('glucoseHist', glucoseHist)
+      .catch((err) => {
+        console.log('Unable to store glucoseHist: ' + err);
+      });
+
+    storageLock.unlockStorage();
+  };
+
   // test to see if we have a BG Check that needs
   // to be entered into the pending messages
   // as a calibration.
@@ -787,6 +823,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         ++txFailedReads;
       } else if (m.msg == 'backfillData') {
         console.log('backfillData Received: ', m);
+        processBackfillData(m.data);
       }
     });
 

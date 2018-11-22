@@ -645,7 +645,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
       console.log('Received backfill glucose: ' + glucose.glucose + ' time: ' + sgvDate.format());
 
-      if (glucose.type == 7) {
+      if (glucose.type == 7 || glucose.type == 6) {
         _.each(gaps, (gap) => {
           glucose.readDateMills = moment(glucose.readDate).valueOf();
           if ((gap.gapStart.diff(sgvDate) < 0) && (gap.gapEnd.diff(sgvDate) > 0)) {

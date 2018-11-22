@@ -654,6 +654,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
               'readDateMills': sgvDate.valueOf()
               , 'glucose': glucose.glucose
               , 'readDate': sgvDate.format()
+              , 'trend': 0
               , 'inSession': true
             });
           }

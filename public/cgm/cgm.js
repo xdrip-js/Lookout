@@ -76,6 +76,9 @@ angular.module('AngularOpenAPS.cgm', [
       get voltageb() {
         return glucose ? glucose.voltageb : null;
       },
+      get isG6() {
+        return (id.substr(0, 1) === '8');
+      },
       reset() {
         socket.emit('resetTx');
       },

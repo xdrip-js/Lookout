@@ -85,18 +85,22 @@ module.exports = (options) => {
         transmitter.resetTx();
       }
     });
-    socket.on('startSensor', () => {
-      debug('received startSensor command');
+    socket.on('startSensor', (sensorSerialCode) => {
+      if (sensorSerialCode) {
+        debug(`received startSensor command with sensor code ${sensorSerialCode}`);
+      } else {
+        debug('received startSensor command');
+      }
 
       if (transmitter) {
-        transmitter.startSensor();
+        transmitter.startSensor(sensorSerialCode);
       }
     });
-    socket.on('backStartSensor', () => {
+    socket.on('backStartSensor', (sensorSerialCode) => {
       debug('received backStartSensor command');
 
       if (transmitter) {
-        transmitter.backStartSensor();
+        transmitter.backStartSensor(sensorSerialCode);
       }
     });
     socket.on('stopSensor', () => {

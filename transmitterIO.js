@@ -249,7 +249,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     return calibration.haveCalibration(storage);
   };
 
-  const startSession = async (startTime) => {
+  const startSession = async (startTime, sensorSerialCode) => {
     const sgv = await getGlucose();
 
     if (!inSensorSession(sgv)) {
@@ -271,7 +271,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       });
 
       if (!startPending) {
-        pending.push({ date: startTime, type: 'StartSensor' });
+        pending.push({ date: startTime, type: 'StartSensor', sensorSerialCode });
 
         pending = filterPending(pending);
 
@@ -1116,6 +1116,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     }
   };
 
+  const g6Txmitter = () => (txId.substr(0, 1) === '8');
+
   // Create an object that can be used
   // to interact with the transmitter.
   const transmitterIO = {
@@ -1159,18 +1161,22 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     },
 
     // Start a sensor session
-    startSensor: () => {
-      startSession(Date.now());
+    startSensor: (sensorSerialCode) => {
+      startSession(Date.now(), sensorSerialCode);
     },
 
     // Start a sensor session at time
     startSensorTime: (startTime) => {
-      startSession(startTime.valueOf());
+      if (g6Txmitter()) {
+        xDripAPS.postAnnouncement('G6 Start Unsupported by NS');
+      } else {
+        startSession(startTime.valueOf());
+      }
     },
 
     // Start a sensor session back started 2 hours
-    backStartSensor: () => {
-      startSession(Date.now() - 2 * 60 * 60 * 1000);
+    backStartSensor: (sensorSerialCode) => {
+      startSession(Date.now() - 2 * 60 * 60 * 1000, sensorSerialCode);
     },
 
     stopSensor: async () => {

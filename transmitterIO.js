@@ -985,7 +985,6 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     // Start a sensor session at time
     startSensorTime: (startTime) => {
       startSession(startTime.valueOf());
-    }
     },
 
     // Start a sensor session back started 2 hours

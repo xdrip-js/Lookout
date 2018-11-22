@@ -655,7 +655,6 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
               , 'glucose': glucose.glucose
               , 'readDate': sgvDate.format()
               , 'inSession': true
-              , 'g5calibrated': true
             });
           }
         });

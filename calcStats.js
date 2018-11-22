@@ -106,7 +106,6 @@ exports.calcTrend = (calcGlucose, glucoseHist, lastCal, sgv) => {
 
   if (glucoseHist.length > 0) {
     let maxDate = null;
-    let sliceStart = 0;
     let timeSpan = 0;
     let totalDelta = 0;
 

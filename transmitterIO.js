@@ -725,6 +725,28 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
           return true;
         });
 
+        let glucoseHist = await storage.getItem('glucoseHist');
+        let gaps = sgvGaps(glucoseHist);
+
+        let minGapDate = null;
+        let maxGapDate = null;
+        let now = moment();
+
+        _.each(gaps, (gap) => {
+          if (!minGapDate || ((minGapDate.diff(gap.gapStart) < 0) && (gap.gapStart.diff(now, 'minutes') > 120))) {
+            minGapDate = gap.gapStart;
+          }
+
+          if (!maxGapDate || (maxGapDate.diff(gap.gapEnd) < 0)) {
+            maxGapDate = gap.gapEnd;
+          }
+        });
+
+        if (minGapDate !== null) {
+          console.log('Requesting backfill - start: ' + minGapDate.format() + ' end: ' + maxGapDate.format());
+          pending.push({ type: 'Backfill', date: minGapDate.valueOf(), endDate: maxGapDate.valueOf() });
+        }
+
         worker.send(pending);
         // NOTE: this will lead to missed messages if the rig
         // shuts down before acting on them, or in the
@@ -763,6 +785,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         // increment failed reads counter so we know how many
         // times we saw the transmitter
         ++txFailedReads;
+      } else if (m.msg == 'backfillData') {
+        console.log('backfillData Received: ', m);
       }
     });
 
@@ -835,6 +859,37 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     // If the transmitter is not in a session, return whether
     // we have a valid set of calibration values
     return calibration.haveCalibration(storage);
+  };
+
+  const sgvGaps = (rigSGVs) => {
+    let now = moment().valueOf();
+    let minDate = moment().subtract(24, 'hours').valueOf();
+
+    let rigGaps = [ ];
+
+    if (rigSGVs && (rigSGVs.length > 0)) {
+      let prevTime = rigSGVs[0].readDateMills;
+
+      for (let i = 1; i < rigSGVs.length; ++i) {
+        // Add 1 minute to gapStart and subtract 1 minute from gapEnd to prevent duplicats
+        let gap = { gapStart: moment(prevTime+60000), gapEnd: moment(rigSGVs[i].readDateMills-60000) };
+        if ((rigSGVs[i].readDateMills - prevTime) > 6*60000) {
+          rigGaps.push(gap);
+        }
+
+        prevTime = rigSGVs[i].readDateMills;
+      }
+
+      if ((now - prevTime) > 6*60000) {
+        // Add 1 minute to gapStart to prevent duplicats
+        rigGaps.push( { gapStart: moment(prevTime+60000), gapEnd: moment(now) } );
+      }
+    } else {
+      // Add 1 minute to gapStart to prevent duplicats
+      rigGaps.push( { gapStart: moment(minDate+60000), gapEnd: moment(now) } );
+    }
+
+    return rigGaps;
   };
 
   // Create an object that can be used
@@ -969,8 +1024,11 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       let sgv = getGlucose();
 
       return inSensorSession(sgv);
-    }
+    },
 
+    sgvGaps: (rigSGVs) => {
+      return sgvGaps(rigSGVs);
+    }
   };
 
   // Provide the object to the client

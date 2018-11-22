@@ -181,7 +181,7 @@ const calculateTxmitterCalibration = (lastCal, lastTxmitterCalTime, latestBgChec
       // Only use up to 10 of the most recent suitable readings
       let sgv = glucoseHist[i];
 
-      if ((sgv.readDateMills > (lastTxmitterCalTime + 12*60*1000)) && (sgv.glucose < 300) && (sgv.glucose > 80) && sgv.g5calibrated && (!sensorInsert || (sgv.readDateMills > sensorInsert.valueOf()))) {
+      if (('unfiltered' in sgv) && (sgv.readDateMills > (lastTxmitterCalTime + 12*60*1000)) && (sgv.glucose < 300) && (sgv.glucose > 80) && sgv.g5calibrated && (!sensorInsert || (sgv.readDateMills > sensorInsert.valueOf()))) {
         calPairs.unshift(sgv);
       }
     }

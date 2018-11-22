@@ -772,7 +772,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         let now = moment();
 
         _.each(gaps, (gap) => {
-          if (!minGapDate || ((minGapDate.diff(gap.gapStart) < 0) && (now.diff(gap.gapStart, 'minutes') < 120))) {
+          if ((now.diff(gap.gapStart, 'minutes') < 120) && (!minGapDate || (minGapDate.diff(gap.gapStart) < 0))) {
             minGapDate = gap.gapStart;
           }
 
@@ -781,7 +781,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
           }
         });
 
-        if (minGapDate !== null) {
+        if ((minGapDate !== null) && glucoseHist && transmitterInSession(glucoseHist[glucoseHist.length-1])) {
           console.log('Requesting backfill - start: ' + minGapDate.format() + ' end: ' + maxGapDate.format());
           pending.push({ type: 'Backfill', date: minGapDate.valueOf(), endDate: maxGapDate.valueOf() });
         }

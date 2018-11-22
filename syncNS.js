@@ -556,7 +556,7 @@ const syncNS = async (storage_, storageLock_, transmitter_) => {
 
     setTimeout(() => {
       // Restart the syncNS after 5 minute
-      syncNS(storage, storageLock);
+      syncNS(storage, storageLock, transmitter);
     }, 5 * 60000);
 
     return;
@@ -601,7 +601,7 @@ const syncNS = async (storage_, storageLock_, transmitter_) => {
 
   setTimeout(() => {
     // Restart the syncNS after 5 minute
-    syncNS(storage, storageLock);
+    syncNS(storage, storageLock, transmitter);
   }, timeDelay);
 };
 

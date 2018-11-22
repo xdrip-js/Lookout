@@ -287,7 +287,11 @@ const syncSGVs = async () => {
     });
   }));
 
-  let rigGaps = transmitter.sgvGaps(rigSGVs);
+  let rigGaps = null;
+
+  if (transmitter) {
+    rigGaps = transmitter.sgvGaps(rigSGVs);
+  }
 
   console.log('rigGaps: ', rigGaps);
 

@@ -469,6 +469,13 @@ const syncBGChecks = async (sensorInsert, sensorStop) => {
 
   rigBGChecks = rigBGChecks.slice(sliceStart);
 
+  // try to fill in any missing unfiltered values
+  for (let i=0; i < bgChecks.length; ++i) {
+    if (transmitter && (!('unfiltered' in bgChecks[i]) || !bgChecks[i].unfiltered)) {
+      bgChecks[i].unfiltered = await transmitter.getUnfiltered(moment(bgChecks[i].dateMills));
+    }
+  }
+
   await storage.setItem('bgChecks', rigBGChecks)
     .catch((err) => {
       console.log('Unable to store bgChecks: ' + err);

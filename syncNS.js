@@ -470,9 +470,9 @@ const syncBGChecks = async (sensorInsert, sensorStop) => {
   rigBGChecks = rigBGChecks.slice(sliceStart);
 
   // try to fill in any missing unfiltered values
-  for (let i=0; i < bgChecks.length; ++i) {
-    if (transmitter && (!('unfiltered' in bgChecks[i]) || !bgChecks[i].unfiltered)) {
-      bgChecks[i].unfiltered = await transmitter.getUnfiltered(moment(bgChecks[i].dateMills));
+  for (let i=0; i < rigBGChecks.length; ++i) {
+    if (transmitter && (!('unfiltered' in rigBGChecks[i]) || !rigBGChecks[i].unfiltered)) {
+      rigBGChecks[i].unfiltered = await transmitter.getUnfiltered(moment(rigBGChecks[i].dateMills));
     }
   }
 

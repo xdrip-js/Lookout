@@ -55,6 +55,7 @@ const argv = require('yargs')
   })
   .option('no_nightscout', {
     boolean: true,
+    describe: 'Disable Nightscout interaction',
     alias: 'n',
     default: false
   })

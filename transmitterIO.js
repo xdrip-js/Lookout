@@ -663,6 +663,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
               , 'glucose': glucose.glucose
               , 'readDate': sgvDate.format()
               , 'trend': 0
+              , 'state': glucose.type
               , 'inSession': true
             });
           }

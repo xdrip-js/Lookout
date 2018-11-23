@@ -185,6 +185,15 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         console.log('Error getting rig sensorStart: ' + error);
       });
 
+    if (!sensorStart && transmitterInSession(sgv)) {
+      sensorStart = moment(sgv.sessionStartDate);
+
+      storage.setItem('sensorStart', sensorStart.valueOf())
+        .catch(error => {
+          console.log('Error saving rig sensorStart: ' + error);
+        });
+    }
+
     if (sensorStart) {
       sensorStart = moment(sensorStart);
       console.log('SyncNS Rig sensor start - date: ' + sensorStart.format());

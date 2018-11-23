@@ -4,7 +4,7 @@ const storage = require('node-persist');
 const storageLock = require('./storageLock');
 
 const argv = require('yargs')
-  .usage('$0 [--extend_sensor] [--expired_cal] [--port <port>] [--openaps <directory>] [--sim]')
+  .usage('$0 [--extend_sensor] [--expired_cal] [--port <port>] [--openaps <directory>] [--sim] [--fakemeter] [--offline_fakemeter] [--no_nightscout]')
   .option('extend_sensor', {
     boolean: true,
     describe: 'Enables extended sensor session mode',
@@ -53,6 +53,12 @@ const argv = require('yargs')
     alias: 'd',
     default: '/root/myopenaps'
   })
+  .option('no_nightscout', {
+    boolean: true,
+    describe: 'Disable Nightscout interaction',
+    alias: 'n',
+    default: false
+  })
   .wrap(null)
   .strict(true)
   .help('help');
@@ -67,7 +73,8 @@ let options = {
   openaps: params.openaps,
   fakemeter: params.fakemeter,
   offline_fakemeter: params.offline_fakemeter,
-  verbose: params.verbose
+  verbose: params.verbose,
+  nightscout: !params.no_nightscout
 };
 
 const init = async (options) => {
@@ -77,11 +84,9 @@ const init = async (options) => {
   // not the calling directory
   await storage.init({dir: __dirname + '/storage'});
 
-  const TransmitterIO = options.sim ? require('./transmitterIO-simulated') : require('./transmitterIO');
+  const TransmitterIO = require('./transmitterIO');
 
   const ClientIO = require('./clientIO');
-
-  const syncNS = require('./syncNS');
 
   // Start the web GUI server
   const client = ClientIO(options);
@@ -92,7 +97,7 @@ const init = async (options) => {
   let transmitter = await TransmitterIO(options, storage, storageLock, client, fakeMeter);
 
   // Start the Nightscout synchronization loop task
-  syncNS(storage, storageLock, transmitter);
+  options.nightscout && require('./syncNS')(storage, storageLock, transmitter);
 };
 
 init(options);

@@ -60,7 +60,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       } else if (!txId) {
         // If the current txId was null,
         // then we need to start the listener
-        listenToTransmitter(txId);
+        listenToTransmitter(value);
       }
 
       console.log('received id of ' + value);
@@ -160,7 +160,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         console.log('Unable to store sensorStop: ' + err);
       });
 
-    xDripAPS.postEvent('Sensor Stop', now);
+    options.nightscout && xDripAPS.postEvent('Sensor Stop', now);
 
     await storage.del('glucoseHist');
     await calibration.clearCalibration(storage);
@@ -174,7 +174,6 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       .catch(error => {
         console.log('Error getting rig sensorInsert: ' + error);
       });
-
     if (sensorInsert) {
       sensorInsert = moment(sensorInsert);
       console.log('SyncNS Rig sensor insert - date: ' + sensorInsert.format());
@@ -258,7 +257,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       let prevSgv = await getGlucose();
 
       if (!prevSgv || (sgv.state != prevSgv.state)) {
-        xDripAPS.postAnnouncement('Sensor: ' + sgv.stateString);
+        options.nightscout && xDripAPS.postAnnouncement('Sensor: ' + sgv.stateString);
       }
     }
 
@@ -288,7 +287,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     let activeCalTime = (activeCal && activeCal.dateMills) || null;
 
-    xDripAPS.postStatus(txId, sgv, txStatus, activeCal, activeCalTime);
+    options.nightscout && xDripAPS.postStatus(txId, sgv, txStatus, activeCal, activeCalTime);
   };
 
   // Store the last hour of glucose readings
@@ -327,7 +326,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       await fakeMeter.glucose(sgv.glucose);
     }
 
-    xDripAPS.post(sgv, sendSGV);
+    options.nightscout && xDripAPS.post(sgv, sendSGV);
   };
 
   const txStatusString = (state) => {
@@ -700,7 +699,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
   };
 
-  const listenToTransmitter = (id) => {
+  const listenToTransmitter = async (id) => {
     if (!id) {
       console.log('Unable to listen to invalid Transmitter ID');
       return;
@@ -709,11 +708,19 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     // Remove the BT device so it starts from scratch
     removeBTDevice(id);
 
-    worker = cp.fork(__dirname + '/transmitter-worker', [id], {
-      env: {
-        DEBUG: 'transmitter,bluetooth-manager'
-      }
-    });
+    if (options.sim) {
+      let prevGlucose = await getGlucose();
+
+      prevGlucose = prevGlucose ? prevGlucose.glucose : 120;
+
+      worker = cp.fork(__dirname + '/transmitter-simulator', [prevGlucose], { });
+    } else {
+      worker = cp.fork(__dirname + '/transmitter-worker', [id], {
+        env: {
+          DEBUG: 'transmitter,bluetooth-manager'
+        }
+      });
+    }
 
     worker.on('message', async m => {
       let pendingCalTime;
@@ -742,7 +749,6 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         client.newPending(pending);
       } else if (m.msg == 'glucose') {
         const glucose = m.data;
-
         glucose.readDateMills = moment(glucose.readDate).valueOf();
         glucose.voltagea = txStatus && txStatus.voltagea || null;
         glucose.voltageb = txStatus && txStatus.voltageb || null;
@@ -958,7 +964,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
       pending.push({date: Date.now(), type: 'CalibrateSensor', glucose});
 
-      xDripAPS.postBGCheck(calData);
+      options.nightscout && xDripAPS.postBGCheck(calData);
 
       client.newPending(pending);
     },

@@ -290,7 +290,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     options.nightscout && xDripAPS.postStatus(txId, sgv, txStatus, activeCal, activeCalTime);
   };
 
-  // Store the last hour of glucose readings
+  // Store the last 24 hours of glucose readings
   const storeNewGlucose = async (glucoseHist, sgv) => {
 
     glucoseHist.push(sgv);
@@ -641,6 +641,45 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     console.log('Got battery status message: ', txStatus);
   };
 
+  const processBackfillData = async (backfillData) => {
+
+    await storageLock.lockStorage();
+
+    let glucoseHist = await storage.getItem('glucoseHist');
+    let gaps = sgvGaps(glucoseHist);
+    
+    _.each(backfillData, (glucose) => {
+      let sgvDate = moment(glucose.time);
+
+      console.log('Received backfill glucose: ' + glucose.glucose + ' time: ' + sgvDate.format());
+
+      if (glucose.type == 7 || glucose.type == 6) {
+        _.each(gaps, (gap) => {
+          glucose.readDateMills = moment(glucose.readDate).valueOf();
+          if ((gap.gapStart.diff(sgvDate) < 0) && (gap.gapEnd.diff(sgvDate) > 0)) {
+            console.log('Storing backfill glucose: ' + glucose.glucose + ' time: ' + sgvDate.format());
+            glucoseHist.push({
+              'readDateMills': sgvDate.valueOf()
+              , 'glucose': glucose.glucose
+              , 'readDate': sgvDate.format()
+              , 'trend': 0
+              , 'inSession': true
+            });
+          }
+        });
+      }
+    });
+
+    glucoseHist = _.sortBy(glucoseHist, ['readDateMills']);
+
+    await storage.setItem('glucoseHist', glucoseHist)
+      .catch((err) => {
+        console.log('Unable to store glucoseHist: ' + err);
+      });
+
+    storageLock.unlockStorage();
+  };
+
   // test to see if we have a BG Check that needs
   // to be entered into the pending messages
   // as a calibration.
@@ -670,6 +709,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     }
 
     let deltaTime = latestBGCheckTime - latestTxmitterCalTime;
+    let bgCheckAge = Date.now() - latestBGCheckTime;
     let timeSinceTxmitterControl = Date.now() - lastSuccessfulRead;
 
     let deltaFromLastCalSent = 5*60000; // initialize to a large value
@@ -690,7 +730,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     //   The time between the last BG Check and the last transmitter calibration time is more than 5 minutes
     //   The time since this rig last successfully connected and read the transmitter is less than 15 minutes
     //   The last successful calibration send to the transmitter is not the same as the last BG Check (prevents resending it on the next read)
-    if (!pendingCalTime && (deltaTime > 5*60000) && (timeSinceTxmitterControl < 15*60000) && latestTxmitterCalTime && (deltaFromLastCalSent > 2*60000)) {
+    //   The BG Check occurred in the last 30 minutes
+    if (!pendingCalTime && (deltaTime > 5*60000) && (bgCheckAge < 15*60000) && (timeSinceTxmitterControl < 15*60000) && latestTxmitterCalTime && (deltaFromLastCalSent > 2*60000)) {
       let glucose = bgChecks[bgChecks.length-1].glucose;
       console.log('Sending calibration value to transmitter: ' + glucose + ' at time: ' + moment(latestBGCheckTime).format());
       pending.push({date: latestBGCheckTime, type: 'CalibrateSensor', glucose});
@@ -741,6 +782,28 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
           return true;
         });
 
+        let glucoseHist = await storage.getItem('glucoseHist');
+        let gaps = sgvGaps(glucoseHist);
+
+        let minGapDate = null;
+        let maxGapDate = null;
+        let now = moment();
+
+        _.each(gaps, (gap) => {
+          if ((now.diff(gap.gapStart, 'minutes') < 120) && (!minGapDate || (minGapDate.diff(gap.gapStart) < 0))) {
+            minGapDate = gap.gapStart;
+          }
+
+          if (!maxGapDate || (maxGapDate.diff(gap.gapEnd) < 0)) {
+            maxGapDate = gap.gapEnd;
+          }
+        });
+
+        if ((minGapDate !== null) && glucoseHist && transmitterInSession(glucoseHist[glucoseHist.length-1])) {
+          console.log('Requesting backfill - start: ' + minGapDate.format() + ' end: ' + maxGapDate.format());
+          pending.push({ type: 'Backfill', date: minGapDate.valueOf(), endDate: maxGapDate.valueOf() });
+        }
+
         worker.send(pending);
         // NOTE: this will lead to missed messages if the rig
         // shuts down before acting on them, or in the
@@ -778,6 +841,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         // increment failed reads counter so we know how many
         // times we saw the transmitter
         ++txFailedReads;
+      } else if (m.msg == 'backfillData') {
+        processBackfillData(m.data);
       }
     });
 
@@ -850,6 +915,37 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     // If the transmitter is not in a session, return whether
     // we have a valid set of calibration values
     return calibration.haveCalibration(storage);
+  };
+
+  const sgvGaps = (rigSGVs) => {
+    let now = moment().valueOf();
+    let minDate = moment().subtract(24, 'hours').valueOf();
+
+    let rigGaps = [ ];
+
+    if (rigSGVs && (rigSGVs.length > 0)) {
+      let prevTime = rigSGVs[0].readDateMills;
+
+      for (let i = 1; i < rigSGVs.length; ++i) {
+        // Add 1 minute to gapStart and subtract 1 minute from gapEnd to prevent duplicats
+        let gap = { gapStart: moment(prevTime+60000), gapEnd: moment(rigSGVs[i].readDateMills-60000) };
+        if ((rigSGVs[i].readDateMills - prevTime) > 6*60000) {
+          rigGaps.push(gap);
+        }
+
+        prevTime = rigSGVs[i].readDateMills;
+      }
+
+      if ((now - prevTime) > 6*60000) {
+        // Add 1 minute to gapStart to prevent duplicats
+        rigGaps.push( { gapStart: moment(prevTime+60000), gapEnd: moment(now) } );
+      }
+    } else {
+      // Add 1 minute to gapStart to prevent duplicats
+      rigGaps.push( { gapStart: moment(minDate+60000), gapEnd: moment(now) } );
+    }
+
+    return rigGaps;
   };
 
   // Create an object that can be used
@@ -984,8 +1080,11 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       let sgv = getGlucose();
 
       return inSensorSession(sgv);
-    }
+    },
 
+    sgvGaps: (rigSGVs) => {
+      return sgvGaps(rigSGVs);
+    }
   };
 
   // Provide the object to the client

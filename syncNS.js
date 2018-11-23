@@ -194,7 +194,6 @@ const syncSGVs = async () => {
     return sgv;
   });
 
-  let now = moment().valueOf();
   let minDate = moment().subtract(24, 'hours').valueOf();
 
   // remote items older than 24 hours
@@ -288,28 +287,10 @@ const syncSGVs = async () => {
     });
   }));
 
-  let rigGaps = [ ];
+  let rigGaps = null;
 
-  if (rigSGVs.length > 0) {
-    let prevTime = rigSGVs[0].readDateMills;
-
-    for (let i = 1; i < rigSGVs.length; ++i) {
-      // Add 1 minute to gapStart and subtract 1 minute from gapEnd to prevent duplicats
-      let gap = { gapStart: moment(prevTime+60000), gapEnd: moment(rigSGVs[i].readDateMills-60000) };
-      if ((rigSGVs[i].readDateMills - prevTime) > 6*60000) {
-        rigGaps.push(gap);
-      }
-
-      prevTime = rigSGVs[i].readDateMills;
-    }
-
-    if ((now - prevTime) > 6*60000) {
-      // Add 1 minute to gapStart to prevent duplicats
-      rigGaps.push( { gapStart: moment(prevTime+60000), gapEnd: moment(now) } );
-    }
-  } else {
-    // Add 1 minute to gapStart to prevent duplicats
-    rigGaps.push( { gapStart: moment(minDate+60000), gapEnd: moment(now) } );
+  if (transmitter) {
+    rigGaps = transmitter.sgvGaps(rigSGVs);
   }
 
   console.log('rigGaps: ', rigGaps);
@@ -575,7 +556,7 @@ const syncNS = async (storage_, storageLock_, transmitter_) => {
 
     setTimeout(() => {
       // Restart the syncNS after 5 minute
-      syncNS(storage, storageLock);
+      syncNS(storage, storageLock, transmitter);
     }, 5 * 60000);
 
     return;
@@ -620,7 +601,7 @@ const syncNS = async (storage_, storageLock_, transmitter_) => {
 
   setTimeout(() => {
     // Restart the syncNS after 5 minute
-    syncNS(storage, storageLock);
+    syncNS(storage, storageLock, transmitter);
   }, timeDelay);
 };
 

@@ -73,7 +73,7 @@ exports.calcSensorNoise = (calcGlucose, glucoseHist, lastCal, sgv) => {
 
   for (let i = numRecords; i < glucoseHist.length; ++i) {
     // Only use values that are > 30 to filter out invalid values.
-    if (glucoseHist[i].glucose > 30) {
+    if ((glucoseHist[i].glucose > 30) && ('unfiltered' in glucoseHist[i])) {
       // use the unfiltered data with the most recent calculated calibration value
       // this will provide a noise calculation that is independent of calibration jumps
       sgvArr.push({
@@ -106,19 +106,18 @@ exports.calcTrend = (calcGlucose, glucoseHist, lastCal, sgv) => {
 
   if (glucoseHist.length > 0) {
     let maxDate = null;
-    let sliceStart = 0;
     let timeSpan = 0;
     let totalDelta = 0;
 
-    // delete any deltas > 16 minutes
+    sgvHist = [ ];
+
+    // delete any deltas > 16 minutes and any that don't have an unfiltered value (backfill records)
     let minDate = moment().subtract(16, 'minutes').valueOf();
     for (var i=0; i < glucoseHist.length; ++i) {
-      if (glucoseHist[i].readDateMills < minDate) {
-        sliceStart = i+1;
+      if ((glucoseHist[i].readDateMills >= minDate) && ('unfiltered' in glucoseHist[i])) {
+        sgvHist.push(glucoseHist[i]);
       }
     }
-
-    sgvHist = glucoseHist.slice(sliceStart);
 
     if (sgv) {
       sgvHist.push(sgv);

@@ -125,7 +125,7 @@ describe('Test Calibration', function() {
       'stateString': 'Need calibration',
     };
 
-    let lastCal = calibration.calculateG5Calibration(null, 0, null, glucoseHist, currSGV);
+    let lastCal = calibration.calculateTxmitterCalibration(null, 0, null, null, glucoseHist, currSGV);
 
     lastCal.slope.should.be.greaterThan(800);
     lastCal.slope.should.be.lessThan(810);
@@ -134,7 +134,7 @@ describe('Test Calibration', function() {
     lastCal.type.should.equal('LeastSquaresRegression');
   });
 
-  it('should not calculate Single Point calibration if not enough records', function() {
+  it('should calculate Single Point calibration if not enough records', function() {
 
     let glucoseHist = [{
       'inSession': true,
@@ -148,20 +148,6 @@ describe('Test Calibration', function() {
       'trend': -3.9982585362819747,
       'canBeCalibrated': true,
       'rssi': -59,
-      'g5calibrated': true,
-      'stateString': 'Need calibration',
-    }, {
-      'inSession': true,
-      'status': 0,
-      'state': 7,
-      'readDate': 1528890689766,
-      'readDateMills': 1528890689766,
-      'filtered': 159360,
-      'unfiltered': 156544,
-      'glucose': 153,
-      'trend': -3.9992534726850986,
-      'canBeCalibrated': true,
-      'rssi': -63,
       'g5calibrated': true,
       'stateString': 'Need calibration',
     }];
@@ -182,7 +168,7 @@ describe('Test Calibration', function() {
       'stateString': 'Need calibration',
     };
 
-    let lastCal = calibration.calculateG5Calibration(null, 0, null, glucoseHist, currSGV);
+    let lastCal = calibration.calculateTxmitterCalibration(null, 0, null, null, glucoseHist, currSGV);
 
     lastCal.slope.should.be.greaterThan(1050);
     lastCal.slope.should.be.lessThan(1060);
@@ -318,7 +304,7 @@ describe('Test Stats', function() {
 
     glucoseHist.push(currSGV);
 
-    let noise = stats.calcSensorNoise(glucoseHist, lastCal);
+    let noise = stats.calcSensorNoise(calibration.calcGlucose, glucoseHist, lastCal);
 
     noise.should.be.greaterThan(0.016);
     noise.should.be.lessThan(0.017);
@@ -379,7 +365,7 @@ describe('Test Stats', function() {
 
     glucoseHist.push(currSGV);
 
-    let noise = stats.calcSensorNoise(glucoseHist, lastCal);
+    let noise = stats.calcSensorNoise(calibration.calcGlucose, glucoseHist, lastCal);
 
     noise.should.equal(0);
   });

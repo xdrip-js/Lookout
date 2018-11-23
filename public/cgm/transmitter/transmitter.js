@@ -21,28 +21,28 @@ angular.module('AngularOpenAPS.cgm.transmitter', [
     });
   })
 
-  .controller('TransmitterController', ['$scope', '$interval', '$location', 'G5', function ($scope, $interval, $location, G5) {
-    $scope.transmitter = G5.transmitter;
+  .controller('TransmitterController', ['$scope', '$interval', '$location', 'CGM', function ($scope, $interval, $location, CGM) {
+    $scope.transmitter = CGM.transmitter;
 
     const tick = function() {
-      const activationDate = G5.transmitter.activationDate;
+      const activationDate = CGM.transmitter.activationDate;
       $scope.age = activationDate ? (Date.now() - activationDate.valueOf()) / 1000 : null;
     };
     tick();
     $interval(tick, 1000);
 
     $scope.setID = function(id) {
-      G5.transmitter.id = id;
+      CGM.transmitter.id = id;
       $location.path('/cgm/transmitter');
     };
 
     $scope.setMeterID = function(id) {
-      G5.transmitter.meterid = id;
+      CGM.transmitter.meterid = id;
       $location.path('/cgm/transmitter');
     };
 
-    $scope.resetG5Tx = function() {
-      G5.transmitter.reset();
+    $scope.resetTxmitter = function() {
+      CGM.transmitter.reset();
       $location.path('/cgm/transmitter');
     };
   }]);

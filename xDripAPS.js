@@ -23,6 +23,11 @@ const _convertEntryToNS = (glucose) => {
     direction = 'DoubleUp';
   }
 
+  if (!glucose.glucose) {
+    // Set to 5 so NS will plot the unfiltered glucose values
+    glucose.glucose = 5;
+  }
+
   console.log('Glucose: ' + glucose.glucose + ' Trend: ' + Math.round(glucose.trend*10)/10 + ' direction: ' + direction);
 
   return {
@@ -264,12 +269,12 @@ const querySGVsSince = (startTime, count) => {
   return requestPromise(optionsNS);
 };
 
-const queryLatestSensorInserted = () => {
+const queryLatestEvent = (type) => {
   const secret = process.env.API_SECRET;
   let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/treatments.json?';
   let oldestTime = moment().utc().subtract(2400, 'hours');
 
-  let ns_query = 'find[created_at][$gte]=' + oldestTime.format() + '&find[eventType][$regex]=Sensor&count=1';
+  let ns_query = 'find[created_at][$gte]=' + oldestTime.format() + '&find[eventType][$regex]=' + type + '&count=1';
 
   let ns_headers = {
     'Content-Type': 'application/json'
@@ -330,7 +335,7 @@ const convertBGCheck = (BGCheck) => {
     'eventType': 'BG Check',
     'glucose': BGCheck.glucose,
     'glucoseType': 'Finger',
-    'reason': 'G5 Calibration',
+    'reason': 'Txmitter Calibration',
     'duration': 0,
     'units': 'mg/dl',
     'created_at': moment(BGCheck.date).format()
@@ -426,7 +431,7 @@ module.exports = () => {
       });
     },
 
-    postStatus: (txId, sgv, txStatus, cal, lastG5CalTime) => {
+    postStatus: (txId, sgv, txStatus, cal, lastTxmitterCalTime) => {
       const entry = [{
         'device': 'xdripjs://' + os.hostname(),
         'xdripjs': {
@@ -438,7 +443,7 @@ module.exports = () => {
           'txStatusString': sgv.txStatusString,
           'txStatusStringShort': sgv.txStatusStringShort,
           'txActivation': sgv.transmitterStartDate,
-          'mode': 'not expired',  // 'expired' or 'not expired'
+          'mode': sgv.mode,
           'timestamp': sgv.readDateMills,
           'rssi': sgv.rssi,
           'unfiltered': sgv.unfiltered,
@@ -448,7 +453,7 @@ module.exports = () => {
           'slope': (cal && cal.slope) || 1,
           'intercept': (cal && cal.intercept) || 0,
           'calType': (cal && cal.type) || 'None', // 'LeastSquaresRegression' or 'SinglePoint' or 'Unity'
-          'lastCalibrationDate': lastG5CalTime,
+          'lastCalibrationDate': lastTxmitterCalTime,
           'sessionStart': sgv.sessionStartDate,
           'batteryTimestamp': (txStatus && txStatus.timestamp.valueOf()) || null,
           'voltagea': (txStatus && txStatus.voltagea) || null,
@@ -569,6 +574,46 @@ module.exports = () => {
       });
     },
 
+    postEvent: (eventType, eventTime) => {
+
+      const entry = [{
+        'enteredBy': 'xdripjs://' + os.hostname(),
+        'eventType': eventType,
+        'created_at': new Date(eventTime.valueOf()).toISOString(),
+      }];
+
+      const secret = process.env.API_SECRET;
+      let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json';
+      let ns_headers = {
+        'Content-Type': 'application/json'
+      };
+
+      if (secret.startsWith('token=')) {
+        ns_url = ns_url + '?' + secret;
+      } else {
+        ns_headers['API-SECRET'] = secret;
+      }
+
+      const optionsNS = {
+        url: ns_url,
+        timeout: 30*1000,
+        method: 'POST',
+        headers: ns_headers,
+        body: entry,
+        json: true
+      };
+
+      /*eslint-disable no-unused-vars*/
+      request(optionsNS, function (error, response, body) {
+      /*eslint-enable no-unused-vars*/
+        if (error) {
+          console.error('error posting json: ', error);
+        } else {
+          console.log('uploaded new calibration to NS, statusCode = ' + response.statusCode);
+        }
+      });
+    },
+
     latestCal: async () => {
       let formattedCal = null;
 
@@ -611,16 +656,16 @@ module.exports = () => {
       return queryBGChecksSince(startTime);
     },
 
-    latestSensorInserted: async () => {
-      let insertTime = null;
+    latestEvent: async (type) => {
+      let eventTime = null;
 
-      let sensorInsert = await queryLatestSensorInserted();
+      let eventRecord = await queryLatestEvent(type);
 
-      if (sensorInsert && (sensorInsert.length > 0)) {
-        insertTime = moment(sensorInsert[0].created_at);
+      if (eventRecord && (eventRecord.length > 0)) {
+        eventTime = moment(eventRecord[0].created_at);
       }
 
-      return insertTime;
+      return eventTime;
     },
 
     convertEntryToNS: (glucose) => {

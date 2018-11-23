@@ -1,7 +1,6 @@
 'use strict';
 
 const moment = require('moment');
-const calibration = require('./calibration');
 
 var exports = module.exports = {};
 
@@ -65,12 +64,12 @@ const calcNoise = (sgvArr) => {
   return noise;
 };
 
-exports.calcSensorNoise = (glucoseHist, lastCal) => {
+exports.calcSensorNoise = (calcGlucose, glucoseHist, lastCal, sgv) => {
   const MAXRECORDS=8;
   const MINRECORDS=4;
   let sgvArr = [];
 
-  let numRecords = Math.max(glucoseHist.length-MAXRECORDS-1, 0);
+  let numRecords = Math.max(glucoseHist.length-MAXRECORDS, 0);
 
   for (let i = numRecords; i < glucoseHist.length; ++i) {
     // Only use values that are > 30 to filter out invalid values.
@@ -78,10 +77,17 @@ exports.calcSensorNoise = (glucoseHist, lastCal) => {
       // use the unfiltered data with the most recent calculated calibration value
       // this will provide a noise calculation that is independent of calibration jumps
       sgvArr.push({
-        'glucose': calibration.calcGlucose(glucoseHist[i], lastCal),
+        'glucose': calcGlucose(glucoseHist[i], lastCal),
         'readDate': glucoseHist[i].readDateMills
       });
     }
+  }
+
+  if (sgv) {
+    sgvArr.push({
+      'glucose': calcGlucose(sgv, lastCal),
+      'readDate': sgv.readDateMills
+    });
   }
 
   if (sgvArr.length < MINRECORDS) {
@@ -92,13 +98,13 @@ exports.calcSensorNoise = (glucoseHist, lastCal) => {
 };
 
 // Return 10 minute trend total
-exports.calcTrend = (glucoseHist, lastCal) => {
+exports.calcTrend = (calcGlucose, glucoseHist, lastCal, sgv) => {
   let sgvHist = null;
 
   let trend = 0;
 
 
-  if (glucoseHist.length > 1) {
+  if (glucoseHist.length > 0) {
     let maxDate = null;
     let sliceStart = 0;
     let timeSpan = 0;
@@ -114,6 +120,10 @@ exports.calcTrend = (glucoseHist, lastCal) => {
 
     sgvHist = glucoseHist.slice(sliceStart);
 
+    if (sgv) {
+      sgvHist.push(sgv);
+    }
+
     if (sgvHist.length > 1) {
       minDate = sgvHist[0].readDateMills;
       maxDate = sgvHist[sgvHist.length-1].readDateMills;
@@ -121,7 +131,7 @@ exports.calcTrend = (glucoseHist, lastCal) => {
       // Use the current calibration value to calculate the glucose from the
       // unfiltered data. This allows the trend calculation to be independent
       // of the calibration jumps
-      totalDelta = calibration.calcGlucose(sgvHist[sgvHist.length-1], lastCal) - calibration.calcGlucose(sgvHist[0], lastCal);
+      totalDelta = calcGlucose(sgvHist[sgvHist.length-1], lastCal) - calcGlucose(sgvHist[0], lastCal);
 
       timeSpan = (maxDate - minDate)/1000.0/60.0;
 
@@ -148,7 +158,9 @@ exports.calcNSNoise = (noise, glucoseHist) => {
     }
   }
 
-  if (currSGV.glucose > 400) {
+  if (!currSGV) {
+    nsNoise = 1;
+  } else if (currSGV.glucose > 400) {
     console.log('Glucose ' + currSGV.glucose + ' > 400 - setting noise level Heavy');
     nsNoise = 4;
   } else if (currSGV.glucose < 40) {

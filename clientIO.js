@@ -58,9 +58,9 @@ module.exports = (options) => {
       socket.emit('glucoseHistory', glucoseHist);
     }
 
-    let lastG5Cal = transmitter && await transmitter.getLastCal() || null;
-    if (lastG5Cal) {
-      socket.emit('calibrationData', lastG5Cal);
+    let lastTxmitterCal = transmitter && await transmitter.getLastCal() || null;
+    if (lastTxmitterCal) {
+      socket.emit('calibrationData', lastTxmitterCal);
     }
   };
 

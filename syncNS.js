@@ -102,7 +102,7 @@ const syncEvent = async (itemName, eventType) => {
     });
 
   if (nsQueryError) {
-    return null;
+    throw 'NS Query Error';
   }
 
   if (nsEvent) {
@@ -543,22 +543,32 @@ const syncNS = async (storage_, storageLock_, transmitter_) => {
   let sensorStop = null;
   let latestSGV = null;
   let bgChecks = null;
+  let nsQueryError = false;
 
   storage = storage_;
   storageLock = storageLock_;
   transmitter = transmitter_;
 
-  sensorInsert = await syncEvent('sensorInsert', 'Sensor Change');
+  sensorInsert = await syncEvent('sensorInsert', 'Sensor Change')
+    .catch(() => {
+      nsQueryError = true;
+    });
 
-  sensorStart = await syncEvent('sensorStart', 'Sensor Start');
+  sensorStart = await syncEvent('sensorStart', 'Sensor Start')
+    .catch(() => {
+      nsQueryError = true;
+    });
 
   if (!sensorInsert || (sensorStart && (sensorStart.valueOf() > sensorInsert.valueOf()))) {
     sensorInsert = sensorStart;
   }
 
-  sensorStop = await syncEvent('sensorStop', 'Sensor Stop');
+  sensorStop = await syncEvent('sensorStop', 'Sensor Stop')
+    .catch(() => {
+      nsQueryError = true;
+    });
 
-  if (!sensorInsert) {
+  if (nsQueryError) {
     console.log('syncNS - No known sensor insert -  Setting 5 minute timer to try again');
 
     setTimeout(() => {

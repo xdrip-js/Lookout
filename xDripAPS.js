@@ -28,7 +28,7 @@ const _convertEntryToNS = (glucose) => {
     glucose.glucose = 5;
   }
 
-  console.log('Glucose: ' + glucose.glucose + ' Trend: ' + Math.round(glucose.trend*10)/10 + ' direction: ' + direction);
+  console.log('Glucose: ' + glucose.glucose + ' Time: ' + moment(glucose.readDateMills).format() + ' Trend: ' + Math.round(glucose.trend*10)/10 + ' direction: ' + direction);
 
   return {
     'device': 'xdripjs://' + os.hostname(),

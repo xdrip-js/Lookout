@@ -1085,7 +1085,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     sgvGaps: (rigSGVs) => {
       return sgvGaps(rigSGVs);
-    }
+    },
 
     getUnfiltered: (valueTime) => {
       return calibration.getUnfiltered(storage, valueTime);

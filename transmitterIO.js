@@ -964,7 +964,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     // provide the most recent glucose reading
     getGlucose: async () => {
-      return getGlucose();
+      return await getGlucose();
     },
 
     // provide the glucose history
@@ -1078,7 +1078,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     },
 
     inSensorSession: async () => {
-      let sgv = getGlucose();
+      let sgv = await getGlucose();
 
       return inSensorSession(sgv);
     },

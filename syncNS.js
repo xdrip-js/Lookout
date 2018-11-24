@@ -3,6 +3,10 @@
 const xDripAPS = require('./xDripAPS')();
 const moment = require('moment');
 const timeLimitedPromise = require('./timeLimitedPromise');
+const Debug = require('debug');
+const log = Debug('log');
+const error = Debug('error');
+const debug = Debug('sync');
 
 const _ = require('lodash');
 
@@ -16,9 +20,11 @@ const syncCal = async (sensorInsert) => {
   let nsQueryError = false;
   let rigCalStr = null;
 
+  log('syncCal started');
+
   NSCal = await xDripAPS.latestCal()
     .catch(error => {
-      console.log('Error getting NS calibration: ' + error);
+      error('Error getting NS calibration: ' + error);
       nsQueryError = true;
       return;
     });
@@ -28,7 +34,7 @@ const syncCal = async (sensorInsert) => {
   }
 
   if (NSCal) {
-    console.log('SyncNS NS Cal - date: ' + moment(NSCal.date).format() + ' slope: ' + Math.round(NSCal.slope*100)/100 + ' intercept: ' + Math.round(NSCal.intercept*10)/10);
+    debug('SyncNS NS Cal - date: ' + moment(NSCal.date).format() + ' slope: ' + Math.round(NSCal.slope*100)/100 + ' intercept: ' + Math.round(NSCal.intercept*10)/10);
   }
 
   await storageLock.lockStorage();
@@ -40,52 +46,52 @@ const syncCal = async (sensorInsert) => {
 
   rigCal = await storage.getItem(rigCalStr)
     .catch(error => {
-      console.log('Error getting rig calibration: ' + error);
+      error('Error getting rig calibration: ' + error);
     });
 
   if (rigCal) {
-    console.log('SyncNS Rig Cal - date: ' + moment(rigCal.date).format() + ' slope: ' + Math.round(rigCal.slope*100)/100 + ' intercept: ' + Math.round(rigCal.intercept*10)/10);
+    debug('SyncNS Rig Cal - date: ' + moment(rigCal.date).format() + ' slope: ' + Math.round(rigCal.slope*100)/100 + ' intercept: ' + Math.round(rigCal.intercept*10)/10);
   }
 
   if (NSCal) {
     if (!rigCal) {
-      console.log('No rig calibration, storing NS calibration');
+      debug('No rig calibration, storing NS calibration');
 
       if (sensorInsert && sensorInsert.diff(moment(NSCal.date)) > 0) {
-        console.log('Found sensor insert after latest NS calibration. Not updating local rig calibration');
+        debug('Found sensor insert after latest NS calibration. Not updating local rig calibration');
       } else {
         await storage.setItem(rigCalStr, NSCal)
           .catch(() => {
-            console.log('Unable to store NS Calibration');
+            error('Unable to store NS Calibration');
           });
       }
     } else if (rigCal && (rigCal.date < NSCal.date)) {
-      console.log('NS calibration more recent than rig calibration NS Cal Date: ' + NSCal.date + ' Rig Cal Date: ' + rigCal.date);
+      debug('NS calibration more recent than rig calibration NS Cal Date: ' + NSCal.date + ' Rig Cal Date: ' + rigCal.date);
 
       storage.setItem(rigCalStr, NSCal)
         .catch(() => {
-          console.log('Unable to store NS Calibration');
+          error('Unable to store NS Calibration');
         });
     } else if (rigCal && (rigCal.date > NSCal.date)) {
-      console.log('Rig calibration more recent than NS calibration NS Cal Date: ' + NSCal.date + ' Rig Cal Date: ' + rigCal.date);
-      console.log('Upoading rig calibration');
+      debug('Rig calibration more recent than NS calibration NS Cal Date: ' + NSCal.date + ' Rig Cal Date: ' + rigCal.date);
+      debug('Upoading rig calibration');
 
       xDripAPS.postCalibration(rigCal);
     } else {
-      console.log('Rig and NS calibration dates match - no sync needed');
+      debug('Rig and NS calibration dates match - no sync needed');
     }
   } else {
     if (rigCal) {
-      console.log('No NS calibration - uploading rig calibration');
+      debug('No NS calibration - uploading rig calibration');
       xDripAPS.postCalibration(rigCal);
     } else {
-      console.log('No rig or NS calibration');
+      debug('No rig or NS calibration');
     }
   }
 
   storageLock.unlockStorage();
 
-  console.log('syncCal complete');
+  log('syncCal complete');
 };
 
 const syncEvent = async (itemName, eventType) => {
@@ -93,11 +99,11 @@ const syncEvent = async (itemName, eventType) => {
   let nsEvent = null;
   let nsQueryError = false;
 
-  console.log('Syncing rig ' + itemName + ' and NS ' + eventType);
+  log('Syncing rig ' + itemName + ' and NS ' + eventType + ' started');
 
   nsEvent = await xDripAPS.latestEvent(eventType)
     .catch(error => {
-      console.log('Unable to get latest ' + eventType + ' record from NS: ' + error);
+      error('Unable to get latest ' + eventType + ' record from NS: ' + error);
       nsQueryError = true;
     });
 
@@ -106,19 +112,19 @@ const syncEvent = async (itemName, eventType) => {
   }
 
   if (nsEvent) {
-    console.log('SyncNS NS ' + eventType + '- date: ' + nsEvent.format());
+    debug('SyncNS NS ' + eventType + '- date: ' + nsEvent.format());
   }
 
   await storageLock.lockStorage();
 
   rigItem = await storage.getItem(itemName)
     .catch(error => {
-      console.log('Error getting rig ' + itemName + ': ' + error);
+      error('Error getting rig ' + itemName + ': ' + error);
     });
 
   if (rigItem) {
     rigItem = moment(rigItem);
-    console.log('SyncNS Rig ' + itemName + '- date: ' + rigItem.format());
+    debug('SyncNS Rig ' + itemName + '- date: ' + rigItem.format());
   }
 
   if (nsQueryError) {
@@ -130,45 +136,45 @@ const syncEvent = async (itemName, eventType) => {
 
   if (nsEvent) {
     if (!rigItem) {
-      console.log('No rig ' + itemName + ', storing NS ' + eventType);
+      debug('No rig ' + itemName + ', storing NS ' + eventType);
 
       latestEvent = nsEvent;
 
       await storage.setItem(itemName, nsEvent.valueOf())
         .catch(() => {
-          console.log('Unable to store ' + itemName);
+          error('Unable to store ' + itemName);
         });
     } else if (rigItem && (rigItem.valueOf() < nsEvent.valueOf())) {
-      console.log('NS ' + eventType + ' more recent than rig ' + itemName + ' NS date: ' + nsEvent.format() + ' Rig date: ' + rigItem.format());
+      debug('NS ' + eventType + ' more recent than rig ' + itemName + ' NS date: ' + nsEvent.format() + ' Rig date: ' + rigItem.format());
 
       latestEvent = nsEvent;
 
       storage.setItem(itemName, nsEvent.valueOf())
         .catch(() => {
-          console.log('Unable to store ' + itemName);
+          error('Unable to store ' + itemName);
         });
     } else if (rigItem && (rigItem.valueOf() > nsEvent.valueOf())) {
-      console.log('Rig ' + itemName + ' more recent than NS ' + eventType + ' NS date: ' + nsEvent.format() + ' Rig date: ' + rigItem.format());
-      console.log('Uploading rig ' + itemName);
+      debug('Rig ' + itemName + ' more recent than NS ' + eventType + ' NS date: ' + nsEvent.format() + ' Rig date: ' + rigItem.format());
+      debug('Uploading rig ' + itemName);
 
       latestEvent = rigItem;
       xDripAPS.postEvent(eventType, rigItem);
     } else {
-      console.log('Rig and NS dates match - no sync needed');
+      debug('Rig and NS dates match - no sync needed');
     }
   } else {
     if (rigItem) {
-      console.log('No NS ' + eventType + ' - uploading rig sensor insert');
+      debug('No NS ' + eventType + ' - uploading rig sensor insert');
       latestEvent = rigItem;
       xDripAPS.postEvent(eventType, rigItem);
     } else {
-      console.log('No rig ' + itemName + ' or NS ' + eventType);
+      debug('No rig ' + itemName + ' or NS ' + eventType);
     }
   }
 
   storageLock.unlockStorage();
 
-  console.log('Syncing rig ' + itemName + ' and NS ' + eventType + ' complete');
+  log('Syncing rig ' + itemName + ' and NS ' + eventType + ' complete');
 
   return latestEvent;
 };
@@ -177,11 +183,13 @@ const syncSGVs = async () => {
   let rigSGVs = null;
   let nsSGVs = null;
 
+  log('syncSGVs started');
+
   await storageLock.lockStorage();
 
   rigSGVs = await storage.getItem('glucoseHist')
     .catch(error => {
-      console.log('Error getting rig SGVs: ' + error);
+      error('Error getting rig SGVs: ' + error);
     });
 
   if (!rigSGVs) {
@@ -240,9 +248,9 @@ const syncSGVs = async () => {
     }
   }
 
-  console.log('nsGaps: ');
+  debug('nsGaps: ');
   _.each(nsGaps, (gap) => {
-    console.log('    gapStart: ' + moment(gap.gapStart).format() + ' gapEnd: ' + moment(gap.gapEnd).format());
+    debug('    gapStart: ' + moment(gap.gapStart).format() + ' gapEnd: ' + moment(gap.gapEnd).format());
   });
 
   await Promise.all(_.map(nsGaps, async (nsGap) => {
@@ -251,7 +259,7 @@ const syncSGVs = async () => {
     // get the NS entries that are in the gap
     nsSGVs = await xDripAPS.SGVsBetween(nsGap.gapStart, nsGap.gapEnd, Math.round((nsGap.gapEnd.valueOf() - nsGap.gapStart.valueOf()) * 2 / 5*60000) + 1 )
       .catch(error => {
-        console.log('Unable to get NS SGVs to match unfiltered with BG Check: ' + error);
+        error('Unable to get NS SGVs to match unfiltered with BG Check: ' + error);
         nsQueryError = true;
       });
 
@@ -297,12 +305,12 @@ const syncSGVs = async () => {
     rigGaps = transmitter.sgvGaps(rigSGVs);
   }
 
-  console.log('rigGaps: ', rigGaps);
+  debug('rigGaps: ', rigGaps);
 
   await Promise.all(_.map(rigGaps, async (gap) => {
     nsSGVs = await xDripAPS.SGVsBetween(gap.gapStart, gap.gapEnd, Math.round((gap.gapEnd.valueOf() - gap.gapStart.valueOf()) / 5*60000) + 1 )
       .catch(error => {
-        console.log('Unable to get NS SGVs to match unfiltered with BG Check: ' + error);
+        error('Unable to get NS SGVs to match unfiltered with BG Check: ' + error);
       });
 
     if (!nsSGVs) {
@@ -338,12 +346,12 @@ const syncSGVs = async () => {
 
   await storage.setItem('glucoseHist', rigSGVs)
     .catch((err) => {
-      console.log('Unable to store glucoseHist: ' + err);
+      error('Unable to store glucoseHist: ' + err);
     });
 
   storageLock.unlockStorage();
 
-  console.log('syncSGVs complete');
+  log('syncSGVs complete');
 
   return ((rigSGVs.length > 0) && rigSGVs[rigSGVs.length-1]) || null;
 };
@@ -355,6 +363,8 @@ const syncBGChecks = async (sensorInsert, sensorStop) => {
   let sliceStart = 0;
   let validBGCheckStartTime = sensorInsert;
 
+  log('syncBGChecks started');
+
   if (!sensorInsert || (sensorStop && sensorStop.valueOf() > sensorInsert.valueOf())) {
     validBGCheckStartTime = sensorStop;
   }
@@ -362,7 +372,7 @@ const syncBGChecks = async (sensorInsert, sensorStop) => {
   NSBGChecks = await xDripAPS.BGChecksSince(validBGCheckStartTime)
     .catch(error => {
       // Bail out since we can't sync if we don't have NS access
-      console.log('Error getting NS BG Checks: ' + error);
+      error('Error getting NS BG Checks: ' + error);
       nsQueryError = true;
       return;
     });
@@ -375,7 +385,7 @@ const syncBGChecks = async (sensorInsert, sensorStop) => {
     NSBGChecks = [];
   }
 
-  console.log('SyncNS NS BG Checks: ' + NSBGChecks.length);
+  debug('SyncNS NS BG Checks: ' + NSBGChecks.length);
 
   NSBGChecks = NSBGChecks.map((bgCheck) => {
     let timeVal = moment(bgCheck.created_at);
@@ -400,14 +410,14 @@ const syncBGChecks = async (sensorInsert, sensorStop) => {
 
   if (NSBGChecks.length > 0) {
     let bgCheck = NSBGChecks[NSBGChecks.length-1];
-    console.log('Most recent NS BG Check - date: ' + bgCheck.created_at + ' type: ' + bgCheck.glucoseType + ' glucose: ' + bgCheck.glucose);
+    debug('Most recent NS BG Check - date: ' + bgCheck.created_at + ' type: ' + bgCheck.glucoseType + ' glucose: ' + bgCheck.glucose);
   }
 
   await storageLock.lockStorage();
 
   let rigBGChecks = await storage.getItem('bgChecks')
     .catch(error => {
-      console.log('Error getting bgChecks: ' + error);
+      error('Error getting bgChecks: ' + error);
     });
 
   if (!rigBGChecks || !Array.isArray(rigBGChecks)) {
@@ -425,7 +435,7 @@ const syncBGChecks = async (sensorInsert, sensorStop) => {
 
   if (rigDataLength > 0) {
     let bgCheck = rigBGChecks[rigDataLength-1];
-    console.log('Most recent Rig BG Check - date: ' + moment(bgCheck.date).format() + ' glucose: ' + bgCheck.glucose + ' unfiltered: ' + bgCheck.unfiltered);
+    debug('Most recent Rig BG Check - date: ' + moment(bgCheck.date).format() + ' glucose: ' + bgCheck.glucose + ' unfiltered: ' + bgCheck.unfiltered);
   }
 
   for (let i = 0; i < NSBGChecks.length; ++i) {
@@ -482,7 +492,7 @@ const syncBGChecks = async (sensorInsert, sensorStop) => {
 
   await storage.setItem('bgChecks', rigBGChecks)
     .catch((err) => {
-      console.log('Unable to store bgChecks: ' + err);
+      debug('Unable to store bgChecks: ' + err);
     });
 
   storageLock.unlockStorage();
@@ -514,7 +524,7 @@ const syncBGChecks = async (sensorInsert, sensorStop) => {
     transmitter && transmitter.sendBgCheckToTxmitter(rigBGChecks[rigBGChecks.length-1]);
   }
 
-  console.log('syncBGChecks complete');
+  log('syncBGChecks complete');
 
   return rigBGChecks;
 };
@@ -573,7 +583,7 @@ const syncNS = async (storage_, storageLock_, transmitter_) => {
     });
 
   if (nsQueryError) {
-    console.log('syncNS - No known sensor insert -  Setting 5 minute timer to try again');
+    log('syncNS - No known sensor insert -  Setting 5 minute timer to try again');
 
     setTimeout(() => {
       // Restart the syncNS after 5 minute
@@ -611,14 +621,14 @@ const syncNS = async (storage_, storageLock_, transmitter_) => {
 
   await Promise.all([syncCalPromise, syncSGVsPromise, syncBGChecksPromise])
     .catch(error => {
-      console.log('syncNS error: ' + error);
+      error('syncNS error: ' + error);
     });
 
   // have transmitterIO check if the sensor session should be ended.
   transmitter && transmitter.checkSensorSession(sensorInsert, sensorStop, bgChecks, latestSGV);
 
   let timeDelay = calcNextSyncTimeDelay(latestSGV);
-  console.log('syncNS complete - setting ' + Math.round(timeDelay/6000)/10 + ' minute timer');
+  log('syncNS complete - setting ' + Math.round(timeDelay/6000)/10 + ' minute timer');
 
   setTimeout(() => {
     // Restart the syncNS after 5 minute

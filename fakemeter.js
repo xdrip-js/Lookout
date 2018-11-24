@@ -82,7 +82,7 @@ module.exports = (_options, _storage, client) => {
       let meterId = await _getMeterId();
 
       if (options.fakemeter || (!online && options.offline_fakemeter)) {
-        log('Sending glucose to fakemeter: ', value);
+        log('Sending glucose to fakemeter: ' + value);
 
         let stdout = null;
         let stderr = null;

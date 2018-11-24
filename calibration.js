@@ -238,7 +238,7 @@ const calculateTxmitterCalibration = (lastCal, lastTxmitterCalTime, latestBgChec
   }
 
   if (calReturn) {
-    log('Calculated new CGM calculated calibration with ' + calReturn.type + ' due to ' + calPairs.length + ' calibration pairs:\n', calReturn);
+    log('Calculated new CGM calculated calibration with ' + calReturn.type + ' due to ' + calPairs.length + ' calibration pairs:\n%O', calReturn);
   } else if (lastCal && latestBgCheckTime && (latestBgCheckTime.diff(moment(lastCal.date).subtract(6, 'minutes')) > 0)) {
     log('BG Check occurred, but no CGM calculated calibration update needed. Setting calibration date to be after latest BG check time.');
 
@@ -355,7 +355,7 @@ const expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorInser
     return lastExpiredCal;
   } else {
     if (calReturn) {
-      log('New expired calibration with ' + calReturn.type + ' due to ' + calPairs.length + ' calibration pairs:\n', calReturn);
+      log('New expired calibration with ' + calReturn.type + ' due to ' + calPairs.length + ' calibration pairs:\n%O', calReturn);
     }
 
     saveExpiredCal(storage, calReturn);

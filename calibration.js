@@ -13,6 +13,12 @@
 //         (> minimum unfiltered value in calibration record set or 
 //          < - minimum unfiltered value in calibration record set)
 
+const Debug = require('debug');
+
+const log = Debug('calibration:log');
+const error = Debug('calibration:error');
+const debug = Debug('calibration:debug');
+
 const stats = require('./calcStats');
 const xDripAPS = require('./xDripAPS')();
 var _ = require('lodash');
@@ -94,7 +100,7 @@ const lsrCalibration = (calibrationPairs) => {
       }
     }
 
-    console.log('Calibration - record ' + i + ', ' + new Date(calibrationPairs[i].readDateMills) + ', weighted multiplier=' + multiplier);
+    debug('Calibration - record ' + i + ', ' + new Date(calibrationPairs[i].readDateMills) + ', weighted multiplier=' + multiplier);
  
     sumXY=(sumXY + calibrationPairs[i].glucose * calibrationPairs[i].unfiltered) * multiplier;
     sumXSq=(sumXSq + calibrationPairs[i].glucose * calibrationPairs[i].glucose) * multiplier;
@@ -149,7 +155,7 @@ const calculateTxmitterCalibration = (lastCal, lastTxmitterCalTime, latestBgChec
   // Do not calculate a new calibration value
   // if we don't have a valid calibrated glucose reading
   if (currSGV.glucose > 300 || currSGV.glucose < 80) {
-    console.log('Current glucose out of range to calibrate: ' + currSGV.glucose);
+    log('Current glucose out of range to calibrate: ' + currSGV.glucose);
     return null;
   }
 
@@ -162,7 +168,7 @@ const calculateTxmitterCalibration = (lastCal, lastTxmitterCalTime, latestBgChec
     calValue = calcGlucose(currSGV, lastCal);
     calErr = Math.abs(calValue - currSGV.glucose);
 
-    console.log('Current CGM calculated calibration error: ' + Math.round(calErr*10)/10 + ' calibrated value: ' + Math.round(calValue*10)/10 + ' slope: ' + Math.round(lastCal.slope*10)/10 + ' intercept: ' + Math.round(lastCal.intercept*10)/10);
+    log('Current CGM calculated calibration error: ' + Math.round(calErr*10)/10 + ' calibrated value: ' + Math.round(calValue*10)/10 + ' slope: ' + Math.round(lastCal.slope*10)/10 + ' intercept: ' + Math.round(lastCal.intercept*10)/10);
   }
 
   // Check if we need a calibration
@@ -192,16 +198,16 @@ const calculateTxmitterCalibration = (lastCal, lastTxmitterCalTime, latestBgChec
     if (((calErr > 5) && calPairs.length > MIN_LSR_PAIRS) || (calPairs.length > 8)) {
       let calResult = lsrCalibration(calPairs);
 
-      console.log('CGM lsrCalibration: numPoints=' + calPairs.length + ', slope=' + calResult.slope + ', yIntercept=' + calResult.yIntercept); 
+      log('CGM lsrCalibration: numPoints=' + calPairs.length + ', slope=' + calResult.slope + ', yIntercept=' + calResult.yIntercept); 
 
       if (!calResult) {
-        console.log('CGM calculated calibration calculated denominator of zero');
+        error('CGM calculated calibration calculated denominator of zero');
         return null;
       }
 
       if ((calResult.slope > MAXSLOPE) || (calResult.slope < MINSLOPE)) {
         // wait until the next opportunity
-        console.log('CGM calculated calibration slope out of range: ' + calResult.slope);
+        error('CGM calculated calibration slope out of range: ' + calResult.slope);
         return null;
       }
 
@@ -216,7 +222,7 @@ const calculateTxmitterCalibration = (lastCal, lastTxmitterCalTime, latestBgChec
     } else if ((calErr > 5) && (calPairs.length > 0)) {
       let calResult = singlePointCalibration(calPairs);
 
-      console.log('CGM singlePointCalibration: glucose=' + calPairs[calPairs.length-1].glucose + ', unfiltered=' + calPairs[calPairs.length-1].unfiltered + ', slope=' + calResult.slope + ', yIntercept=0'); 
+      log('CGM singlePointCalibration: glucose=' + calPairs[calPairs.length-1].glucose + ', unfiltered=' + calPairs[calPairs.length-1].unfiltered + ', slope=' + calResult.slope + ', yIntercept=0'); 
 
       calReturn = {
         date: currSGV.readDateMills,
@@ -226,21 +232,21 @@ const calculateTxmitterCalibration = (lastCal, lastTxmitterCalTime, latestBgChec
         type: calResult.calibrationType
       };
     } else if (calErr > 5) {
-      console.log('CGM calculated calibration update needed, but no suitable glucose pairs found.');
+      log('CGM calculated calibration update needed, but no suitable glucose pairs found.');
       return null;
     }
   }
 
   if (calReturn) {
-    console.log('Calculated new CGM calculated calibration with ' + calReturn.type + ' due to ' + calPairs.length + ' calibration pairs:\n', calReturn);
+    log('Calculated new CGM calculated calibration with ' + calReturn.type + ' due to ' + calPairs.length + ' calibration pairs:\n', calReturn);
   } else if (lastCal && latestBgCheckTime && (latestBgCheckTime.diff(moment(lastCal.date).subtract(6, 'minutes')) > 0)) {
-    console.log('BG Check occurred, but no CGM calculated calibration update needed. Setting calibration date to be after latest BG check time.');
+    log('BG Check occurred, but no CGM calculated calibration update needed. Setting calibration date to be after latest BG check time.');
 
     // this disables the CGM calculated calibration until we have at least 2 readings showing it doesn't need an update (6 minutes).
     lastCal.date = Date.now();
     calReturn = lastCal;
   } else {
-    console.log('No CGM calculated calibration update needed.');
+    log('No CGM calculated calibration update needed.');
   }
 
   return calReturn;
@@ -300,7 +306,7 @@ const expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorInser
     let calResult = lsrCalibration(calPairs);
 
     if (calResult && (calResult.slope < MAXSLOPE) && (calResult.slope > MINSLOPE)) {
-      console.log('expired lsrCalibration: numPoints=' + calPairs.length + ', slope=' + calResult.slope + ', yIntercept=' + calResult.yIntercept); 
+      log('expired lsrCalibration: numPoints=' + calPairs.length + ', slope=' + calResult.slope + ', yIntercept=' + calResult.yIntercept); 
 
       calReturn = {
         date: calPairs[calPairs.length-1].readDateMills,
@@ -310,16 +316,16 @@ const expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorInser
         type: calResult.calibrationType
       };
     } else if (calResult) {
-      console.log('Falling back to single point cal due to slope out of range: ' + calResult.slope);
+      log('Falling back to single point cal due to slope out of range: ' + calResult.slope);
     } else {
-      console.log('Falling back to single point cal due to calibration result denominator of zero');
+      log('Falling back to single point cal due to calibration result denominator of zero');
     }
   }
 
   if (!calReturn && (calPairs.length > 0)) {
     let calResult = singlePointCalibration(calPairs);
 
-    console.log('expired singlePointCalibration: glucose=' + calPairs[calPairs.length-1].glucose + ', unfiltered=' + calPairs[calPairs.length-1].unfiltered + ', slope=' + calResult.slope + ', yIntercept=0'); 
+    log('expired singlePointCalibration: glucose=' + calPairs[calPairs.length-1].glucose + ', unfiltered=' + calPairs[calPairs.length-1].unfiltered + ', slope=' + calResult.slope + ', yIntercept=0'); 
 
     calReturn = {
       date: calPairs[calPairs.length-1].readDateMills,
@@ -331,7 +337,7 @@ const expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorInser
   }
 
   if (!calReturn) {
-    console.log('No suitable glucose pairs found for expired calibration.');
+    log('No suitable glucose pairs found for expired calibration.');
   }
 
   // Default to sending a new calibration calculation
@@ -344,12 +350,12 @@ const expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorInser
   }
 
   if ((slopeDelta < 1) && (interceptDelta < 1)) {
-    console.log('No calibration update: slopeDelta=' + Math.round(slopeDelta*10)/10 + ' interceptDelta=' + Math.round(interceptDelta*10)/10);
+    log('No calibration update: slopeDelta=' + Math.round(slopeDelta*10)/10 + ' interceptDelta=' + Math.round(interceptDelta*10)/10);
 
     return lastExpiredCal;
   } else {
     if (calReturn) {
-      console.log('New expired calibration with ' + calReturn.type + ' due to ' + calPairs.length + ' calibration pairs:\n', calReturn);
+      log('New expired calibration with ' + calReturn.type + ' due to ' + calPairs.length + ' calibration pairs:\n', calReturn);
     }
 
     saveExpiredCal(storage, calReturn);
@@ -364,7 +370,7 @@ const getUnfiltered = async (storage, valueTime, sgv) => {
 
   let rigSGVs = await storage.getItem('glucoseHist')
     .catch(error => {
-      console.log('Error getting rig SGVs: ' + error);
+      error('Error getting rig SGVs: ' + error);
     });
 
   if (rigSGVs && (rigSGVs.length > 1)) {
@@ -401,8 +407,8 @@ const getUnfiltered = async (storage, valueTime, sgv) => {
     if (SGVBefore && SGVAfter) {
       return interpolateUnfiltered(SGVBefore, SGVAfter, valueTime);
     }
-    console.log('Unable to find bounding SGVs for calibration at ' + valueTime.format());
-    console.log('Looking in Nightscout');
+    debug('Unable to find bounding SGVs for calibration at ' + valueTime.format());
+    debug('Looking in Nightscout');
     return await getUnfilteredFromNS(valueTime);
   }
 };
@@ -421,7 +427,7 @@ const getUnfilteredFromNS = async (valueTime) => {
   // Get NS SGV immediately before BG Check
   NSSGVs = await xDripAPS.SGVsBetween(timeStart, timeEnd, 5)
     .catch(error => {
-      console.log('Unable to get NS SGVs to match unfiltered with BG Check: ' + error);
+      error('Unable to get NS SGVs to match unfiltered with BG Check: ' + error);
     });
 
   if (!NSSGVs) {
@@ -450,7 +456,7 @@ const getUnfilteredFromNS = async (valueTime) => {
   if (SGVBefore && SGVAfter) {
     return interpolateUnfiltered(xDripAPS.convertEntryToxDrip(SGVBefore), xDripAPS.convertEntryToxDrip(SGVAfter), valueTime);
   } else {
-    console.log('Unable to find bounding SGVs for BG Check at ' + valueTime.format());
+    debug('Unable to find bounding SGVs for BG Check at ' + valueTime.format());
     return null;
   }
 };
@@ -460,20 +466,20 @@ const interpolateUnfiltered = (SGVBefore, SGVAfter, valueTime) => {
   let totalDelta = SGVAfter.unfiltered - SGVBefore.unfiltered;
   let fractionTime = (valueTime.valueOf() - SGVBefore.readDateMills) / totalTime;
 
-  console.log('SGVBefore Time: ' + SGVBefore.readDateMills + ' SGVBefore Unfiltered: ' + SGVBefore.unfiltered);
-  console.log(' SGVAfter Time: ' + SGVAfter.readDateMills + '  SGVAfter Unfiltered: ' + SGVAfter.unfiltered);
+  debug('SGVBefore Time: ' + SGVBefore.readDateMills + ' SGVBefore Unfiltered: ' + SGVBefore.unfiltered);
+  debug(' SGVAfter Time: ' + SGVAfter.readDateMills + '  SGVAfter Unfiltered: ' + SGVAfter.unfiltered);
 
   if (totalTime > 12*60000) {
-    console.log('Total time exceeds 12 minutes: ' + totalTime + 'ms');
-    console.log('Not interpolating unfiltered values.');
+    debug('Total time exceeds 12 minutes: ' + totalTime + 'ms');
+    debug('Not interpolating unfiltered values.');
 
     return null;
   }
 
   let returnVal = totalDelta * fractionTime + SGVBefore.unfiltered;
 
-  console.log('  BGCheck Time: ' + valueTime.valueOf() + '       Unfilter Value: ' + (Math.round(returnVal*1000)/1000));
-  console.log('     totalTime: ' + totalTime + ' totalDelta: ' + (Math.round(totalDelta*1000) / 1000) + ' fractionTime: ' + (Math.round(fractionTime*100)/100));
+  debug('  BGCheck Time: ' + valueTime.valueOf() + '       Unfilter Value: ' + (Math.round(returnVal*1000)/1000));
+  debug('     totalTime: ' + totalTime + ' totalDelta: ' + (Math.round(totalDelta*1000) / 1000) + ' fractionTime: ' + (Math.round(fractionTime*100)/100));
 
   return returnVal;
 };
@@ -481,7 +487,7 @@ const interpolateUnfiltered = (SGVBefore, SGVAfter, valueTime) => {
 const getExpiredCal = async (storage) => {
   let lastExpiredCal = await storage.getItem('expiredCal')
     .catch(error => {
-      console.log('Unable to obtain current Expired Calibration' + error);
+      error('Unable to obtain current Expired Calibration' + error);
     });
 
   return lastExpiredCal;
@@ -492,7 +498,7 @@ exports.getExpiredCal = getExpiredCal;
 const saveExpiredCal = async (storage, newCal) => {
   await storage.setItem('expiredCal', newCal)
     .catch(() => {
-      console.log('Unable to store new NS Calibration');
+      error('Unable to store new NS Calibration');
     });
 };
 
@@ -501,7 +507,7 @@ exports.saveExpiredCal = saveExpiredCal;
 const getTxmitterCal = async (storage) => {
   let lastCal = await storage.getItem('g5Calibration')
     .catch(error => {
-      console.log('Unable to obtain current NS Calibration' + error);
+      error('Unable to obtain current NS Calibration' + error);
     });
 
   return lastCal;
@@ -512,7 +518,7 @@ exports.getTxmitterCal = getTxmitterCal;
 const saveTxmitterCal = async (storage, newCal) => {
   await storage.setItem('g5Calibration', newCal)
     .catch(() => {
-      console.log('Unable to store new NS Calibration');
+      error('Unable to store new NS Calibration');
     });
 };
 
@@ -554,7 +560,7 @@ exports.getActiveCal = getActiveCal;
 const getLastCal = async (storage) => {
   let bgChecks = await storage.getItem('bgChecks')
     .catch(error => {
-      console.log('Unable to get bgChecks storage item: ' + error);
+      error('Unable to get bgChecks storage item: ' + error);
     });
 
   let lastTxmitterCal = getLastTxmitterCal(bgChecks);
@@ -604,10 +610,10 @@ const validateTxmitterCalibration = (sensorInsert, sensorStop, latestBgCheckTime
     || (sensorInsertDelta > 0)
     || (sensorStopDelta > 0)
     || (bgCheckDelta > 0)) {
-    console.log('No valid Transmitter Calibration - sensorInsert: ' + moment(sensorInsert).format() + ' lastCal: ' + moment(lastCal.date).format() + ' sensorInsertDelta: ' + sensorInsertDelta + ' sensorStopDelta: ' + sensorStopDelta + ' bgCheckDelta: ' + bgCheckDelta);
+    debug('No valid Transmitter Calibration - sensorInsert: ' + moment(sensorInsert).format() + ' lastCal: ' + moment(lastCal.date).format() + ' sensorInsertDelta: ' + sensorInsertDelta + ' sensorStopDelta: ' + sensorStopDelta + ' bgCheckDelta: ' + bgCheckDelta);
     return false;
   } else {
-    console.log('Have valid Transmitter Calibration');
+    debug('Have valid Transmitter Calibration');
     return true;
   }
 };
@@ -626,10 +632,10 @@ const validateExpiredCalibration = (sensorInsert, sensorStop, lastExpiredCal) =>
   if (!sensorInsert || !lastExpiredCal
     || (sensorInsertDelta > 0)
     || (sensorStopDelta > 0)) {
-    console.log('No valid Expired Calibration');
+    debug('No valid Expired Calibration');
     return false;
   } else {
-    console.log('Have valid Expired Calibration');
+    debug('Have valid Expired Calibration');
     return true;
   }
 };
@@ -650,7 +656,7 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, sensorStop, gl
 
   let bgChecks = await storage.getItem('bgChecks')
     .catch((err) => {
-      console.log('Error getting bgChecks: ' + err);
+      error('Error getting bgChecks: ' + err);
     });
 
   if (!bgChecks) {
@@ -691,8 +697,8 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, sensorStop, gl
     sgv.glucose = calcGlucose(sgv, lastCal);
     sgv.inExpiredSession = true;
 
-    console.log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value from Txmitter calibration algorithm');
-    console.log('Calibrated SGV: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered + ' slope: ' + lastCal.slope + ' intercept: ' + lastCal.intercept);
+    log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value from Txmitter calibration algorithm');
+    log('Calibrated SGV: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered + ' slope: ' + lastCal.slope + ' intercept: ' + lastCal.intercept);
 
     sgv.g5calibrated = false;
   }
@@ -704,18 +710,18 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, sensorStop, gl
       sgv.glucose = expiredCalGlucose;
       sgv.inExpiredSession = true;
 
-      console.log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value from expired calibration algorithm');
-      console.log('Calibrated SGV: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered + ' slope: ' + lastCal.slope + ' intercept: ' + lastCal.intercept);
+      log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value from expired calibration algorithm');
+      log('Calibrated SGV: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered + ' slope: ' + lastCal.slope + ' intercept: ' + lastCal.intercept);
 
       sgv.g5calibrated = false;
     } else {
       let calErr = expiredCalGlucose - sgv.glucose;
-      console.log('Current expired calibration error: ' + Math.round(calErr*10)/10 + ' calibrated value: ' + Math.round(expiredCalGlucose*10)/10 + ' slope: ' + Math.round(expiredCal.slope*10)/10 + ' intercept: ' + Math.round(expiredCal.intercept*10)/10 + ' type: ' + expiredCal.type);
+      log('Current expired calibration error: ' + Math.round(calErr*10)/10 + ' calibrated value: ' + Math.round(expiredCalGlucose*10)/10 + ' slope: ' + Math.round(expiredCal.slope*10)/10 + ' intercept: ' + Math.round(expiredCal.intercept*10)/10 + ' type: ' + expiredCal.type);
     }
   }
 
   if (newCal) {
-    console.log('New CGM calibration: slope = ' + newCal.slope + ', intercept = ' + newCal.intercept + ', scale = ' + newCal.scale);
+    log('New CGM calibration: slope = ' + newCal.slope + ', intercept = ' + newCal.intercept + ', scale = ' + newCal.scale);
 
     saveTxmitterCal(storage, newCal);
   }
@@ -728,7 +734,7 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, sensorStop, gl
 
     if ((sgv.noise < .4) && sensorInsert && ((sgv.readDateMills - sensorInsert.valueOf()) < SENSOR_WARM*60*60000)) {
       // put in light noise to account for warm up
-      console.log('Setting noise to light because SGV date (' + moment(sgv.readDateMills).format() + ' - ' + sensorInsert.format() + ' < ' + SENSOR_WARM + ' hours');
+      log('Setting noise to light because SGV date (' + moment(sgv.readDateMills).format() + ' - ' + sensorInsert.format() + ' < ' + SENSOR_WARM + ' hours');
       sgv.noise=.4;
     }
   } else {
@@ -742,7 +748,7 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, sensorStop, gl
   sgv.nsNoise = stats.calcNSNoise(sgv.noise, glucoseHist);
   sgv.noiseString = stats.NSNoiseString(sgv.nsNoise),
 
-  console.log('Current sensor trend: ' + Math.round(sgv.trend*10)/10 + ' Sensor Noise: ' + Math.round(sgv.noise*1000)/1000 + ' NS Noise: ' + sgv.nsNoise);
+  log('Current sensor trend: ' + Math.round(sgv.trend*10)/10 + ' Sensor Noise: ' + Math.round(sgv.noise*1000)/1000 + ' NS Noise: ' + sgv.nsNoise);
 
   return sgv;
 };

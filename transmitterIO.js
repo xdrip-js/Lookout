@@ -145,9 +145,9 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
   };
 
   const stopTransmitterSession = () => {
-    // Stop sensor 3 hours prior to now to enable a rapid restart
+    // Stop sensor 2 hours prior to now to enable a rapid restart
     // if one is desired.
-    pending.push({date: Date.now() - 3*60*60*1000, type: 'StopSensor'});
+    pending.push({date: Date.now() - 2*60*60*1000, type: 'StopSensor'});
 
     client.newPending(pending);
   };

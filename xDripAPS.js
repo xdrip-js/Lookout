@@ -4,6 +4,11 @@ const request = require('request');
 const requestPromise = require('request-promise-native');
 const moment = require('moment');
 
+const Debug = require('debug');
+const log = Debug('xdripaps:log');
+const error = Debug('xdripaps:error');
+const debug = Debug('xdripaps:debug');
+
 const _convertEntryToNS = (glucose) => {
   let direction;
 
@@ -28,7 +33,7 @@ const _convertEntryToNS = (glucose) => {
     glucose.glucose = 5;
   }
 
-  console.log('Glucose: ' + glucose.glucose + ' Time: ' + moment(glucose.readDateMills).format() + ' Trend: ' + Math.round(glucose.trend*10)/10 + ' direction: ' + direction);
+  log('Glucose: ' + glucose.glucose + ' Time: ' + moment(glucose.readDateMills).format() + ' Trend: ' + Math.round(glucose.trend*10)/10 + ' direction: ' + direction);
 
   return {
     'device': 'xdripjs://' + os.hostname(),
@@ -76,12 +81,13 @@ const postToXdrip = (entry) => {
   };
 
   /*eslint-disable no-unused-vars*/
-  request(optionsX, function (error, response, body) {
+  request(optionsX, function (err, response, body) {
   /*eslint-enable no-unused-vars*/
-    if (error) {
-      console.error('error posting json: ', error);
+    if (err) {
+      error('error posting json: ', err);
     } else {
-      console.log('uploaded to xDripAPS, statusCode = ' + response.statusCode);
+      log('uploaded to xDripAPS, statusCode = ' + response.statusCode);
+      debug('Entry: %O', entry);
     }
   });
 };
@@ -109,12 +115,13 @@ const postToNS = (entry) => {
   };
 
   /*eslint-disable no-unused-vars*/
-  request(optionsNS, function (error, response, body) {
+  request(optionsNS, function (err, response, body) {
   /*eslint-enable no-unused-vars*/
-    if (error) {
-      console.error('error posting json: ', error);
+    if (err) {
+      error('error posting json: ', err);
     } else {
-      console.log('uploaded to NS, statusCode = ' + response.statusCode);
+      log('uploaded to NS, statusCode = ' + response.statusCode);
+      debug('Entry: %O', entry);
     }
   });
 };
@@ -382,12 +389,12 @@ module.exports = () => {
       };
 
       /*eslint-disable no-unused-vars*/
-      request(optionsNS, function (error, response, body) {
+      request(optionsNS, function (err, response, body) {
       /*eslint-enable no-unused-vars*/
         if (error) {
-          console.error('error posting json: ', error);
+          error('error posting json: ', err);
         } else {
-          console.log('updated BG Check to NS, statusCode = ' + response.statusCode);
+          log('updated BG Check to NS, statusCode = ' + response.statusCode);
         }
       });
     },
@@ -421,12 +428,13 @@ module.exports = () => {
       };
 
       /*eslint-disable no-unused-vars*/
-      request(optionsNS, function (error, response, body) {
+      request(optionsNS, function (err, response, body) {
       /*eslint-enable no-unused-vars*/
         if (error) {
-          console.error('error posting json: ', error);
+          error('error posting json: ', err);
         } else {
-          console.log('uploaded new Announcement to NS, statusCode = ' + response.statusCode);
+          log('uploaded new Announcement to NS, statusCode = ' + response.statusCode);
+          debug('Announcement: %O', entry);
         }
       });
     },
@@ -485,12 +493,13 @@ module.exports = () => {
       };
 
       /*eslint-disable no-unused-vars*/
-      request(optionsNS, function (error, response, body) {
+      request(optionsNS, function (err, response, body) {
       /*eslint-enable no-unused-vars*/
         if (error) {
-          console.error('error posting json: ', error);
+          error('error posting json: ', err);
         } else {
-          console.log('uploaded new DeviceStatus to NS, statusCode = ' + response.statusCode);
+          log('uploaded new DeviceStatus to NS, statusCode = ' + response.statusCode);
+          debug('Status: %O', entry);
         }
       });
     },
@@ -520,12 +529,13 @@ module.exports = () => {
       };
 
       /*eslint-disable no-unused-vars*/
-      request(optionsNS, function (error, response, body) {
+      request(optionsNS, function (err, response, body) {
       /*eslint-enable no-unused-vars*/
         if (error) {
-          console.error('error posting json: ', error);
+          error('error posting json: ', err);
         } else {
-          console.log('uploaded new BG Check to NS, statusCode = ' + response.statusCode);
+          log('uploaded new BG Check to NS, statusCode = ' + response.statusCode);
+          debug('BG Check: %O', entry);
         }
       });
     },
@@ -564,12 +574,13 @@ module.exports = () => {
       };
 
       /*eslint-disable no-unused-vars*/
-      request(optionsNS, function (error, response, body) {
+      request(optionsNS, function (err, response, body) {
       /*eslint-enable no-unused-vars*/
         if (error) {
-          console.error('error posting json: ', error);
+          error('error posting json: ', err);
         } else {
-          console.log('uploaded new calibration to NS, statusCode = ' + response.statusCode);
+          log('uploaded new calibration to NS, statusCode = ' + response.statusCode);
+          debug('calibration: %O', entry);
         }
       });
     },
@@ -604,12 +615,13 @@ module.exports = () => {
       };
 
       /*eslint-disable no-unused-vars*/
-      request(optionsNS, function (error, response, body) {
+      request(optionsNS, function (err, response, body) {
       /*eslint-enable no-unused-vars*/
         if (error) {
-          console.error('error posting json: ', error);
+          error('error posting json: ', err);
         } else {
-          console.log('uploaded new calibration to NS, statusCode = ' + response.statusCode);
+          log('uploaded new ' + eventType + ' event to NS, statusCode = ' + response.statusCode);
+          debug('event: %O', entry);
         }
       });
     },

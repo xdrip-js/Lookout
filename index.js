@@ -82,9 +82,9 @@ let options = {
 const init = async (options) => {
 
   if (options.verbose) {
-    Debug.enable('lookout:*');
+    Debug.enable('*:*');
   } else {
-    Debug.enable('lookout:*,-lookout:debug');
+    Debug.enable('*:*,-*:debug');
   }
 
   // handle persistence here

@@ -762,9 +762,10 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
       worker = cp.fork(__dirname + '/transmitterSimulator', [prevGlucose], { });
     } else {
+      let xdripDebug = options.verbose ? 'transmitter,bluetooth-manager,backfill-parser' : 'transmitter';
       worker = cp.fork(__dirname + '/transmitterWorker', [id], {
         env: {
-          DEBUG: 'transmitter,bluetooth-manager'
+          DEBUG: xdripDebug
         }
       });
     }

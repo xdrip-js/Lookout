@@ -59,7 +59,7 @@ module.exports = (io, options) => {
             units,
             COB
           }))(obj);
-          debug('Enacted: %O', enacted);
+          debug('Enacted:\n%O', enacted);
           io.emit('enacted', enacted);
         } catch(e) {
           return;

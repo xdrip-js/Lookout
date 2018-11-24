@@ -305,7 +305,7 @@ const syncSGVs = async () => {
     rigGaps = transmitter.sgvGaps(rigSGVs);
   }
 
-  debug('rigGaps: %O', rigGaps);
+  debug('rigGaps:\n%O', rigGaps);
 
   await Promise.all(_.map(rigGaps, async (gap) => {
     nsSGVs = await xDripAPS.SGVsBetween(gap.gapStart, gap.gapEnd, Math.round((gap.gapEnd.valueOf() - gap.gapStart.valueOf()) / 5*60000) + 1 )

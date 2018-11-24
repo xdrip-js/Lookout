@@ -87,7 +87,7 @@ const postToXdrip = (entry) => {
       error('error posting SGV to xDripAPS: ', err);
     } else {
       log('uploaded SGV to xDripAPS, statusCode = ' + response.statusCode);
-      debug('Entry: %O', entry);
+      debug('Entry:\n%O', entry);
     }
   });
 };
@@ -121,7 +121,7 @@ const postToNS = (entry) => {
       error('error posting SGV to NS: ', err);
     } else {
       log('uploaded SGV to NS, statusCode = ' + response.statusCode);
-      debug('Entry: %O', entry);
+      debug('Entry:\n%O', entry);
     }
   });
 };
@@ -434,7 +434,7 @@ module.exports = () => {
           error('error posting Announcement to NS: ', err);
         } else {
           log('uploaded new Announcement to NS, statusCode = ' + response.statusCode);
-          debug('Announcement: %O', entry);
+          debug('Announcement:\n%O', entry);
         }
       });
     },
@@ -499,7 +499,7 @@ module.exports = () => {
           error('error posting DeviceStatus to NS: ', err);
         } else {
           log('uploaded new DeviceStatus to NS, statusCode = ' + response.statusCode);
-          debug('Status: %O', entry);
+          debug('Status:\n%O', entry);
         }
       });
     },
@@ -535,7 +535,7 @@ module.exports = () => {
           error('error posting BG Check to NS: ', err);
         } else {
           log('uploaded new BG Check to NS, statusCode = ' + response.statusCode);
-          debug('BG Check: %O', entry);
+          debug('BG Check:\n%O', entry);
         }
       });
     },
@@ -580,7 +580,7 @@ module.exports = () => {
           error('error posting calibration to NS: ', err);
         } else {
           log('uploaded new calibration to NS, statusCode = ' + response.statusCode);
-          debug('calibration: %O', entry);
+          debug('calibration:\n%O', entry);
         }
       });
     },
@@ -621,7 +621,7 @@ module.exports = () => {
           error('error posting ' + eventType + ' to NS: ', err);
         } else {
           log('uploaded new ' + eventType + ' event to NS, statusCode = ' + response.statusCode);
-          debug('event: %O', entry);
+          debug('event:\n%O', entry);
         }
       });
     },

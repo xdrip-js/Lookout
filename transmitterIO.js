@@ -643,7 +643,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     txStatus.timestamp = moment();
 
-    log('Got battery status message: %O', txStatus);
+    log('Got battery status message:\n%O', txStatus);
   };
 
   const processBackfillData = async (backfillData) => {

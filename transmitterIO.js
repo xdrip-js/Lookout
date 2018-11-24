@@ -127,8 +127,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       // Only enter a sensorStart if we aren't
       // in either a transmitter session, extend session, or expired session
       await storage.setItem('sensorStart', Date.now())
-        .catch(error => {
-          error('Error getting rig sensorStart: ' + error);
+        .catch(err => {
+          error('Error getting rig sensorStart: ' + err);
         });
     }
 
@@ -176,8 +176,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     let sendSGV = true;
 
     let sensorInsert = await storage.getItem('sensorInsert')
-      .catch(error => {
-        error('Error getting rig sensorInsert: ' + error);
+      .catch(err => {
+        error('Error getting rig sensorInsert: ' + err);
       });
     if (sensorInsert) {
       sensorInsert = moment(sensorInsert);
@@ -185,16 +185,16 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     }
 
     let sensorStart = await storage.getItem('sensorStart')
-      .catch(error => {
-        error('Error getting rig sensorStart: ' + error);
+      .catch(err => {
+        error('Error getting rig sensorStart: ' + err);
       });
 
     if (!sensorStart && transmitterInSession(sgv)) {
       sensorStart = moment(sgv.sessionStartDate);
 
       storage.setItem('sensorStart', sensorStart.valueOf())
-        .catch(error => {
-          error('Error saving rig sensorStart: ' + error);
+        .catch(err => {
+          error('Error saving rig sensorStart: ' + err);
         });
     }
 
@@ -209,8 +209,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     }
 
     let sensorStop = await storage.getItem('sensorStop')
-      .catch(error => {
-        error('Error getting rig sensorStop: ' + error);
+      .catch(err => {
+        error('Error getting rig sensorStop: ' + err);
       });
 
     if (sensorStop) {
@@ -223,8 +223,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     sgv.readDateMills = moment(sgv.readDate).valueOf();
 
     let bgChecks = await storage.getItem('bgChecks')
-      .catch(error => {
-        error('Error getting bgChecks: ' + error);
+      .catch(err => {
+        error('Error getting bgChecks: ' + err);
       });
 
     if (!bgChecks) {
@@ -536,8 +536,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     }
 
     let rigSGVs = await storage.getItem('glucoseHist')
-      .catch(error => {
-        error('Error getting rig SGVs: ' + error);
+      .catch(err => {
+        error('Error getting rig SGVs: ' + err);
       });
 
     if (!rigSGVs) {
@@ -563,8 +563,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     await storageLock.lockStorage();
 
     bgChecks = await storage.getItem('bgChecks')
-      .catch(error => {
-        error('Error getting bgChecks: ' + error);
+      .catch(err => {
+        error('Error getting bgChecks: ' + err);
       });
 
     if (!bgChecks) {
@@ -596,8 +596,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     }
 
     let sensorInsert = await storage.getItem('sensorInsert')
-      .catch(error => {
-        error('Error getting rig sensorInsert: ' + error);
+      .catch(err => {
+        error('Error getting rig sensorInsert: ' + err);
       });
 
     if (sensorInsert) {
@@ -631,8 +631,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     }
 
     storage.setItem('bgChecks', bgChecks)
-      .catch(error => {
-        error('Error saving bgChecks: ' + error);
+      .catch(err => {
+        error('Error saving bgChecks: ' + err);
       });
 
     storageLock.unlockStorage();
@@ -695,8 +695,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     let pendingCalTime = 0;
 
     let bgChecks = await storage.getItem('bgChecks')
-      .catch(error => {
-        error('Error getting bgChecks: ' + error);
+      .catch(err => {
+        error('Error getting bgChecks: ' + err);
       });
 
     if (!bgChecks) {
@@ -975,8 +975,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     // provide the glucose history
     getHistory: async () => {
       let glucoseHist = await storage.getItem('glucoseHist')
-        .catch(error => {
-          error('Unable to get glucoseHist storage item: ' + error);
+        .catch(err => {
+          error('Unable to get glucoseHist storage item: ' + err);
         });
 
       if (!glucoseHist) {
@@ -1038,8 +1038,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       await storageLock.lockStorage();
 
       let bgChecks = await storage.getItem('bgChecks')
-        .catch(error => {
-          error('Error getting bgChecks: ' + error);
+        .catch(err => {
+          error('Error getting bgChecks: ' + err);
         });
 
       if (!bgChecks) {
@@ -1058,8 +1058,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       bgChecks = _.sortBy(bgChecks, ['dateMills']);
 
       storage.setItem('bgChecks', bgChecks)
-        .catch(error => {
-          error('Error saving bgChecks: ' + error);
+        .catch(err => {
+          error('Error saving bgChecks: ' + err);
         });
 
       storageLock.unlockStorage();

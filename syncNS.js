@@ -23,8 +23,8 @@ const syncCal = async (sensorInsert) => {
   log('syncCal started');
 
   NSCal = await xDripAPS.latestCal()
-    .catch(error => {
-      error('Error getting NS calibration: ' + error);
+    .catch(err => {
+      error('Error getting NS calibration: ' + err);
       nsQueryError = true;
       return;
     });
@@ -45,8 +45,8 @@ const syncCal = async (sensorInsert) => {
   rigCalStr = 'g5Calibration';
 
   rigCal = await storage.getItem(rigCalStr)
-    .catch(error => {
-      error('Error getting rig calibration: ' + error);
+    .catch(err => {
+      error('Error getting rig calibration: ' + err);
     });
 
   if (rigCal) {
@@ -102,8 +102,8 @@ const syncEvent = async (itemName, eventType) => {
   log('Syncing rig ' + itemName + ' and NS ' + eventType + ' started');
 
   nsEvent = await xDripAPS.latestEvent(eventType)
-    .catch(error => {
-      error('Unable to get latest ' + eventType + ' record from NS: ' + error);
+    .catch(err => {
+      error('Unable to get latest ' + eventType + ' record from NS: ' + err);
       nsQueryError = true;
     });
 
@@ -118,8 +118,8 @@ const syncEvent = async (itemName, eventType) => {
   await storageLock.lockStorage();
 
   rigItem = await storage.getItem(itemName)
-    .catch(error => {
-      error('Error getting rig ' + itemName + ': ' + error);
+    .catch(err => {
+      error('Error getting rig ' + itemName + ': ' + err);
     });
 
   if (rigItem) {
@@ -188,8 +188,8 @@ const syncSGVs = async () => {
   await storageLock.lockStorage();
 
   rigSGVs = await storage.getItem('glucoseHist')
-    .catch(error => {
-      error('Error getting rig SGVs: ' + error);
+    .catch(err => {
+      error('Error getting rig SGVs: ' + err);
     });
 
   if (!rigSGVs) {
@@ -258,8 +258,8 @@ const syncSGVs = async () => {
 
     // get the NS entries that are in the gap
     nsSGVs = await xDripAPS.SGVsBetween(nsGap.gapStart, nsGap.gapEnd, Math.round((nsGap.gapEnd.valueOf() - nsGap.gapStart.valueOf()) * 2 / 5*60000) + 1 )
-      .catch(error => {
-        error('Unable to get NS SGVs to match unfiltered with BG Check: ' + error);
+      .catch(err => {
+        error('Unable to get NS SGVs to match unfiltered with BG Check: ' + err);
         nsQueryError = true;
       });
 
@@ -309,8 +309,8 @@ const syncSGVs = async () => {
 
   await Promise.all(_.map(rigGaps, async (gap) => {
     nsSGVs = await xDripAPS.SGVsBetween(gap.gapStart, gap.gapEnd, Math.round((gap.gapEnd.valueOf() - gap.gapStart.valueOf()) / 5*60000) + 1 )
-      .catch(error => {
-        error('Unable to get NS SGVs to match unfiltered with BG Check: ' + error);
+      .catch(err => {
+        error('Unable to get NS SGVs to match unfiltered with BG Check: ' + err);
       });
 
     if (!nsSGVs) {
@@ -370,9 +370,9 @@ const syncBGChecks = async (sensorInsert, sensorStop) => {
   }
 
   NSBGChecks = await xDripAPS.BGChecksSince(validBGCheckStartTime)
-    .catch(error => {
+    .catch(err => {
       // Bail out since we can't sync if we don't have NS access
-      error('Error getting NS BG Checks: ' + error);
+      error('Error getting NS BG Checks: ' + err);
       nsQueryError = true;
       return;
     });
@@ -416,8 +416,8 @@ const syncBGChecks = async (sensorInsert, sensorStop) => {
   await storageLock.lockStorage();
 
   let rigBGChecks = await storage.getItem('bgChecks')
-    .catch(error => {
-      error('Error getting bgChecks: ' + error);
+    .catch(err => {
+      error('Error getting bgChecks: ' + err);
     });
 
   if (!rigBGChecks || !Array.isArray(rigBGChecks)) {
@@ -622,8 +622,8 @@ const syncNS = async (storage_, storageLock_, transmitter_) => {
   });
 
   await Promise.all([syncCalPromise, syncSGVsPromise, syncBGChecksPromise])
-    .catch(error => {
-      error('syncNS error: ' + error);
+    .catch(err => {
+      error('syncNS error: ' + err);
     });
 
   // have transmitterIO check if the sensor session should be ended.

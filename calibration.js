@@ -369,8 +369,8 @@ exports.expiredCalibration = expiredCalibration;
 const getUnfiltered = async (storage, valueTime, sgv) => {
 
   let rigSGVs = await storage.getItem('glucoseHist')
-    .catch(error => {
-      error('Error getting rig SGVs: ' + error);
+    .catch(err => {
+      error('Error getting rig SGVs: ' + err);
     });
 
   if (rigSGVs && (rigSGVs.length > 1)) {
@@ -426,8 +426,8 @@ const getUnfilteredFromNS = async (valueTime) => {
 
   // Get NS SGV immediately before BG Check
   NSSGVs = await xDripAPS.SGVsBetween(timeStart, timeEnd, 5)
-    .catch(error => {
-      error('Unable to get NS SGVs to match unfiltered with BG Check: ' + error);
+    .catch(err => {
+      error('Unable to get NS SGVs to match unfiltered with BG Check: ' + err);
     });
 
   if (!NSSGVs) {
@@ -486,8 +486,8 @@ const interpolateUnfiltered = (SGVBefore, SGVAfter, valueTime) => {
 
 const getExpiredCal = async (storage) => {
   let lastExpiredCal = await storage.getItem('expiredCal')
-    .catch(error => {
-      error('Unable to obtain current Expired Calibration' + error);
+    .catch(err => {
+      error('Unable to obtain current Expired Calibration' + err);
     });
 
   return lastExpiredCal;
@@ -506,8 +506,8 @@ exports.saveExpiredCal = saveExpiredCal;
 
 const getTxmitterCal = async (storage) => {
   let lastCal = await storage.getItem('g5Calibration')
-    .catch(error => {
-      error('Unable to obtain current NS Calibration' + error);
+    .catch(err => {
+      error('Unable to obtain current NS Calibration' + err);
     });
 
   return lastCal;
@@ -559,8 +559,8 @@ exports.getActiveCal = getActiveCal;
 // provide the most recent Txmitter calibration
 const getLastCal = async (storage) => {
   let bgChecks = await storage.getItem('bgChecks')
-    .catch(error => {
-      error('Unable to get bgChecks storage item: ' + error);
+    .catch(err => {
+      error('Unable to get bgChecks storage item: ' + err);
     });
 
   let lastTxmitterCal = getLastTxmitterCal(bgChecks);

@@ -35,15 +35,15 @@ const test_online = async () => {
 
 const _getMeterId = async () => {
   let meterId = await storage.getItem('meterid')
-    .catch(error => {
-      error('Unable to get meterid storage item: ' + error);
+    .catch(err => {
+      error('Unable to get meterid storage item: ' + err);
     });
 
   if (!meterId) {
     meterId = '000000';
     storage.setItem('meterid', meterId)
-      .catch(error => {
-        error('Unable to store meterid storage item: ' + error);
+      .catch(err => {
+        error('Unable to store meterid storage item: ' + err);
       });
   }
 
@@ -64,8 +64,8 @@ module.exports = (_options, _storage, client) => {
     // Set the meter Id to the value provided
     setMeterId: (value) => {
       storage.setItem('meterid', value)
-        .catch(error => {
-          error('Error saving meterid: ' + error);
+        .catch(err => {
+          error('Error saving meterid: ' + err);
         });
 
       client.meterId(value);

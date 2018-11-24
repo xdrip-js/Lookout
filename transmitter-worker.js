@@ -1,9 +1,9 @@
 const Debug = require('debug');
-const log = Debug('worker:log');
+const log = Debug('lookout:log');
 /*eslint-disable-next-line no-unused-vars*/
-const error = Debug('worker:error');
+const error = Debug('lookout:error');
 /*eslint-disable-next-line no-unused-vars*/
-const debug = Debug('worker:debug');
+const debug = Debug('lookout:debug');
 
 const Transmitter = require('xdrip-js');
 

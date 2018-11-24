@@ -1,8 +1,8 @@
 const Debug = require('debug');
 /*eslint-disable-next-line no-unused-vars*/
-const log = Debug('pumpio:log');
-const error = Debug('pumpio:error');
-const debug = Debug('pumpio:debug');
+const log = Debug('lookout:log');
+const error = Debug('lookout:error');
+const debug = Debug('lookout:debug');
 
 const chokidar = require('chokidar');
 const fs = require('fs');

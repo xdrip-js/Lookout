@@ -4,9 +4,9 @@ const cp = require('child_process');
 const moment = require('moment');
 
 const Debug = require('debug');
-const log = Debug('transmitter:log');
-const error = Debug('transmitter:error');
-const debug = Debug('transmitter:debug');
+const log = Debug('lookout:log');
+const error = Debug('lookout:error');
+const debug = Debug('lookout:debug');
 
 var _ = require('lodash');
 

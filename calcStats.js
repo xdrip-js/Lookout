@@ -3,11 +3,11 @@
 const moment = require('moment');
 
 const Debug = require('debug');
-const log = Debug('stats:log');
+const log = Debug('lookout:log');
 
 /*eslint-disable-next-line no-unused-vars*/
-const error = Debug('stats:error');
-const debug = Debug('stats:debug');
+const error = Debug('lookout:error');
+const debug = Debug('lookout:debug');
 
 var exports = module.exports = {};
 

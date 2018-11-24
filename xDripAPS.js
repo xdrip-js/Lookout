@@ -5,9 +5,9 @@ const requestPromise = require('request-promise-native');
 const moment = require('moment');
 
 const Debug = require('debug');
-const log = Debug('xdripaps:log');
-const error = Debug('xdripaps:error');
-const debug = Debug('xdripaps:debug');
+const log = Debug('lookout:log');
+const error = Debug('lookout:error');
+const debug = Debug('lookout:debug');
 
 const _convertEntryToNS = (glucose) => {
   let direction;

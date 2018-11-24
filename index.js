@@ -3,6 +3,8 @@
 const storage = require('node-persist');
 const storageLock = require('./storageLock');
 
+const Debug = require('debug');
+
 const argv = require('yargs')
   .usage('$0 [--extend_sensor] [--expired_cal] [--port <port>] [--openaps <directory>] [--sim] [--fakemeter] [--offline_fakemeter] [--no_nightscout]')
   .option('extend_sensor', {
@@ -78,6 +80,14 @@ let options = {
 };
 
 const init = async (options) => {
+
+  Debug.disable();
+
+  if (options.verbose) {
+    Debug.enable('lookout:*');
+  } else {
+    Debug.enable('lookout:*,-lookout:debug');
+  }
 
   // handle persistence here
   // make the storage direction relative to the install directory,

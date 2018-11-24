@@ -583,7 +583,7 @@ module.exports = () => {
       }];
 
       const secret = process.env.API_SECRET;
-      let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json';
+      let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/treatments.json';
       let ns_headers = {
         'Content-Type': 'application/json'
       };

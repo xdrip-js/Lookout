@@ -3,9 +3,9 @@
 const Debug = require('debug');
 
 /*eslint-disable-next-line no-unused-vars*/
-const log = Debug('lookout:log');
-const error = Debug('lookout:error');
-const debug = Debug('lookout:debug');
+const log = Debug('storageLock:log');
+const error = Debug('storageLock:error');
+const debug = Debug('storageLock:debug');
 
 var exports = module.exports = {};
 

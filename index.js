@@ -81,8 +81,6 @@ let options = {
 
 const init = async (options) => {
 
-  Debug.disable();
-
   if (options.verbose) {
     Debug.enable('lookout:*');
   } else {

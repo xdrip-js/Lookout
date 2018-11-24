@@ -1,8 +1,8 @@
 const Debug = require('debug');
 /*eslint-disable-next-line no-unused-vars*/
-const log = Debug('lookout:log');
-const error = Debug('lookout:error');
-const debug = Debug('lookout:debug');
+const log = Debug('loopIO:log');
+const error = Debug('loopIO:error');
+const debug = Debug('loopIO:debug');
 
 const chokidar = require('chokidar');
 const fs = require('fs');

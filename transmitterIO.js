@@ -4,9 +4,9 @@ const cp = require('child_process');
 const moment = require('moment');
 
 const Debug = require('debug');
-const log = Debug('lookout:log');
-const error = Debug('lookout:error');
-const debug = Debug('lookout:debug');
+const log = Debug('transmitterIO:log');
+const error = Debug('transmitterIO:error');
+const debug = Debug('transmitterIO:debug');
 
 var _ = require('lodash');
 
@@ -760,9 +760,9 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
       prevGlucose = prevGlucose ? prevGlucose.glucose : 120;
 
-      worker = cp.fork(__dirname + '/transmitter-simulator', [prevGlucose], { });
+      worker = cp.fork(__dirname + '/transmitterSimulator', [prevGlucose], { });
     } else {
-      worker = cp.fork(__dirname + '/transmitter-worker', [id], {
+      worker = cp.fork(__dirname + '/transmitterWorker', [id], {
         env: {
           DEBUG: 'transmitter,bluetooth-manager'
         }

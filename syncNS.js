@@ -4,9 +4,9 @@ const xDripAPS = require('./xDripAPS')();
 const moment = require('moment');
 const timeLimitedPromise = require('./timeLimitedPromise');
 const Debug = require('debug');
-const log = Debug('lookout:log');
-const error = Debug('lookout:error');
-const debug = Debug('lookout:debug');
+const log = Debug('syncNS:log');
+const error = Debug('syncNS:error');
+const debug = Debug('syncNS:debug');
 
 const _ = require('lodash');
 

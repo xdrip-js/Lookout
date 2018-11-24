@@ -15,9 +15,9 @@
 
 const Debug = require('debug');
 
-const log = Debug('lookout:log');
-const error = Debug('lookout:error');
-const debug = Debug('lookout:debug');
+const log = Debug('calibration:log');
+const error = Debug('calibration:error');
+const debug = Debug('calibration:debug');
 
 const stats = require('./calcStats');
 const xDripAPS = require('./xDripAPS')();

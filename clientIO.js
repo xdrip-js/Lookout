@@ -1,9 +1,9 @@
 
 const Debug = require('debug');
-const log = Debug('lookout:log');
+const log = Debug('clientIO:log');
 /*eslint-disable-next-line no-unused-vars*/
-const error = Debug('lookout:error');
-const debug = Debug('lookout:debug');
+const error = Debug('clientIO:error');
+const debug = Debug('clientIO:debug');
 
 const LoopIO = require('./loopIO');
 const PumpIO = require('./pumpIO');

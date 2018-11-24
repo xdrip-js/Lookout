@@ -2,9 +2,9 @@
 const exec = require('./childExecPromise');
 
 const Debug = require('debug');
-const log = Debug('lookout:log');
-const error = Debug('lookout:error');
-const debug = Debug('lookout:debug');
+const log = Debug('fakemeter:log');
+const error = Debug('fakemeter:error');
+const debug = Debug('fakemeter:debug');
 
 let storage = null;
 let options = null;

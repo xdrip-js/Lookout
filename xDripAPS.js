@@ -495,7 +495,7 @@ module.exports = () => {
       /*eslint-disable no-unused-vars*/
       request(optionsNS, function (err, response, body) {
       /*eslint-enable no-unused-vars*/
-        if (error) {
+        if (err) {
           error('error posting DeviceStatus to NS: ', err);
         } else {
           log('uploaded new DeviceStatus to NS, statusCode = ' + response.statusCode);
@@ -617,7 +617,7 @@ module.exports = () => {
       /*eslint-disable no-unused-vars*/
       request(optionsNS, function (err, response, body) {
       /*eslint-enable no-unused-vars*/
-        if (error) {
+        if (err) {
           error('error posting ' + eventType + ' to NS: ', err);
         } else {
           log('uploaded new ' + eventType + ' event to NS, statusCode = ' + response.statusCode);

@@ -81,10 +81,13 @@ let options = {
 
 const init = async (options) => {
 
-  if (options.verbose) {
-    Debug.enable('*:*');
-  } else {
-    Debug.enable('*:*,-*:debug');
+  // DEBUG environment variable takes precedence over verbose flag
+  if (!('DEBUG' in Object.keys(process.env))) {
+    if (options.verbose) {
+      Debug.enable('*:*');
+    } else {
+      Debug.enable('*:*,-*:debug,-express:*,-socket.io:*');
+    }
   }
 
   // handle persistence here

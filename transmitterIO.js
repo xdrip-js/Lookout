@@ -764,7 +764,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     } else {
       let workerOptions = { };
 
-      if (!('DEBUG' in Object.keys(process.env))) {
+      if (typeof process.env['DEBUG'] === 'undefined') {
         workerOptions.env = {
           DEBUG: options.verbose ? 'transmitter,bluetooth-manager,backfill-parser' : 'transmitter'
         };

@@ -82,7 +82,7 @@ let options = {
 const init = async (options) => {
 
   // DEBUG environment variable takes precedence over verbose flag
-  if (!('DEBUG' in Object.keys(process.env))) {
+  if (typeof process.env['DEBUG'] === 'undefined') {
     if (options.verbose) {
       Debug.enable('*:*');
     } else {

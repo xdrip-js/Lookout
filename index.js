@@ -86,7 +86,7 @@ const init = async (options) => {
     if (options.verbose == 0) {
       Debug.enable('*:*,transmitter,-*:debug,-hci,-express:*,-socket.io:*');
     } else if (options.verbose == 1) {
-      Debug.enable('*,*:*,-express:*,-socket.io:*');
+      Debug.enable('*,*:*,-hci,-express:*,-socket.io:*');
     } else {
       Debug.enable('*,*:*');
     }

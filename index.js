@@ -20,10 +20,10 @@ const argv = require('yargs')
     default: false
   })
   .option('verbose', {
-    boolean: true,
+    count: true,
     describe: 'Enables verbose mode',
     alias: 'v',
-    default: false
+    default: 0
   })
   .option('sim', {
     boolean: true,
@@ -83,10 +83,12 @@ const init = async (options) => {
 
   // DEBUG environment variable takes precedence over verbose flag
   if (typeof process.env['DEBUG'] === 'undefined') {
-    if (options.verbose) {
-      Debug.enable('*:*');
+    if (options.verbose == 0) {
+      Debug.enable('*:*,transmitter,-*:debug,-express:*,-socket.io:*');
+    } else if (options.verbose == 1) {
+      Debug.enable('*,*:*,-express:*,-socket.io:*');
     } else {
-      Debug.enable('*:*,-*:debug,-express:*,-socket.io:*');
+      Debug.enable('*,*:*');
     }
   }
 

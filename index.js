@@ -84,7 +84,7 @@ const init = async (options) => {
   // DEBUG environment variable takes precedence over verbose flag
   if (typeof process.env['DEBUG'] === 'undefined') {
     if (options.verbose == 0) {
-      Debug.enable('*:*,transmitter,-*:debug,-express:*,-socket.io:*');
+      Debug.enable('*:*,transmitter,-*:debug,-hci,-express:*,-socket.io:*');
     } else if (options.verbose == 1) {
       Debug.enable('*,*:*,-express:*,-socket.io:*');
     } else {

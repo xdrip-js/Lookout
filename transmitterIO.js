@@ -764,12 +764,6 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     } else {
       let workerOptions = { };
 
-//      if (typeof process.env['DEBUG'] === 'undefined') {
-//        workerOptions.env = {
-//          DEBUG: options.verbose ? 'transmitter,bluetooth-manager,backfill-parser' : 'transmitter'
-//        };
-//      }
-
       worker = cp.fork(__dirname + '/transmitterWorker', [id], workerOptions);
     }
 

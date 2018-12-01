@@ -81,12 +81,16 @@ let options = {
 
 const init = async (options) => {
 
+  let lookoutDebug = 'calcStats:*,calibration:*,clientIO:*,fakemeter:*,loopIO:*';
+  lookoutDebug += ',pumpIO:*,storageLock:*,syncNS:*,transmitterIO:*,transmitterWorker:*';
+  lookoutDebug += ',xDripAPS:*,transmitter';
+
   // DEBUG environment variable takes precedence over verbose flag
   if (typeof process.env['DEBUG'] === 'undefined') {
     if (options.verbose == 0) {
-      Debug.enable('*:*,transmitter,-*:debug,-hci,-express:*,-socket.io:*');
+      Debug.enable(lookoutDebug + ',-*:debug');
     } else if (options.verbose == 1) {
-      Debug.enable('*,*:*,-hci,-express:*,-socket.io:*');
+      Debug.enable(lookoutDebug);
     } else {
       Debug.enable('*,*:*');
     }

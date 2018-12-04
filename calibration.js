@@ -235,7 +235,9 @@ const calculateTxmitterCalibration = (lastCal, lastTxmitterCalTime, latestBgChec
     console.log('Calculated new CGM calculated calibration with ' + calReturn.type + ' due to ' + calPairs.length + ' calibration pairs:\n', calReturn);
   } else if (lastCal && latestBgCheckTime && (latestBgCheckTime.diff(moment(lastCal.date).subtract(6, 'minutes')) > 0)) {
     console.log('BG Check occurred, but no CGM calculated calibration update needed. Setting calibration date to be after latest BG check time.');
-    lastCal.date = latestBgCheckTime.valueOf();
+
+    // this disables the CGM calculated calibration until we have at least 2 readings showing it doesn't need an update (6 minutes).
+    lastCal.date = Date.now();
     calReturn = lastCal;
   } else {
     console.log('No CGM calculated calibration update needed.');

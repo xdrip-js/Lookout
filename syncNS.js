@@ -132,12 +132,16 @@ const syncEvent = async (itemName, eventType) => {
     if (!rigItem) {
       console.log('No rig ' + itemName + ', storing NS ' + eventType);
 
+      latestEvent = nsEvent;
+
       await storage.setItem(itemName, nsEvent.valueOf())
         .catch(() => {
           console.log('Unable to store ' + itemName);
         });
     } else if (rigItem && (rigItem.valueOf() < nsEvent.valueOf())) {
       console.log('NS ' + eventType + ' more recent than rig ' + itemName + ' NS date: ' + nsEvent.format() + ' Rig date: ' + rigItem.format());
+
+      latestEvent = nsEvent;
 
       storage.setItem(itemName, nsEvent.valueOf())
         .catch(() => {

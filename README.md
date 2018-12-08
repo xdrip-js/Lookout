@@ -106,7 +106,7 @@ After updating the rig, reboot to restart Lookout with the updated version.
 ## Example usage
 Just type `Lookout`. The app will run on port 3000.
 
-To see verbose output, use `sudo DEBUG=* Lookout`, and replace the `*` with a comma separated list of the modules you would like to debug. E.g. `sudo DEBUG=smp,transmitter,bluetooth-manager Lookout`.
+To see verbose output, use `Lookout -v`. To see even more verbose output, use `Lookout -vv`. Alternatively, use `sudo DEBUG=* Lookout`, and replace the `*` with a comma separated list of the modules you would like to debug. E.g. `sudo DEBUG=transmitterIO:*,smp,transmitter,bluetooth-manager Lookout`.
 
 To run in simulated mode, use `node index.js --sim`.
 
@@ -227,25 +227,27 @@ To look at the Lookout log, for debug purposes, type `cat /var/log/openaps/xdrip
 * If your xdrip-js.log file contains messages similar to `Error: /root/Lookout/node_modules/bluetooth-hci-socket/build/Release/binding.node: undefined symbol: _ZN2v816FunctionTemplate3NewEPNS_7IsolateEPFvRKNS_20FunctionCallbackInfoINS_5ValueEEEENS_5LocalIS4_EENSA_INS_9SignatureEEEi` run the following command: `cd ~/Lookout; npm rebuild`
 
 ## Lookout Command Line Options
-* `--extend_sensor`: Enables using the calibrated and unfiltered values reported by the CGM to calculate the running calibration slope and intercept values whenever the current calibration values it has produces a calibrated value that is more than 5 mg/dL away from the CGM reported calibrated value.  Lookout will apply the most recent calculated calibration to the CGM's unfiltered value if the transmitter does not report a calibrated glucose.  This enables Lookout to continue reporting glucose values after the sensor session is ended, providing greater flexibility on when the user changes the site.  This is not intended to extend a sensor life past 24 hours due to the lack of an ongoing calibration update mechanism.
+* `--extend_sensor`, `-e`: Enables using the calibrated and unfiltered values reported by the CGM to calculate the running calibration slope and intercept values whenever the current calibration values it has produces a calibrated value that is more than 5 mg/dL away from the CGM reported calibrated value.  Lookout will apply the most recent calculated calibration to the CGM's unfiltered value if the transmitter does not report a calibrated glucose.  This enables Lookout to continue reporting glucose values after the sensor session is ended, providing greater flexibility on when the user changes the site.  This is not intended to extend a sensor life past 24 hours due to the lack of an ongoing calibration update mechanism.
 
 **WARNING** If running in extended sensor mode, the user must enter a `Sensor Insert` in Nightscout to notify Lookout to stop reporting glucose values.
 
-* `--expired_cal`: Enables using user entered BG Check and Sensor Start records to calibrate raw unfiltered values reported by the CGM transmitter. Lookout does not perform calibration for 15 minutes after a Sensor Start. During the first 12 hours after a Sensor Start, Lookout only uses a Single Point calibration algorithm that assumes a y axis intercept of 0.  After the first 12 hours, Lookout will switch to using a Least Squares Regression algorithm to calculate the y axis intercept and slope to convert the raw unfiltered values to calibrated glucose values.  Transmitter provided calibrated glucose readings take presedence over the Lookout calibration algorithm.  If the transmitter doesn't provide a calibrated value, Lookout will calibrate the unfiltered value.  Extend sensor mode takes presedence over expired calibration mode.
+* `--expired_cal`, `-x`: Enables using user entered BG Check and Sensor Start records to calibrate raw unfiltered values reported by the CGM transmitter. Lookout does not perform calibration for 15 minutes after a Sensor Start. During the first 12 hours after a Sensor Start, Lookout only uses a Single Point calibration algorithm that assumes a y axis intercept of 0.  After the first 12 hours, Lookout will switch to using a Least Squares Regression algorithm to calculate the y axis intercept and slope to convert the raw unfiltered values to calibrated glucose values.  Transmitter provided calibrated glucose readings take presedence over the Lookout calibration algorithm.  If the transmitter doesn't provide a calibrated value, Lookout will calibrate the unfiltered value.  Extend sensor mode takes presedence over expired calibration mode.
 
 **INFO** Currently, expired calibration mode only calculates the values and prints them to the log file for monitoring the algorithm effectiveness.  Expired calibration mode is in testing phase only. It is included in the code at this time so the user can monitor in the log file the delta between the official calibration values and the expired mode calculated calibration values.  The calculation of glucose values from the calculated expired calibration values is disabled.
 
-* `--verbose`: Enables verbose logging.
+* `--verbose`, `-v`: Enables verbose logging.
 
-* `--sim`: Runs Lookout in simulation mode for offline testing.
+* `--sim`, `-s`: Runs Lookout in simulation mode for offline testing.
 
-* `--fakemeter`: Enables sending blood glucose readings to the pump configured in the OpenAPS directory as meter readings. Configure the pump to enable the meterid configured in Lookout. This option requires oref0 version 0.7.0 or later.
+* `--fakemeter`, `-f`: Enables sending blood glucose readings to the pump configured in the OpenAPS directory as meter readings. Configure the pump to enable the meterid configured in Lookout. This option requires oref0 version 0.7.0 or later.
 
-* `--offline_fakemeter`: Enables sending blood glucose readings to the pump as described in `--fakemeter`, but only when the rig is offline.
+* `--offline_fakemeter`, `-o`: Enables sending blood glucose readings to the pump as described in `--fakemeter`, but only when the rig is offline.
 
-* `--port`: Sets the port number for the web server providing the Lookout GUI.
+* `--port`, `-p`: Sets the port number for the web server providing the Lookout GUI.
 
-* `--openaps`: Sets the OpenAPS directory. The default directory is `/root/myopenaps`
+* `--openaps`, `-d`: Sets the OpenAPS directory. The default directory is `/root/myopenaps`
+
+* `--no_nightscout`, `-n`: Disable Nightscout interaction.
 
 ## Reverting NodeJS
 

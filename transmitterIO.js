@@ -102,7 +102,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
       let latestBgCheckTime = null;
 
-      if (bgChecks.length > 0) {
+      if (bgChecks && (bgChecks.length > 0)) {
         latestBgCheckTime = moment(bgChecks[bgChecks.length-1].dateMills);
       }
 

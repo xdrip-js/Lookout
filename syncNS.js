@@ -51,7 +51,7 @@ const syncCal = async (sensorInsert) => {
     if (!rigCal) {
       console.log('No rig calibration, storing NS calibration');
 
-      if (sensorInsert.diff(moment(NSCal.date)) > 0) {
+      if (sensorInsert && sensorInsert.diff(moment(NSCal.date)) > 0) {
         console.log('Found sensor insert after latest NS calibration. Not updating local rig calibration');
       } else {
         await storage.setItem(rigCalStr, NSCal)

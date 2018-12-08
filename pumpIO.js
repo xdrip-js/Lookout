@@ -1,3 +1,9 @@
+const Debug = require('debug');
+/*eslint-disable-next-line no-unused-vars*/
+const log = Debug('pumpIO:log');
+const error = Debug('pumpIO:error');
+const debug = Debug('pumpIO:debug');
+
 const chokidar = require('chokidar');
 const fs = require('fs');
 
@@ -6,14 +12,18 @@ module.exports = (io, options) => {
   const openapsDir = options.openaps;
 
   const readBasalProfile = (path) => {
-    console.log(`Reading file ${path}`);
+    debug(`Reading file ${path}`);
     setTimeout(function() {
       fs.readFile(path, 'utf8', function (err, data) {
-        if (err) return; // we'll not consider error handling for now
+        if (err) {
+          error('Error reading file: ' + path);
+          return; // we'll not consider error handling for now
+        }
         try {
           basalProfile = JSON.parse(data);
           io.emit('basalProfile', basalProfile);
         } catch (e) {
+          error('Error parsing JSON file: ' + path);
           return;
         }
       });

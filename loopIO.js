@@ -1,3 +1,9 @@
+const Debug = require('debug');
+/*eslint-disable-next-line no-unused-vars*/
+const log = Debug('loopIO:log');
+const error = Debug('loopIO:error');
+const debug = Debug('loopIO:debug');
+
 const chokidar = require('chokidar');
 const fs = require('fs');
 const moment = require('moment');
@@ -9,15 +15,19 @@ module.exports = (io, options) => {
   let enacted;
 
   const readIOB = (path) => {
-    console.log(`Reading file ${path}`);
+    debug(`Reading file ${path}`);
     setTimeout(function () {
       fs.readFile(path, 'utf8', function (err, data) {
-        if (err) return; // we'll not consider error handling for now
+        if (err) {
+          error('Error reading file: ' + path);
+          return; // we'll not consider error handling for now
+        }
         try {
           const obj = JSON.parse(data);
           iob = obj[0]['iob'];
           io.emit('iob', iob);
         } catch(e) {
+          error('Error parsing JSON file: ' + path);
           return;
         }
       });
@@ -28,7 +38,7 @@ module.exports = (io, options) => {
     .on('add', readIOB);
 
   const readEnacted = (path) => {
-    console.log(`Reading file ${path}`);
+    debug(`Reading file ${path}`);
     // use timeout of 1 s to make sure the write operation is finished
     // as per https://github.com/paulmillr/chokidar/issues/365#issuecomment-146896170
     setTimeout(function () {
@@ -49,7 +59,7 @@ module.exports = (io, options) => {
             units,
             COB
           }))(obj);
-          console.log(enacted);
+          debug('Enacted:\n%O', enacted);
           io.emit('enacted', enacted);
         } catch(e) {
           return;

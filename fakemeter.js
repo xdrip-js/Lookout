@@ -1,6 +1,11 @@
 
 const exec = require('./childExecPromise');
 
+const Debug = require('debug');
+const log = Debug('fakemeter:log');
+const error = Debug('fakemeter:error');
+const debug = Debug('fakemeter:debug');
+
 let storage = null;
 let options = null;
 let online = false;
@@ -12,7 +17,7 @@ const test_online = async () => {
 
   let retVal = await exec('lookout_online')
     .catch( (err) => {
-      console.log('Online test failed with error: ' + err.err);
+      error('Online test failed with error: ' + err.err);
       stdout = err.stdout;
       stderr = err.stderr;
       status = false;
@@ -22,23 +27,23 @@ const test_online = async () => {
   stdout = retVal && retVal.stdout || stdout;
   stderr = retVal && retVal.stderr || stderr;
 
-  options.verbose && console.log(`lookout_online stdout: ${stdout}`);
-  options.verbose && console.log(`lookout_online stderr: ${stderr}`);
+  debug(`lookout_online stdout: ${stdout}`);
+  debug(`lookout_online stderr: ${stderr}`);
 
   return status;
 };
 
 const _getMeterId = async () => {
   let meterId = await storage.getItem('meterid')
-    .catch(error => {
-      console.log('Unable to get meterid storage item: ' + error);
+    .catch(err => {
+      error('Unable to get meterid storage item: ' + err);
     });
 
   if (!meterId) {
     meterId = '000000';
     storage.setItem('meterid', meterId)
-      .catch(error => {
-        console.log('Unable to store meterid storage item: ' + error);
+      .catch(err => {
+        error('Unable to store meterid storage item: ' + err);
       });
   }
 
@@ -59,8 +64,8 @@ module.exports = (_options, _storage, client) => {
     // Set the meter Id to the value provided
     setMeterId: (value) => {
       storage.setItem('meterid', value)
-        .catch(error => {
-          console.log('Error saving meterid: ' + error);
+        .catch(err => {
+          error('Error saving meterid: ' + err);
         });
 
       client.meterId(value);
@@ -77,14 +82,14 @@ module.exports = (_options, _storage, client) => {
       let meterId = await _getMeterId();
 
       if (options.fakemeter || (!online && options.offline_fakemeter)) {
-        console.log('Sending glucose to fakemeter: ', value);
+        log('Sending glucose to fakemeter: ' + value);
 
         let stdout = null;
         let stderr = null;
 
         let retVal = await exec('lookout_fakemeter '+meterId+' '+value+' '+options.openaps)
           .catch( (err) => {
-            console.log('Unable to send glucose to fakemeter: ' + err.err);
+            error('Unable to send glucose to fakemeter: ' + err.err);
             stdout = err.stdout;
             stderr = err.stderr;
           });
@@ -93,10 +98,10 @@ module.exports = (_options, _storage, client) => {
         stdout = retVal && retVal.stdout || stdout;
         stderr = retVal && retVal.stderr || stderr;
 
-        options.verbose && console.log(`fakemeter stdout: ${stdout}`);
-        options.verbose && console.log(`fakemeter stderr: ${stderr}`);
+        debug(`fakemeter stdout: ${stdout}`);
+        debug(`fakemeter stderr: ${stderr}`);
       } else if (online && options.offline_fakemeter) {
-        console.log('Not sending glucose to fakemeter because rig is online');
+        log('Not sending glucose to fakemeter because rig is online');
       }
     }
   };

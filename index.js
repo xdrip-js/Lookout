@@ -3,6 +3,8 @@
 const storage = require('node-persist');
 const storageLock = require('./storageLock');
 
+const Debug = require('debug');
+
 const argv = require('yargs')
   .usage('$0 [--extend_sensor] [--expired_cal] [--port <port>] [--openaps <directory>] [--sim] [--fakemeter] [--offline_fakemeter] [--no_nightscout]')
   .option('extend_sensor', {
@@ -18,10 +20,10 @@ const argv = require('yargs')
     default: false
   })
   .option('verbose', {
-    boolean: true,
+    count: true,
     describe: 'Enables verbose mode',
     alias: 'v',
-    default: false
+    default: 0
   })
   .option('sim', {
     boolean: true,
@@ -78,6 +80,21 @@ let options = {
 };
 
 const init = async (options) => {
+
+  let lookoutDebug = 'calcStats:*,calibration:*,clientIO:*,fakemeter:*,loopIO:*';
+  lookoutDebug += ',pumpIO:*,storageLock:*,syncNS:*,transmitterIO:*,transmitterWorker:*';
+  lookoutDebug += ',xDripAPS:*,transmitter';
+
+  // DEBUG environment variable takes precedence over verbose flag
+  if (typeof process.env['DEBUG'] === 'undefined') {
+    if (options.verbose == 0) {
+      Debug.enable(lookoutDebug + ',-*:debug');
+    } else if (options.verbose == 1) {
+      Debug.enable(lookoutDebug);
+    } else {
+      Debug.enable('*,*:*');
+    }
+  }
 
   // handle persistence here
   // make the storage direction relative to the install directory,

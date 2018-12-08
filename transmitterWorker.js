@@ -1,3 +1,10 @@
+const Debug = require('debug');
+const log = Debug('transmitterWorker:log');
+/*eslint-disable-next-line no-unused-vars*/
+const error = Debug('transmitterWorker:error');
+/*eslint-disable-next-line no-unused-vars*/
+const debug = Debug('transmitterWorker:debug');
+
 const Transmitter = require('xdrip-js');
 
 const id = process.argv[2];
@@ -14,7 +21,8 @@ const getMessages = () => {
   });
 };
 
-console.log('kicking off');
+log('kicking off');
+
 const transmitter = new Transmitter(id, getMessages);
 
 transmitter.on('glucose', glucose => {

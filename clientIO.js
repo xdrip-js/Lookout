@@ -1,4 +1,10 @@
 
+const Debug = require('debug');
+const log = Debug('clientIO:log');
+/*eslint-disable-next-line no-unused-vars*/
+const error = Debug('clientIO:error');
+const debug = Debug('clientIO:debug');
+
 const LoopIO = require('./loopIO');
 const PumpIO = require('./pumpIO');
 const express = require('express');
@@ -17,7 +23,7 @@ module.exports = (options) => {
     .get('/*', function(req, res){
       res.sendFile(__dirname + '/public/index.html');
     })
-    .listen(options.port, () => console.log(`Listening on ${ options.port }`));
+    .listen(options.port, () => log(`Listening on ${ options.port }`));
 
   const io = socketIO(server);
 
@@ -32,7 +38,7 @@ module.exports = (options) => {
 
   const initClient = async (socket) => {
     let txId = transmitter && transmitter.getTxId() || null;
-    console.log('about to emit id ' + txId);
+    debug('about to emit id ' + txId);
 
     if (txId) {
       socket.emit('id', txId);
@@ -68,44 +74,44 @@ module.exports = (options) => {
     // TODO: should this just be a 'data' message?
     // how do we initialise the connection with
     // all the data it needs?
-    console.log('Client connected');
+    log('Client connected');
 
-    socket.on('disconnect', () => console.log('Client disconnected'));
+    socket.on('disconnect', () => log('Client disconnected'));
 
     initClient(socket);
 
     socket.on('resetTx', () => {
-      console.log('received resetTx command');
+      debug('received resetTx command');
 
       transmitter && transmitter.resetTx();
     });
     socket.on('startSensor', () => {
-      console.log('received startSensor command');
+      debug('received startSensor command');
 
       transmitter && transmitter.startSensor();
     });
     socket.on('backStartSensor', () => {
-      console.log('received backStartSensor command');
+      debug('received backStartSensor command');
 
       transmitter && transmitter.backStartSensor();
     });
     socket.on('stopSensor', () => {
-      console.log('received stopSensor command');
+      debug('received stopSensor command');
 
       transmitter && transmitter.stopSensor();
     });
     socket.on('calibrate', glucose => {
-      console.log('received calibration of ' + glucose);
+      debug('received calibration of ' + glucose);
 
       transmitter && transmitter.calibrate(glucose);
     });
     socket.on('id', value => {
-      console.log('received transmitter id of ' + value);
+      debug('received transmitter id of ' + value);
 
       transmitter && transmitter.setTxId(value);
     });
     socket.on('meterid', value => {
-      console.log('received meter id of ' + value);
+      debug('received meter id of ' + value);
 
       fakeMeter && fakeMeter.setMeterId(value);
     });

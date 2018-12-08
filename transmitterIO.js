@@ -3,6 +3,11 @@ const calibration = require('./calibration');
 const cp = require('child_process');
 const moment = require('moment');
 
+const Debug = require('debug');
+const log = Debug('transmitterIO:log');
+const error = Debug('transmitterIO:error');
+const debug = Debug('transmitterIO:debug');
+
 var _ = require('lodash');
 
 module.exports = async (options, storage, storageLock, client, fakeMeter) => {
@@ -20,42 +25,42 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     cp.exec('bt-device -r '+btName, (err, stdout, stderr) => {
       if (err) {
-        console.log('Unable to remove BT Device: ' + btName+' - ' + err);
+        debug('Unable to remove BT Device: ' + btName+' - ' + err);
         return;
       }
 
-      console.log('Removed BT Device: '+btName);
-      console.log(`stdout: ${stdout}`);
-      console.log(`stderr: ${stderr}`);
+      log('Removed BT Device: '+btName);
+      debug(`stdout: ${stdout}`);
+      debug(`stderr: ${stderr}`);
     });
   };
 
   const rebootRig = () => {
-    console.log('============================\nRebooting rig due to too many read failures: ' + txFailedReads + ' failures.\n============================');
+    error('============================\nRebooting rig due to too many read failures: ' + txFailedReads + ' failures.\n============================');
 
     cp.exec('bash -c "wall Rebooting Due to Transmitter Read Errors; sleep 5; shutdown -r now"', (err, stdout, stderr) => {
       if (err) {
-        console.log('Unable to reboot rig: - ' + err);
+        error('Unable to reboot rig: - ' + err);
         return;
       }
 
-      console.log(`stdout: ${stdout}`);
-      console.log(`stderr: ${stderr}`);
+      debug(`stdout: ${stdout}`);
+      debug(`stderr: ${stderr}`);
     });
   };
 
   const changeTxId = (value) => {
     if (value.length != 6) {
-      console.log('received invalid transmitter id of ' + value);
+      error('received invalid transmitter id of ' + value);
     } else {
       if (worker !== null) {
         // When worker exits, listenToTransmitter will
         // be scheduled
         try {
-          console.log('Attempting to kill worker for old id');
+          debug('Attempting to kill worker for old id');
           worker.kill('SIGTERM');
         } catch (error) {
-          console.log('Error killing old worker: ' + error);
+          error('Error killing old worker: ' + error);
         }
       } else if (!txId) {
         // If the current txId was null,
@@ -63,7 +68,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         listenToTransmitter(value);
       }
 
-      console.log('received id of ' + value);
+      log('received id of ' + value);
       txId = value;
 
       calibration.clearCalibration(storage);
@@ -93,8 +98,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     if (txmitterInSession && (sensorStartDelta > 0 || sensorStopDelta > 0)) {
       // give a 2 hour play between the sensor insert record and the session start date from the transmitter
-      console.log('Found sensor change, start, or stop after transmitter start date. Stopping Sensor Session.');
-      console.log('Session Start: ' + sessionStart + ' sensorStart: ' + sensorInsert + ' sensorStop: ' + sensorStop);
+      log('Found sensor change, start, or stop after transmitter start date. Stopping Sensor Session.');
+      debug('Session Start: ' + sessionStart + ' sensorStart: ' + sensorInsert + ' sensorStop: ' + sensorStop);
       stopTransmitterSession();
       await stopSensorSession();
     } else {
@@ -109,7 +114,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       let haveValidCal = await calibration.validateCalibration(storage, sensorInsert, sensorStop, latestBgCheckTime);
 
       if (haveCal && !haveValidCal) {
-        console.log('Transmitter not in session and found sensor change, start, or stop after latest calibration and transmitter not in session. Stopping Sensor Session.');
+        log('Transmitter not in session and found sensor change, start, or stop after latest calibration and transmitter not in session. Stopping Sensor Session.');
         await stopSensorSession();
       }
     }
@@ -122,8 +127,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       // Only enter a sensorStart if we aren't
       // in either a transmitter session, extend session, or expired session
       await storage.setItem('sensorStart', Date.now())
-        .catch(error => {
-          console.log('Error getting rig sensorStart: ' + error);
+        .catch(err => {
+          error('Error getting rig sensorStart: ' + err);
         });
     }
 
@@ -157,7 +162,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     await storage.setItem('sensorStop', now.valueOf())
       .catch((err) => {
-        console.log('Unable to store sensorStop: ' + err);
+        error('Unable to store sensorStop: ' + err);
       });
 
     options.nightscout && xDripAPS.postEvent('Sensor Stop', now);
@@ -171,31 +176,31 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     let sendSGV = true;
 
     let sensorInsert = await storage.getItem('sensorInsert')
-      .catch(error => {
-        console.log('Error getting rig sensorInsert: ' + error);
+      .catch(err => {
+        error('Error getting rig sensorInsert: ' + err);
       });
     if (sensorInsert) {
       sensorInsert = moment(sensorInsert);
-      console.log('SyncNS Rig sensor insert - date: ' + sensorInsert.format());
+      debug('SyncNS Rig sensor insert - date: ' + sensorInsert.format());
     }
 
     let sensorStart = await storage.getItem('sensorStart')
-      .catch(error => {
-        console.log('Error getting rig sensorStart: ' + error);
+      .catch(err => {
+        error('Error getting rig sensorStart: ' + err);
       });
 
     if (!sensorStart && transmitterInSession(sgv)) {
       sensorStart = moment(sgv.sessionStartDate);
 
       storage.setItem('sensorStart', sensorStart.valueOf())
-        .catch(error => {
-          console.log('Error saving rig sensorStart: ' + error);
+        .catch(err => {
+          error('Error saving rig sensorStart: ' + err);
         });
     }
 
     if (sensorStart) {
       sensorStart = moment(sensorStart);
-      console.log('SyncNS Rig sensor start - date: ' + sensorStart.format());
+      debug('SyncNS Rig sensor start - date: ' + sensorStart.format());
 
       if (!sensorInsert || (sensorStart.valueOf() > sensorInsert.valueOf())) {
         // allow the user to enter either to reset the session.
@@ -204,13 +209,13 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     }
 
     let sensorStop = await storage.getItem('sensorStop')
-      .catch(error => {
-        console.log('Error getting rig sensorStop: ' + error);
+      .catch(err => {
+        error('Error getting rig sensorStop: ' + err);
       });
 
     if (sensorStop) {
       sensorStop = moment(sensorStop);
-      console.log('SyncNS Rig sensor stop - date: ' + sensorStop.format());
+      debug('SyncNS Rig sensor stop - date: ' + sensorStop.format());
     }
 
     await storageLock.lockStorage();
@@ -218,8 +223,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     sgv.readDateMills = moment(sgv.readDate).valueOf();
 
     let bgChecks = await storage.getItem('bgChecks')
-      .catch(error => {
-        console.log('Error getting bgChecks: ' + error);
+      .catch(err => {
+        error('Error getting bgChecks: ' + err);
       });
 
     if (!bgChecks) {
@@ -230,7 +235,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     glucoseHist = await storage.getItem('glucoseHist')
       .catch((err) => {
-        console.log('Error getting glucoseHist: ' + err);
+        error('Error getting glucoseHist: ' + err);
       });
 
     if (!glucoseHist) {
@@ -261,17 +266,17 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       }
     }
 
-    console.log('sensor state: ' + sgv.stateString);
+    log('sensor state: ' + sgv.stateString);
 
     if (!sgv.glucose || sgv.glucose < 20) {
       sgv.glucose = null;
-      console.log('No valid glucose to send.');
+      log('No valid glucose to send.');
       sendSGV = false;
     }
 
     await storeNewGlucose(glucoseHist, sgv)
       .catch(() => {
-        console.log('Unable to store new glucose');
+        error('Unable to store new glucose');
       });
 
     storageLock.unlockStorage();
@@ -313,7 +318,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     await storage.setItem('glucoseHist', glucoseHist)
       .catch((err) => {
-        console.log('Unable to store glucoseHist: ' + err);
+        error('Unable to store glucoseHist: ' + err);
       });
   };
 
@@ -523,16 +528,16 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     calData.dateMills = moment(calData.date).valueOf();
 
-    console.log('Last calibration: ' + Math.round((Date.now() - calData.dateMills)/1000/60/60*10)/10 + ' hours ago');
+    log('Last calibration: ' + Math.round((Date.now() - calData.dateMills)/1000/60/60*10)/10 + ' hours ago');
 
     if (calData.glucose > 400 || calData.glucose < 20) {
-      console.log('Txmitter Last Calibration Data glucose out of range - ignoring');
+      log('Txmitter Last Calibration Data glucose out of range - ignoring');
       return;
     }
 
     let rigSGVs = await storage.getItem('glucoseHist')
-      .catch(error => {
-        console.log('Error getting rig SGVs: ' + error);
+      .catch(err => {
+        error('Error getting rig SGVs: ' + err);
       });
 
     if (!rigSGVs) {
@@ -558,8 +563,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     await storageLock.lockStorage();
 
     bgChecks = await storage.getItem('bgChecks')
-      .catch(error => {
-        console.log('Error getting bgChecks: ' + error);
+      .catch(err => {
+        error('Error getting bgChecks: ' + err);
       });
 
     if (!bgChecks) {
@@ -591,8 +596,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     }
 
     let sensorInsert = await storage.getItem('sensorInsert')
-      .catch(error => {
-        console.log('Error getting rig sensorInsert: ' + error);
+      .catch(err => {
+        error('Error getting rig sensorInsert: ' + err);
       });
 
     if (sensorInsert) {
@@ -626,8 +631,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     }
 
     storage.setItem('bgChecks', bgChecks)
-      .catch(error => {
-        console.log('Error saving bgChecks: ' + error);
+      .catch(err => {
+        error('Error saving bgChecks: ' + err);
       });
 
     storageLock.unlockStorage();
@@ -638,7 +643,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     txStatus.timestamp = moment();
 
-    console.log('Got battery status message: ', txStatus);
+    log('Got battery status message:\n%O', txStatus);
   };
 
   const processBackfillData = async (backfillData) => {
@@ -651,13 +656,13 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     _.each(backfillData, (glucose) => {
       let sgvDate = moment(glucose.time);
 
-      console.log('Received backfill glucose: ' + glucose.glucose + ' time: ' + sgvDate.format());
+      log('Received backfill glucose: ' + glucose.glucose + ' time: ' + sgvDate.format());
 
       if (glucose.type == 7 || glucose.type == 6) {
         _.each(gaps, (gap) => {
           glucose.readDateMills = moment(glucose.readDate).valueOf();
           if ((gap.gapStart.diff(sgvDate) < 0) && (gap.gapEnd.diff(sgvDate) > 0)) {
-            console.log('Storing backfill glucose: ' + glucose.glucose + ' time: ' + sgvDate.format());
+            debug('Storing backfill glucose: ' + glucose.glucose + ' time: ' + sgvDate.format());
             glucoseHist.push({
               'readDateMills': sgvDate.valueOf()
               , 'glucose': glucose.glucose
@@ -675,7 +680,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     await storage.setItem('glucoseHist', glucoseHist)
       .catch((err) => {
-        console.log('Unable to store glucoseHist: ' + err);
+        error('Unable to store glucoseHist: ' + err);
       });
 
     storageLock.unlockStorage();
@@ -690,8 +695,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     let pendingCalTime = 0;
 
     let bgChecks = await storage.getItem('bgChecks')
-      .catch(error => {
-        console.log('Error getting bgChecks: ' + error);
+      .catch(err => {
+        error('Error getting bgChecks: ' + err);
       });
 
     if (!bgChecks) {
@@ -734,7 +739,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     //   The BG Check occurred in the last 30 minutes
     if (!pendingCalTime && (deltaTime > 5*60000) && (bgCheckAge < 15*60000) && (timeSinceTxmitterControl < 15*60000) && latestTxmitterCalTime && (deltaFromLastCalSent > 2*60000)) {
       let glucose = bgChecks[bgChecks.length-1].glucose;
-      console.log('Sending calibration value to transmitter: ' + glucose + ' at time: ' + moment(latestBGCheckTime).format());
+      log('Sending calibration value to transmitter: ' + glucose + ' at time: ' + moment(latestBGCheckTime).format());
       pending.push({date: latestBGCheckTime, type: 'CalibrateSensor', glucose});
       pendingCalTime = latestBGCheckTime;
     }
@@ -743,7 +748,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
   const listenToTransmitter = async (id) => {
     if (!id) {
-      console.log('Unable to listen to invalid Transmitter ID');
+      error('Unable to listen to invalid Transmitter ID');
       return;
     }
 
@@ -755,13 +760,11 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
       prevGlucose = prevGlucose ? prevGlucose.glucose : 120;
 
-      worker = cp.fork(__dirname + '/transmitter-simulator', [prevGlucose], { });
+      worker = cp.fork(__dirname + '/transmitterSimulator', [prevGlucose], { });
     } else {
-      worker = cp.fork(__dirname + '/transmitter-worker', [id], {
-        env: {
-          DEBUG: 'transmitter,bluetooth-manager'
-        }
-      });
+      let workerOptions = { };
+
+      worker = cp.fork(__dirname + '/transmitterWorker', [id], workerOptions);
     }
 
     worker.on('message', async m => {
@@ -801,7 +804,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         });
 
         if ((minGapDate !== null) && glucoseHist && transmitterInSession(glucoseHist[glucoseHist.length-1])) {
-          console.log('Requesting backfill - start: ' + minGapDate.format() + ' end: ' + maxGapDate.format());
+          log('Requesting backfill - start: ' + minGapDate.format() + ' end: ' + maxGapDate.format());
           pending.push({ type: 'Backfill', date: minGapDate.valueOf(), endDate: maxGapDate.valueOf() });
         }
 
@@ -818,7 +821,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         glucose.voltageb = txStatus && txStatus.voltageb || null;
         glucose.voltageTime = txStatus && txStatus.timestamp.valueOf() || null;
 
-        console.log('got glucose: ' + glucose.glucose + ' unfiltered: ' + (glucose.unfiltered/1000));
+        log('got glucose: ' + glucose.glucose + ' unfiltered: ' + (glucose.unfiltered/1000));
 
         lastSuccessfulRead = glucose.readDateMills;
         // restart txFailedReads counter since we were successfull
@@ -854,7 +857,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       worker = null;
 
       // Receive results from child process
-      console.log('exited');
+      log('exited');
 
       if (timerObj !==  null) {
         clearTimeout(timerObj);
@@ -881,10 +884,10 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       // callback will fire to restart it
       if (worker !== null) {
         try {
-          console.log('Starting new worker, but one already exists. Attempting to kill it');
+          log('Starting new worker, but one already exists. Attempting to kill it');
           worker.kill('SIGTERM');
         } catch (error) {
-          console.log('Unable to kill existing worker: ' + error);
+          error('Unable to kill existing worker: ' + error);
         }
       }
     }, 6 * 60000);
@@ -970,8 +973,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     // provide the glucose history
     getHistory: async () => {
       let glucoseHist = await storage.getItem('glucoseHist')
-        .catch(error => {
-          console.log('Unable to get glucoseHist storage item: ' + error);
+        .catch(err => {
+          error('Unable to get glucoseHist storage item: ' + err);
         });
 
       if (!glucoseHist) {
@@ -1033,8 +1036,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       await storageLock.lockStorage();
 
       let bgChecks = await storage.getItem('bgChecks')
-        .catch(error => {
-          console.log('Error getting bgChecks: ' + error);
+        .catch(err => {
+          error('Error getting bgChecks: ' + err);
         });
 
       if (!bgChecks) {
@@ -1053,8 +1056,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       bgChecks = _.sortBy(bgChecks, ['dateMills']);
 
       storage.setItem('bgChecks', bgChecks)
-        .catch(error => {
-          console.log('Error saving bgChecks: ' + error);
+        .catch(err => {
+          error('Error saving bgChecks: ' + err);
         });
 
       storageLock.unlockStorage();

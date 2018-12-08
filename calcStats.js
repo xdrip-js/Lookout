@@ -2,6 +2,13 @@
 
 const moment = require('moment');
 
+const Debug = require('debug');
+const log = Debug('calcStats:log');
+
+/*eslint-disable-next-line no-unused-vars*/
+const error = Debug('calcStats:error');
+const debug = Debug('calcStats:debug');
+
 var exports = module.exports = {};
 
 // Calculate the sum of the distance of all points (overallDistance)
@@ -137,7 +144,7 @@ exports.calcTrend = (calcGlucose, glucoseHist, lastCal, sgv) => {
       trend=10 * totalDelta / timeSpan;
     }
   } else {
-    console.log('Not enough history for trend calculation: ' + glucoseHist.length);
+    debug('Not enough history for trend calculation: ' + glucoseHist.length);
   }
 
   return trend;
@@ -160,15 +167,15 @@ exports.calcNSNoise = (noise, glucoseHist) => {
   if (!currSGV) {
     nsNoise = 1;
   } else if (currSGV.glucose > 400) {
-    console.log('Glucose ' + currSGV.glucose + ' > 400 - setting noise level Heavy');
+    log('Glucose ' + currSGV.glucose + ' > 400 - setting noise level Heavy');
     nsNoise = 4;
   } else if (currSGV.glucose < 40) {
-    console.log('Glucose ' + currSGV.glucose + ' < 40 - setting noise level Light');
+    log('Glucose ' + currSGV.glucose + ' < 40 - setting noise level Light');
     nsNoise = 2;
   } else if (Math.abs(deltaSGV) > 30) {
     // This is OK even during a calibration jump because we don't want OpenAPS to be too
     // agressive with the "false" trend implied by a large positive jump
-    console.log('Glucose change ' + deltaSGV + ' out of range [-30, 30] - setting noise level Heavy');
+    log('Glucose change ' + deltaSGV + ' out of range [-30, 30] - setting noise level Heavy');
     nsNoise = 4;
   } else if (noise < 0.35) {
     nsNoise = 1; // Clean

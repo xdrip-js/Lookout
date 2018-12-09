@@ -1,17 +1,18 @@
+/* global angular io */
 angular.module('AngularOpenAPS.loop', [
-  'ngRoute'
+  'ngRoute',
 ])
 
-  .config(function($routeProvider) {
+  .config(($routeProvider) => {
     $routeProvider.when('/loop', {
       templateUrl: 'loop/loop.html',
-      controller: 'LoopController'
+      controller: 'LoopController',
     });
   })
 
-  .service('OpenAPS', ['socketFactory', function (socketFactory) {
+  .service('OpenAPS', ['socketFactory', (socketFactory) => {
     const socket = socketFactory({
-      ioSocket: io.connect('/loop')
+      ioSocket: io.connect('/loop'),
     });
 
     let iob;
@@ -26,21 +27,19 @@ angular.module('AngularOpenAPS.loop', [
       },
       get enacted() {
         return enacted;
-      }
+      },
     };
 
-    socket.on('iob', value => {
-      console.log('got iob of ' + value);
+    socket.on('iob', (value) => {
       iob = value;
     });
 
-    socket.on('enacted', value => {
-      console.log('got enacted at ' + value.date);
+    socket.on('enacted', (value) => {
       enacted = value;
     });
   }])
 
-  .controller('LoopController', ['$scope', 'OpenAPS', function ($scope, OpenAPS) {
+  .controller('LoopController', ['$scope', 'OpenAPS', ($scope, OpenAPS) => {
   // $http.get('iob.json').then(data => {
   // $http.get('./../../../myopenaps/monitor/iob.json').then(data => {
   //   console.log(data.data);
@@ -50,14 +49,6 @@ angular.module('AngularOpenAPS.loop', [
     $scope.loop = OpenAPS.loop;
   }])
 
-  .filter('units', function() {
-    return function(value) {
-      return value ? value.toFixed(1) + ' U' : '--';
-    };
-  })
+  .filter('units', () => value => (value ? `${value.toFixed(1)} U` : '--'))
 
-  .filter('grams', function() {
-    return function(value) {
-      return value.toFixed(0) + ' g';
-    };
-  });
+  .filter('grams', () => value => `${value.toFixed(0)} g`);

@@ -1,28 +1,23 @@
+/* global angular */
 angular.module('AngularOpenAPS.pump.basal', [
-  'ngRoute'
+  'ngRoute',
 ])
 
-  .config(function($routeProvider) {
+  .config(($routeProvider) => {
     $routeProvider.when('/pump/basal', {
       templateUrl: 'pump/basal/basal.html',
-      controller: 'BasalController'
+      controller: 'BasalController',
     });
   })
 
-  .controller('BasalController', ['$scope', 'Pump', function ($scope, Pump) {
+  .controller('BasalController', ['$scope', 'Pump', ($scope, Pump) => {
     $scope.basal = Pump.basal;
   }])
 
-  .filter('basalRate', function() {
-    return function(value) {
-      return value.toFixed(2) + ' U/hour';
-    };
-  })
+  .filter('basalRate', () => value => `${value.toFixed(2)} U/hour`)
 
-  .filter('basalMinute', function() {
-    return function(value) {
-      const hour = Math.floor(value / 60);
-      const minute = value % 60;
-      return ('' + hour).padStart(2, '0') + ':' + ('' + minute).padStart(2, '0');
-    };
+  .filter('basalMinute', () => (value) => {
+    const hour = Math.floor(value / 60);
+    const minute = value % 60;
+    return `${(`${hour}`).padStart(2, '0')}:${(`${minute}`).padStart(2, '0')}`;
   });

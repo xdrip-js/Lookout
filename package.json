@@ -42,48 +42,9 @@
         "chai": "^3.5.0",
         "chai-spies": "^0.7.1",
         "eslint": "^4.19.1",
+        "eslint-config-airbnb-base": "^13.0.0",
+        "eslint-plugin-import": "^2.13.0",
         "mocha": "^3.2.0",
         "should": "^13.2.1"
-    },
-    "eslintConfig": {
-        "env": {
-            "es6": true,
-            "node": true,
-            "browser": true
-        },
-        "extends": "eslint:recommended",
-        "parserOptions": {
-            "ecmaVersion": 8,
-            "ecmaFeatures": {
-                "experimentalObjectRestSpread": true,
-                "jsx": true
-            }
-        },
-        "globals": {
-            "angular": false,
-            "moment": false,
-            "io": false,
-            "describe": false,
-            "it": false
-        },
-        "rules": {
-            "no-console": 0,
-            "indent": [
-                "error",
-                2
-            ],
-            "linebreak-style": [
-                "error",
-                "unix"
-            ],
-            "quotes": [
-                "error",
-                "single"
-            ],
-            "semi": [
-                "error",
-                "always"
-            ]
-        }
     }
 }

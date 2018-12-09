@@ -1,70 +1,65 @@
+/* global angular */
 angular.module('AngularOpenAPS.cgm.sensor', [
-  'ngRoute'
+  'ngRoute',
 ])
 
-  .config(function($routeProvider) {
+  .config(($routeProvider) => {
     $routeProvider.when('/cgm/sensor', {
       templateUrl: 'cgm/sensor/sensor.html',
-      controller: 'SensorController'
+      controller: 'SensorController',
     });
     $routeProvider.when('/cgm/sensor/calibrate', {
       templateUrl: 'cgm/sensor/calibrate.html',
-      controller: 'SensorController'
+      controller: 'SensorController',
     });
     $routeProvider.when('/cgm/sensor/calibration', {
       templateUrl: 'cgm/sensor/calibration.html',
-      controller: 'SensorController'
+      controller: 'SensorController',
     });
     $routeProvider.when('/cgm/sensor/pending', {
       templateUrl: 'cgm/sensor/pending.html',
-      controller: 'SensorController'
+      controller: 'SensorController',
     });
     $routeProvider.when('/cgm/sensor/stop', {
       templateUrl: 'cgm/sensor/stop.html',
-      controller: 'SensorController'
+      controller: 'SensorController',
     });
   })
 
-  .controller('SensorController', ['$scope', 'SharedState', '$interval', '$location', 'CGM', function ($scope, SharedState, $interval, $location, CGM) {
+  .controller('SensorController', ['$scope', 'SharedState', '$interval', '$location', 'CGM', ($scope, SharedState, $interval, $location, CGM) => {
     $scope.sensor = CGM.sensor;
 
-    let units = SharedState.get('glucoseUnits');
+    const units = SharedState.get('glucoseUnits');
 
     switch (units) {
-    case 'mmol/L':
-      $scope.calMin = 2.2;
-      $scope.calMax = 22; 
-      break;
-    case 'mg/dL':
-    default:
-      $scope.calMin = 40;
-      $scope.calMax = 400; 
+      case 'mmol/L':
+        $scope.calMin = 2.2;
+        $scope.calMax = 22;
+        break;
+      case 'mg/dL':
+      default:
+        $scope.calMin = 40;
+        $scope.calMax = 400;
     }
 
-    const tick = function() {
-      const sessionStartDate = CGM.sensor.sessionStartDate;
+    const tick = () => {
+      const { sessionStartDate } = CGM.sensor;
       $scope.age = sessionStartDate ? (Date.now() - sessionStartDate.valueOf()) / 1000 : null;
     };
     tick();
     $interval(tick, 1000);
 
-    $scope.calibrate = function(value) {
+    $scope.calibrate = (value) => {
       if (value) {
         CGM.sensor.calibrate(value);
         $location.path('/cgm/sensor/pending');
-      } else {
-        console.log('Not sending invalid CGM calibration value.');
       }
     };
 
-    $scope.stopSensor = function() {
+    $scope.stopSensor = () => {
       CGM.sensor.stop();
       $location.path('/cgm/sensor/pending');
     };
   }])
 
-  .filter('state', function() {
-    return function(state) {
-      return state ? 'State: 0x' + state.toString(16) : '--';
-    };
-  });
+  .filter('state', () => state => (state ? `State: 0x${state.toString(16)}` : '--'));

@@ -1,21 +1,20 @@
-'use strict';
+
 
 const Debug = require('debug');
 
-/*eslint-disable-next-line no-unused-vars*/
+/* eslint-disable-next-line no-unused-vars */
 const log = Debug('storageLock:log');
 const error = Debug('storageLock:error');
 const debug = Debug('storageLock:debug');
 
-var exports = module.exports = {};
+module.exports = {};
+const storageLockExports = module.exports;
 
 let StorageLocked = false;
 
-const timeout = async (ms) => {
-  return new Promise(resolve => setTimeout(resolve, ms));
-};
+const timeout = async ms => new Promise(resolve => setTimeout(resolve, ms));
 
-exports.lockStorage = async () => {
+storageLockExports.lockStorage = async () => {
   let count = 0;
 
   // sleep for 1 second at a time until
@@ -27,6 +26,7 @@ exports.lockStorage = async () => {
       error('Storage locked... waiting 1 second');
     }
 
+    /* eslint-disable-next-line no-await-in-loop */
     await timeout(1000);
   }
 
@@ -34,8 +34,7 @@ exports.lockStorage = async () => {
   StorageLocked = true;
 };
 
-exports.unlockStorage = () => {
+storageLockExports.unlockStorage = () => {
   debug('Storage unlocked.');
   StorageLocked = false;
 };
-

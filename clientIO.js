@@ -1,29 +1,29 @@
 
 const Debug = require('debug');
+
 const log = Debug('clientIO:log');
-/*eslint-disable-next-line no-unused-vars*/
+/* eslint-disable-next-line no-unused-vars */
 const error = Debug('clientIO:error');
 const debug = Debug('clientIO:debug');
 
-const LoopIO = require('./loopIO');
-const PumpIO = require('./pumpIO');
 const express = require('express');
 const socketIO = require('socket.io');
+const LoopIO = require('./loopIO');
+const PumpIO = require('./pumpIO');
 
 // Create a Lookout GUI HTTP server
 module.exports = (options) => {
-
   let transmitter = null;
   let fakeMeter = null;
 
   const server = express()
-    .use(express.static(__dirname + '/public'))
-    .use('/node_modules', express.static(__dirname + '/node_modules'))
+    .use(express.static(`${__dirname}/public`))
+    .use('/node_modules', express.static(`${__dirname}/node_modules`))
     // prevent error message on reloads as per https://stackoverflow.com/a/35284602
-    .get('/*', function(req, res){
-      res.sendFile(__dirname + '/public/index.html');
+    .get('/*', (req, res) => {
+      res.sendFile(`${__dirname}/public/index.html`);
     })
-    .listen(options.port, () => log(`Listening on ${ options.port }`));
+    .listen(options.port, () => log(`Listening on ${options.port}`));
 
   const io = socketIO(server);
 
@@ -37,40 +37,40 @@ module.exports = (options) => {
   PumpIO(io.of('/pump'), options);
 
   const initClient = async (socket) => {
-    let txId = transmitter && transmitter.getTxId() || null;
-    debug('about to emit id ' + txId);
+    const txId = transmitter ? transmitter.getTxId() : null;
+    debug(`about to emit id ${txId}`);
 
     if (txId) {
       socket.emit('id', txId);
     }
 
-    let meterId = fakeMeter && await fakeMeter.getMeterId() || null;
+    const meterId = fakeMeter ? await fakeMeter.getMeterId() : null;
     if (meterId) {
       socket.emit('meterid', meterId);
     }
 
-    let pending = transmitter && transmitter.getPending() || null;
+    const pending = transmitter ? transmitter.getPending() : null;
     if (pending) {
       socket.emit('pending', pending);
     }
 
-    let glucose = transmitter && await transmitter.getGlucose() || null;
+    const glucose = transmitter ? await transmitter.getGlucose() : null;
     if (glucose) {
       socket.emit('glucose', glucose);
     }
 
-    let glucoseHist = transmitter && await transmitter.getHistory() || null;
+    const glucoseHist = transmitter ? await transmitter.getHistory() : null;
     if (glucoseHist) {
       socket.emit('glucoseHistory', glucoseHist);
     }
 
-    let lastTxmitterCal = transmitter && await transmitter.getLastCal() || null;
+    const lastTxmitterCal = transmitter ? await transmitter.getLastCal() : null;
     if (lastTxmitterCal) {
       socket.emit('calibrationData', lastTxmitterCal);
     }
   };
 
-  cgmIO.on('connection', async socket => {
+  cgmIO.on('connection', async (socket) => {
     // TODO: should this just be a 'data' message?
     // how do we initialise the connection with
     // all the data it needs?
@@ -83,37 +83,51 @@ module.exports = (options) => {
     socket.on('resetTx', () => {
       debug('received resetTx command');
 
-      transmitter && transmitter.resetTx();
+      if (transmitter) {
+        transmitter.resetTx();
+      }
     });
     socket.on('startSensor', () => {
       debug('received startSensor command');
 
-      transmitter && transmitter.startSensor();
+      if (transmitter) {
+        transmitter.startSensor();
+      }
     });
     socket.on('backStartSensor', () => {
       debug('received backStartSensor command');
 
-      transmitter && transmitter.backStartSensor();
+      if (transmitter) {
+        transmitter.backStartSensor();
+      }
     });
     socket.on('stopSensor', () => {
       debug('received stopSensor command');
 
-      transmitter && transmitter.stopSensor();
+      if (transmitter) {
+        transmitter.stopSensor();
+      }
     });
-    socket.on('calibrate', glucose => {
-      debug('received calibration of ' + glucose);
+    socket.on('calibrate', (glucose) => {
+      debug(`received calibration of ${glucose}`);
 
-      transmitter && transmitter.calibrate(glucose);
+      if (transmitter) {
+        transmitter.calibrate(glucose);
+      }
     });
-    socket.on('id', value => {
-      debug('received transmitter id of ' + value);
+    socket.on('id', (value) => {
+      debug(`received transmitter id of ${value}`);
 
-      transmitter && transmitter.setTxId(value);
+      if (transmitter) {
+        transmitter.setTxId(value);
+      }
     });
-    socket.on('meterid', value => {
-      debug('received meter id of ' + value);
+    socket.on('meterid', (value) => {
+      debug(`received meter id of ${value}`);
 
-      fakeMeter && fakeMeter.setMeterId(value);
+      if (fakeMeter) {
+        fakeMeter.setMeterId(value);
+      }
     });
   });
 
@@ -157,7 +171,6 @@ module.exports = (options) => {
     // send commands to the fakemeter from the client.
     setFakeMeter: (meter) => {
       fakeMeter = meter;
-    }
+    },
   };
 };
-

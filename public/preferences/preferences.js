@@ -1,15 +1,14 @@
+/* global angular */
 angular.module('AngularOpenAPS.preferences', [
-  'ngRoute'
+  'ngRoute',
 ])
 
-  .config(function($routeProvider) {
+  .config(($routeProvider) => {
     $routeProvider.when('/preferences', {
       templateUrl: 'preferences/preferences.html',
-      controller: 'PreferencesController'
+      controller: 'PreferencesController',
     });
   })
 
-  /*eslint-disable no-unused-vars*/
-  .controller('PreferencesController', ['$scope', 'SharedState', function ($scope, SharedState) {
-  /*eslint-enable no-unused-vars*/
-  }]);
+  /* eslint-disable-next-line no-unused-vars */
+  .controller('PreferencesController', ['$scope', 'SharedState', ($scope, SharedState) => { }]);

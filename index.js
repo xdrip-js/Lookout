@@ -1,73 +1,78 @@
 #!/usr/bin/env node
 
 const storage = require('node-persist');
-const storageLock = require('./storageLock');
 
 const Debug = require('debug');
+const yargs = require('yargs');
+const syncNS = require('./syncNS');
+const FakeMeter = require('./fakemeter');
+const TransmitterIO = require('./transmitterIO');
+const ClientIO = require('./clientIO');
 
-const argv = require('yargs')
+const argv = yargs
   .usage('$0 [--extend_sensor] [--expired_cal] [--port <port>] [--openaps <directory>] [--sim] [--fakemeter] [--offline_fakemeter] [--no_nightscout]')
   .option('extend_sensor', {
     boolean: true,
     describe: 'Enables extended sensor session mode',
     alias: 'e',
-    default: false
+    default: false,
   })
   .option('expired_cal', {
     boolean: true,
     describe: 'Enables expired calibration mode',
     alias: 'x',
-    default: false
+    default: false,
   })
   .option('verbose', {
     count: true,
     describe: 'Enables verbose mode',
     alias: 'v',
-    default: 0
+    default: 0,
   })
   .option('sim', {
     boolean: true,
     describe: 'Enable simulation mode',
     alias: 's',
-    default: false
+    default: false,
   })
   .option('fakemeter', {
     boolean: true,
     describe: 'Enable fakemeter',
     alias: 'f',
-    default: false
+    default: false,
   })
   .option('offline_fakemeter', {
     boolean: true,
     describe: 'Enable fakemeter only when offline',
     alias: 'o',
-    default: false
+    default: false,
   })
   .option('port', {
     nargs: 1,
     describe: 'Port number for web server',
     alias: 'p',
-    default: 3000
+    default: 3000,
   })
   .option('openaps', {
     nargs: 1,
     describe: 'OpenAPS directory',
     alias: 'd',
-    default: '/root/myopenaps'
+    default: '/root/myopenaps',
   })
   .option('no_nightscout', {
     boolean: true,
     describe: 'Disable Nightscout interaction',
     alias: 'n',
-    default: false
+    default: false,
   })
   .wrap(null)
   .strict(true)
   .help('help');
+const storageLock = require('./storageLock');
 
 const params = argv.argv;
 
-let options = {
+const options = {
   extend_sensor: params.extend_sensor,
   expired_cal: params.expired_cal,
   port: params.port,
@@ -76,20 +81,19 @@ let options = {
   fakemeter: params.fakemeter,
   offline_fakemeter: params.offline_fakemeter,
   verbose: params.verbose,
-  nightscout: !params.no_nightscout
+  nightscout: !params.no_nightscout,
 };
 
-const init = async (options) => {
-
+const init = async () => {
   let lookoutDebug = 'calcStats:*,calibration:*,clientIO:*,fakemeter:*,loopIO:*';
   lookoutDebug += ',pumpIO:*,storageLock:*,syncNS:*,transmitterIO:*,transmitterWorker:*';
   lookoutDebug += ',xDripAPS:*,transmitter';
 
   // DEBUG environment variable takes precedence over verbose flag
-  if (typeof process.env['DEBUG'] === 'undefined') {
-    if (options.verbose == 0) {
-      Debug.enable(lookoutDebug + ',-*:debug');
-    } else if (options.verbose == 1) {
+  if (typeof process.env.DEBUG === 'undefined') {
+    if (options.verbose === 0) {
+      Debug.enable(`${lookoutDebug},-*:debug`);
+    } else if (options.verbose === 1) {
       Debug.enable(lookoutDebug);
     } else {
       Debug.enable('*,*:*');
@@ -99,23 +103,20 @@ const init = async (options) => {
   // handle persistence here
   // make the storage direction relative to the install directory,
   // not the calling directory
-  await storage.init({dir: __dirname + '/storage'});
-
-  const TransmitterIO = require('./transmitterIO');
-
-  const ClientIO = require('./clientIO');
+  await storage.init({ dir: `${__dirname}/storage` });
 
   // Start the web GUI server
   const client = ClientIO(options);
 
-  const fakeMeter = require('./fakemeter')(options, storage, client);
+  const fakeMeter = FakeMeter(options, storage, client);
 
   // Start the transmitter loop task
-  let transmitter = await TransmitterIO(options, storage, storageLock, client, fakeMeter);
+  const transmitter = await TransmitterIO(options, storage, storageLock, client, fakeMeter);
 
   // Start the Nightscout synchronization loop task
-  options.nightscout && require('./syncNS')(storage, storageLock, transmitter);
+  if (options.nightscout) {
+    syncNS(storage, storageLock, transmitter);
+  }
 };
 
-init(options);
-
+init();

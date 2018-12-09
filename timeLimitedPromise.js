@@ -1,5 +1,3 @@
-'use strict';
-
 class TimeLimitedPromise extends Promise {
   constructor(ms, callback) {
     // We need to support being called with no milliseconds
@@ -8,8 +6,8 @@ class TimeLimitedPromise extends Promise {
     // building the new promises they return.
     // This code to do it is ugly, could use some love, but it
     // gives you the idea.
-    let haveTimeout = typeof ms === 'number' && typeof callback === 'function';
-    let init = haveTimeout ? callback : ms;
+    const haveTimeout = typeof ms === 'number' && typeof callback === 'function';
+    const init = haveTimeout ? callback : ms;
     super((resolve, reject) => {
       init(resolve, reject);
       if (haveTimeout) {
@@ -22,4 +20,3 @@ class TimeLimitedPromise extends Promise {
 }
 
 module.exports = TimeLimitedPromise;
-

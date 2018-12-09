@@ -1,5 +1,5 @@
 const Debug = require('debug');
-/*eslint-disable-next-line no-unused-vars*/
+/* eslint-disable-next-line no-unused-vars */
 const log = Debug('loopIO:log');
 const error = Debug('loopIO:error');
 const debug = Debug('loopIO:debug');
@@ -16,24 +16,23 @@ module.exports = (io, options) => {
 
   const readIOB = (path) => {
     debug(`Reading file ${path}`);
-    setTimeout(function () {
-      fs.readFile(path, 'utf8', function (err, data) {
+    setTimeout(() => {
+      fs.readFile(path, 'utf8', (err, data) => {
         if (err) {
-          error('Error reading file: ' + path);
+          error(`Error reading file: ${path}`);
           return; // we'll not consider error handling for now
         }
         try {
           const obj = JSON.parse(data);
-          iob = obj[0]['iob'];
+          [{ iob }] = obj;
           io.emit('iob', iob);
-        } catch(e) {
-          error('Error parsing JSON file: ' + path);
-          return;
+        } catch (e) {
+          error(`Error parsing JSON file: ${path}`);
         }
       });
     }, 1000);
   };
-  chokidar.watch(openapsDir + '/monitor/iob.json')
+  chokidar.watch(`${openapsDir}/monitor/iob.json`)
     .on('change', readIOB)
     .on('add', readIOB);
 
@@ -41,8 +40,8 @@ module.exports = (io, options) => {
     debug(`Reading file ${path}`);
     // use timeout of 1 s to make sure the write operation is finished
     // as per https://github.com/paulmillr/chokidar/issues/365#issuecomment-146896170
-    setTimeout(function () {
-      fs.readFile(path, 'utf8', function (err, data) {
+    setTimeout(() => {
+      fs.readFile(path, 'utf8', (err, data) => {
         if (err) return; // we'll not consider error handling for now
         try {
           const obj = JSON.parse(data);
@@ -51,27 +50,27 @@ module.exports = (io, options) => {
             rate,
             duration,
             units,
-            COB
+            COB,
           }) => ({
             date: moment(timestamp).toDate().getTime(),
             rate,
             duration,
             units,
-            COB
+            COB,
           }))(obj);
           debug('Enacted:\n%O', enacted);
           io.emit('enacted', enacted);
-        } catch(e) {
-          return;
+        } catch (e) {
+          error(`Error parsing JSON file: ${path}`);
         }
       });
     }, 1000);
   };
-  chokidar.watch(openapsDir + '/enact/enacted.json')
+  chokidar.watch(`${openapsDir}/enact/enacted.json`)
     .on('change', readEnacted)
     .on('add', readEnacted);
 
-  io.on('connection', socket => {
+  io.on('connection', (socket) => {
     socket.emit('iob', iob);
     socket.emit('enacted', enacted);
     // iob = require('/root/myopenaps/monitor/iob.json');

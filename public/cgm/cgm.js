@@ -1,25 +1,26 @@
+/* global angular io moment */
 angular.module('AngularOpenAPS.cgm', [
   'ngRoute',
   'AngularOpenAPS.cgm.transmitter',
-  'AngularOpenAPS.cgm.sensor'
+  'AngularOpenAPS.cgm.sensor',
 ])
 
-  .config(function($routeProvider) {
+  .config(($routeProvider) => {
     $routeProvider.when('/cgm', {
-      templateUrl: 'cgm/cgm.html'
+      templateUrl: 'cgm/cgm.html',
     });
   })
 
-  .service('CGM', ['socketFactory', function (socketFactory) {
+  .service('CGM', ['socketFactory', (socketFactory) => {
     const socket = socketFactory({
-      ioSocket: io.connect('/cgm')
+      ioSocket: io.connect('/cgm'),
     });
 
     let id;
     let meterid;
     let glucose;
     // TODO: replace these with the real thing (faked for now)
-    let version = '1.2.3.4';
+    const version = '1.2.3.4';
     let lastCalibration;
     let history = [];
 
@@ -61,10 +62,9 @@ angular.module('AngularOpenAPS.cgm', [
       get voltageb() {
         return glucose ? glucose.voltageb : null;
       },
-      reset: function() {
-        console.log('resetting transmitter');
+      reset() {
         socket.emit('resetTx');
-      }
+      },
     };
 
     this.sensor = {
@@ -75,9 +75,13 @@ angular.module('AngularOpenAPS.cgm', [
       get glucose() {
       // only return the properties glucose, filtered, readDate and trend
       // - we don't need the rest
-        return glucose ?
-          (({ glucose, filtered, unfiltered, readDate, readDateMills, trend }) => ({ glucose, filtered, unfiltered, readDate, readDateMills, trend }))(glucose) :
-          null;
+        return glucose
+          ? (({
+            sgv, filtered, unfiltered, readDate, readDateMills, trend,
+          }) => ({
+            glucose: sgv, filtered, unfiltered, readDate, readDateMills, trend,
+          }))(glucose)
+          : null;
       },
       get state() {
         return glucose ? glucose.state : null;
@@ -92,7 +96,9 @@ angular.module('AngularOpenAPS.cgm', [
         return glucose ? glucose.inSession : null;
       },
       get displayGlucose() {
-        return glucose ? (glucose.inSession || glucose.inExpiredSession || glucose.inExtendedSession) : null;
+        return glucose
+          ? (glucose.inSession || glucose.inExpiredSession || glucose.inExtendedSession)
+          : null;
       },
       get pendingActions() {
         return pendingActions;
@@ -102,74 +108,63 @@ angular.module('AngularOpenAPS.cgm', [
       },
 
       // methods
-      calibrate: function(value) {
-        console.log('emitting a cal value of ' + value);
+      calibrate(value) {
         socket.emit('calibrate', value);
       },
-      start: function() {
-        console.log('starting sensor');
+      start() {
         socket.emit('startSensor');
       },
-      backstart: function() {
-        console.log('starting sensor 2 hours prior to now');
+      backstart() {
         socket.emit('backStartSensor');
       },
-      stop: function() {
-        console.log('stopping sensor');
+      stop() {
         socket.emit('stopSensor');
-      }
+      },
     };
 
-    socket.on('version', version => {
-      console.log('got version');
-      this.transmitter.version = version;
+    socket.on('version', (newVersion) => {
+      this.transmitter.version = newVersion;
     });
 
-    socket.on('id', value => {
-      console.log('got id of ' + value);
+    socket.on('id', (value) => {
       id = value;
     });
 
-    socket.on('meterid', value => {
-      console.log('got meterid of ' + value);
+    socket.on('meterid', (value) => {
       meterid = value;
     });
 
-    socket.on('glucose', value => {
+    socket.on('glucose', (value) => {
       glucose = value;
 
       if (history.length > 0) {
-        let latestSGV = history[history.length-1];
+        const latestSGV = history[history.length - 1];
 
         if (glucose.readDateMills > latestSGV.readDate) {
           history.push({
             readDate: glucose.readDateMills,
-            glucose: glucose.glucose
+            glucose: glucose.glucose,
           });
 
           // only hold enough for the last 24 hours.
-          history = history.slice(-12*24);
+          history = history.slice(-12 * 24);
         }
       }
     });
 
-    socket.on('calibration', calibration => {
-      console.log('got calibration');
+    socket.on('calibration', (calibration) => {
       this.sensor.calibration = calibration;
     });
 
-    socket.on('pending', pending => {
-      console.log('got pending');
+    socket.on('pending', (pending) => {
       pendingActions = pending;
     });
 
-    socket.on('calibrationData', data => {
-      console.log('got calibration data');
+    socket.on('calibrationData', (data) => {
       lastCalibration = data;
     });
 
-    socket.on('glucoseHistory', data => {
-      console.log('got glucose history');
+    socket.on('glucoseHistory', (data) => {
       history = data;
     });
   }]);

@@ -695,7 +695,7 @@ exports.calibrateGlucose = async (storage, options, sensorInsert, sensorStop, gl
 
   if (!sgv.glucose && options.extend_sensor && validateTxmitterCalibration(sensorInsert, sensorStop, latestBgCheckTime, lastCal)) {
     sgv.glucose = calcGlucose(sgv, lastCal);
-    sgv.inExpiredSession = true;
+    sgv.inExtendedSession = true;
 
     log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value from Txmitter calibration algorithm');
     log('Calibrated SGV: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered + ' slope: ' + lastCal.slope + ' intercept: ' + lastCal.intercept);

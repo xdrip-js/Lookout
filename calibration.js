@@ -351,7 +351,7 @@ const getUnfilteredFromNS = async (valueTime) => {
   return null;
 };
 
-const getUnfiltered = async (storage, valueTime, glucoseHist, sgv) => {
+const getUnfiltered = async (valueTime, glucoseHist, sgv) => {
   const rigSGVs = _.map(glucoseHist, value => ({
     readDateMills: value.readDateMills,
     unfiltered: value.unfiltered,
@@ -414,12 +414,12 @@ const expiredCalibration = async (
     if (!('unfiltered' in bgChecks[i]) || !bgChecks[i].unfiltered) {
       // Try to get the unfiltered value if we don't have it
       /* eslint-disable-next-line no-await-in-loop */
-      unfiltered = await getUnfiltered(storage, moment(bgChecks[i].dateMills), glucoseHist, sgv);
+      unfiltered = await getUnfiltered(moment(bgChecks[i].dateMills), glucoseHist, sgv);
     } else {
       ({ unfiltered } = bgChecks[i]);
     }
 
-    if ((bgChecks[i].type !== 'Unity') && (bgChecks[i].unfiltered)) {
+    if ((bgChecks[i].type !== 'Unity') && (unfiltered)) {
       calPairs.push({
         unfiltered,
         glucose: bgChecks[i].glucose,
@@ -427,7 +427,6 @@ const expiredCalibration = async (
       });
     }
   }
-
   // remove calPairs that are less than SENSOR_STABLE hours from the sensor insert
   if (calPairs.length > 0) {
     for (let i = 0; i < (calPairs.length - 1); i += 1) {
@@ -502,7 +501,9 @@ const expiredCalibration = async (
     log(`New expired calibration with ${calReturn.type} due to ${calPairs.length} calibration pairs:\n%O`, calReturn);
   }
 
-  saveExpiredCal(storage, calReturn);
+  if (storage) {
+    saveExpiredCal(storage, calReturn);
+  }
 
   return calReturn;
 };

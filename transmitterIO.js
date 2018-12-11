@@ -662,7 +662,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       return;
     }
 
-    newCal.unfiltered = await calibration.getUnfiltered(storage, valueTime, rigSGVs);
+    newCal.unfiltered = await calibration.getUnfiltered(valueTime, rigSGVs);
 
     if (bgCheckIdx >= 0) {
       // We already had this bgCheck but didn't have the unfiltered value
@@ -1108,7 +1108,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
           error(`Error getting rig SGVs: ${err}`);
         });
 
-      calibration.getUnfiltered(storage, valueTime, rigSGVs);
+      calibration.getUnfiltered(valueTime, rigSGVs);
     },
   };
 

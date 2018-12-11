@@ -636,25 +636,17 @@ module.exports = () => ({
     return formattedCal;
   },
 
-  latestSGVs: async (numResults) => {
-    queryLatestSGVs(numResults);
-  },
+  latestSGVs: async numResults => queryLatestSGVs(numResults),
 
-  SGVsSince: async (startTime, numResults) => {
-    querySGVsSince(startTime, numResults);
-  },
+  SGVsSince: async (startTime, numResults) => querySGVsSince(startTime, numResults),
 
-  SGVsBefore: async (startTime, numResults) => {
-    querySGVsBefore(startTime, numResults);
-  },
+  SGVsBefore: async (startTime, numResults) => querySGVsBefore(startTime, numResults),
 
-  SGVsBetween: async (startTime, endTime, numResults) => {
-    querySGVsBetween(startTime, endTime, numResults);
-  },
+  SGVsBetween: async (startTime, endTime, numResults) => querySGVsBetween(
+    startTime, endTime, numResults,
+  ),
 
-  BGChecksSince: async (startTime) => {
-    queryBGChecksSince(startTime);
-  },
+  BGChecksSince: async startTime => queryBGChecksSince(startTime),
 
   latestEvent: async (type) => {
     let eventTime = null;

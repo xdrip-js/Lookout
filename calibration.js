@@ -351,11 +351,11 @@ const getUnfilteredFromNS = async (valueTime) => {
   return null;
 };
 
-const getUnfiltered = async (storage, valueTime, sgv) => {
-  const rigSGVs = await storage.getItem('glucoseHist')
-    .catch((err) => {
-      error(`Error getting rig SGVs: ${err}`);
-    });
+const getUnfiltered = async (storage, valueTime, glucoseHist, sgv) => {
+  const rigSGVs = _.map(glucoseHist, value => ({
+    readDateMills: value.readDateMills,
+    unfiltered: value.unfiltered,
+  }));
 
   if (rigSGVs && (rigSGVs.length > 1)) {
     let SGVBefore = null;
@@ -401,15 +401,27 @@ const getUnfiltered = async (storage, valueTime, sgv) => {
 
 calibrationExports.getUnfiltered = getUnfiltered;
 
-const expiredCalibration = async (storage, bgChecks, lastExpiredCal, sensorInsert) => {
+const expiredCalibration = async (
+  storage, bgChecks, lastExpiredCal, sensorInsert, glucoseHist, sgv,
+) => {
   let calPairs = [];
   let calReturn = null;
   let calPairsStart = 0;
 
   for (let i = 0; i < bgChecks.length; i += 1) {
+    let unfiltered = null;
+
+    if (!('unfiltered' in bgChecks[i]) || !bgChecks[i].unfiltered) {
+      // Try to get the unfiltered value if we don't have it
+      /* eslint-disable-next-line no-await-in-loop */
+      unfiltered = await getUnfiltered(storage, moment(bgChecks[i].dateMills), glucoseHist, sgv);
+    } else {
+      ({ unfiltered } = bgChecks[i]);
+    }
+
     if ((bgChecks[i].type !== 'Unity') && (bgChecks[i].unfiltered)) {
       calPairs.push({
-        unfiltered: bgChecks[i].unfiltered,
+        unfiltered,
         glucose: bgChecks[i].glucose,
         readDateMills: bgChecks[i].dateMills,
       });
@@ -691,7 +703,9 @@ calibrationExports.calibrateGlucose = async (
       lastCal, lastTxmitterCalTime, latestBgCheckTime, sensorInsert, glucoseHist, sgv,
     );
 
-    expiredCal = await expiredCalibration(storage, bgChecks, expiredCal, sensorInsert);
+    expiredCal = await expiredCalibration(
+      storage, bgChecks, expiredCal, sensorInsert, glucoseHist, sgv,
+    );
   }
 
   if (newCal) {

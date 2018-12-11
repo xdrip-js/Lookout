@@ -662,7 +662,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       return;
     }
 
-    newCal.unfiltered = await calibration.getUnfiltered(storage, valueTime);
+    newCal.unfiltered = await calibration.getUnfiltered(storage, valueTime, rigSGVs);
 
     if (bgCheckIdx >= 0) {
       // We already had this bgCheck but didn't have the unfiltered value
@@ -1102,7 +1102,14 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     sgvGaps: rigSGVs => sgvGaps(rigSGVs),
 
-    getUnfiltered: valueTime => calibration.getUnfiltered(storage, valueTime),
+    getUnfiltered: async (valueTime) => {
+      const rigSGVs = await storage.getItem('glucoseHist')
+        .catch((err) => {
+          error(`Error getting rig SGVs: ${err}`);
+        });
+
+      calibration.getUnfiltered(storage, valueTime, rigSGVs);
+    },
   };
 
   // Provide the object to the client

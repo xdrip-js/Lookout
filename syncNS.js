@@ -358,6 +358,8 @@ const syncBGChecks = async (sensorInsert, sensorStop) => {
     validBGCheckStartTime = sensorStop;
   }
 
+  debug(`NS Query for BG Checks since: ${validBGCheckStartTime}`);
+
   NSBGChecks = await xDripAPS.BGChecksSince(validBGCheckStartTime)
     .catch((err) => {
       // Bail out since we can't sync if we don't have NS access

@@ -176,6 +176,71 @@ describe('Test Calibration', () => {
     lastCal.intercept.should.equal(0);
     lastCal.type.should.equal('SinglePoint');
   });
+
+  it('should calculate expired calibration values with Least Squares Regression', async () => {
+    const bgChecks = [
+      {
+        date: 1544133780000,
+        dateMills: 1544133780000,
+        glucose: 127,
+        type: 'NS',
+        unfiltered: 110298.86094477712,
+      },
+      {
+        date: 1544237557000,
+        dateMills: 1544237557000,
+        glucose: 130,
+        type: 'NS',
+        unfiltered: 113266.57133129044,
+      },
+      {
+        date: 1544391573000,
+        dateMills: 1544391573000,
+        glucose: 125,
+        type: 'NS',
+      },
+    ];
+
+    const glucoseHist = [{
+      inSession: true,
+      status: 0,
+      state: 7,
+      readDate: 1544391333000,
+      readDateMills: 1544391333000,
+      filtered: 161056,
+      unfiltered: 106000,
+      glucose: 105,
+      trend: -3.9982585362819747,
+      canBeCalibrated: true,
+      rssi: -59,
+      g5calibrated: true,
+      stateString: 'Need calibration',
+    }, {
+      inSession: true,
+      status: 0,
+      state: 7,
+      readDate: 1544391633000,
+      readDateMills: 1544391633000,
+      filtered: 148544,
+      unfiltered: 108500,
+      glucose: 106,
+      trend: -6.002474353316756,
+      canBeCalibrated: true,
+      rssi: -77,
+      g5calibrated: true,
+      stateString: 'Need calibration',
+    }];
+
+    const lastCal = await calibration.expiredCalibration(
+      null, bgChecks, null, null, glucoseHist, null,
+    );
+
+    lastCal.slope.should.be.greaterThan(1050);
+    lastCal.slope.should.be.lessThan(1060);
+    lastCal.intercept.should.be.greaterThan(-24000);
+    lastCal.intercept.should.be.lessThan(-23000);
+    lastCal.type.should.equal('LeastSquaresRegression');
+  });
 });
 
 describe('Test Stats', () => {

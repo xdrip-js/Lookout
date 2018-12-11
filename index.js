@@ -68,6 +68,7 @@ const argv = yargs
   .wrap(null)
   .strict(true)
   .help('help');
+
 const storageLock = require('./storageLock');
 
 const params = argv.argv;

@@ -667,7 +667,7 @@ calibrationExports.calibrateGlucose = async (
   let lastCal = await getTxmitterCal(storage);
   let expiredCal = await getExpiredCal(storage);
 
-  const sgv = _.deepClone(uncalibratedSgv);
+  const sgv = _.cloneDeep(uncalibratedSgv);
 
   let bgChecks = await storage.getItem('bgChecks')
     .catch((err) => {

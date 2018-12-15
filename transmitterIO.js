@@ -87,11 +87,17 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
   };
 
   // Return true if there is no SGV or the most recent SGV was received from transmitter
+  // Also return true if the latest SGV we have is more than 15 minutes old
   // Return false if most recent SGV was received from NS
   const isControlling = async () => {
     const sgv = await getGlucose();
 
+    // inSession is only in the SGV record if it came from transmitter
     if (!sgv || (typeof sgv.inSession !== 'undefined')) {
+      return true;
+    }
+
+    if ((moment().valueOf() - sgv.readDateMills) > 15 * 60000) {
       return true;
     }
 

@@ -86,18 +86,42 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     });
   };
 
-  const rebootRig = () => {
-    error(`============================\nRebooting rig due to too many read failures: ${txFailedReads} failures.\n============================`);
+  // Return true if there is no SGV or the most recent SGV was received from transmitter
+  // Return false if most recent SGV was received from NS
+  const isControlling = async () => {
+    const sgv = await getGlucose();
 
-    cp.exec('bash -c "wall Rebooting Due to Transmitter Read Errors; sleep 5; shutdown -r now"', (err, stdout, stderr) => {
-      if (err) {
-        error(`Unable to reboot rig: - ${err}`);
-        return;
-      }
+    if (!sgv || (typeof sgv.inSession !== 'undefined')) {
+      return true;
+    }
 
-      debug(`stdout: ${stdout}`);
-      debug(`stderr: ${stderr}`);
-    });
+    return false;
+  };
+
+  const rebootRig = async () => {
+    if (await isControlling()) {
+      error(
+        '============================\n'
+        + `Too many read failures: ${txFailedReads} failures, rebooting rig\n`
+        + '============================',
+      );
+
+      cp.exec('bash -c "wall Rebooting Due to Transmitter Read Errors; sleep 5; shutdown -r now"', (err, stdout, stderr) => {
+        if (err) {
+          error(`Unable to reboot rig: - ${err}`);
+          return;
+        }
+
+        debug(`stdout: ${stdout}`);
+        debug(`stderr: ${stderr}`);
+      });
+    } else {
+      error(
+        '============================\n'
+        + `Too many read failures: ${txFailedReads} failures, but not rebooting because not controlling rig\n`
+        + '============================',
+      );
+    }
   };
 
   const stopSensorSession = async () => {

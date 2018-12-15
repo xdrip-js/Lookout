@@ -858,6 +858,10 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
           && transmitterInSession(glucoseHist[glucoseHist.length - 1])) {
           log(`Requesting backfill - start: ${minGapDate.format()} end: ${maxGapDate.format()}`);
           pending.push({ type: 'Backfill', date: minGapDate.valueOf(), endDate: maxGapDate.valueOf() });
+        } else if ((minGapDate !== null) && glucoseHist) {
+          log('Not requesting backfill - transmitter not in session');
+        } else if (minGapDate !== null) {
+          log('Not requesting backfill - no glucose history');
         }
 
         worker.send(pending);

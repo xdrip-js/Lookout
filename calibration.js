@@ -5,11 +5,11 @@
 // Rule 4 - Do not use LSR until we have 3 or more calibration points.
 //         Use SinglePoint calibration only for less than MIN_LSR_PAIRS calibration points.
 //         SinglePoint simply uses the latest calibration record and assumes
-//         the yIntercept is 0.
+//         the intercept is 0.
 // Rule 5 - Drop back to SinglePoint calibration if slope is out of bounds
 //         (>MAXSLOPE or <MINSLOPE)
 //         only applies to expired calibration
-// Rule 6 - TODO: Drop back to SinglePoint calibration if yIntercept is out of bounds
+// Rule 6 - TODO: Drop back to SinglePoint calibration if intercept is out of bounds
 //         (> minimum unfiltered value in calibration record set or
 //          < - minimum unfiltered value in calibration record set)
 
@@ -33,6 +33,19 @@ const SENSOR_STABLE = 12; // hours
 const SENSOR_WARM = 2; // hours
 const MIN_LSR_PAIRS = 2;
 
+const leftPadString = (str, len) => ' '.repeat(len - str.toString().length) + str;
+
+const calcGlucose = (sgv, calibration) => {
+  let glucose = Math.round((sgv.unfiltered - calibration.intercept) / calibration.slope);
+
+  // If BG is below 40, set it to 39 so it's displayed correctly in NS
+  glucose = glucose < 40 ? 39 : glucose;
+
+  return glucose;
+};
+
+calibrationExports.calcGlucose = calcGlucose;
+
 // calibrationPairs has three values for each array element:
 //   glucose => the "true" glucose value for the pair
 //   unfiltered => the sensor's unfiltered glucose value for the pair
@@ -49,17 +62,16 @@ const lsrCalibration = (calibrationPairs) => {
   let sumYSq = 0;
   let sumSqDiffX = 0;
   let sumSqDiffY = 0;
-  /* eslint-disable no-unused-vars */
   let yError = 0;
   let slopeError = 0;
-  /* eslint-enable no-unused-vars */
 
   const n = calibrationPairs.length;
   const tarr = [];
+  const multipliers = [];
 
   const returnVal = {
     slope: 0,
-    yIntercept: 0,
+    intercept: 0,
     calibrationType: 'LeastSquaresRegression',
   };
 
@@ -101,7 +113,7 @@ const lsrCalibration = (calibrationPairs) => {
       }
     }
 
-    debug(`Calibration - record ${i}, ${new Date(calibrationPairs[i].readDateMills)}, weighted multiplier=${multiplier}`);
+    multipliers.push(multiplier);
 
     sumXY = (sumXY + calibrationPairs[i].glucose * calibrationPairs[i].unfiltered) * multiplier;
     sumXSq = (sumXSq + calibrationPairs[i].glucose * calibrationPairs[i].glucose) * multiplier;
@@ -116,15 +128,23 @@ const lsrCalibration = (calibrationPairs) => {
   const r = (n * sumXY - sumX * sumY) / denominator;
 
   returnVal.slope = r * stddevY / stddevX;
-  returnVal.yIntercept = meanY - returnVal.slope * meanX;
+  returnVal.intercept = meanY - returnVal.slope * meanX;
 
   // calculate error
   let varSum = 0;
   for (let j = 0; j < n; j += 1) {
     const varVal = (
-      calibrationPairs[j].unfiltered - returnVal.yIntercept
+      calibrationPairs[j].unfiltered - returnVal.intercept
       - returnVal.slope * calibrationPairs[j].glucose
     );
+
+    debug(`LSR Cal - record ${j},`
+     + ` ${new Date(calibrationPairs[j].readDateMills)},`
+     + ` unfiltered: ${calibrationPairs[j].unfiltered},`
+     + ` glucose: ${calibrationPairs[j].glucose},`
+     + ` calculated: ${calcGlucose(calibrationPairs[j], returnVal)},`
+     + ` multiplier: ${leftPadString(multipliers[j].toFixed(3), 5)}`);
+
     varSum += varVal * varVal;
   }
 
@@ -134,6 +154,7 @@ const lsrCalibration = (calibrationPairs) => {
   yError = Math.sqrt(vari / delta * sumXSq);
   slopeError = Math.sqrt(n / delta * vari);
 
+  debug(`LSR Calibration yError: ${yError}, slopeError: ${slopeError}`);
 
   return returnVal;
 };
@@ -141,28 +162,17 @@ const lsrCalibration = (calibrationPairs) => {
 const singlePointCalibration = (calibrationPairs) => {
   const returnVal = {
     slope: 0,
-    yIntercept: 0,
+    intercept: 0,
     calibrationType: 'SinglePoint',
   };
 
   const x = calibrationPairs[calibrationPairs.length - 1].glucose;
   const y = calibrationPairs[calibrationPairs.length - 1].unfiltered;
-  returnVal.yIntercept = 0;
+  returnVal.intercept = 0;
   returnVal.slope = y / x;
 
   return returnVal;
 };
-
-const calcGlucose = (sgv, calibration) => {
-  let glucose = Math.round((sgv.unfiltered - calibration.intercept) / calibration.slope);
-
-  // If BG is below 40, set it to 39 so it's displayed correctly in NS
-  glucose = glucose < 40 ? 39 : glucose;
-
-  return glucose;
-};
-
-calibrationExports.calcGlucose = calcGlucose;
 
 const calculateTxmitterCalibration = (
   lastCal, lastTxmitterCalTime, latestBgCheckTime, sensorInsert, glucoseHist, currSGV,
@@ -216,7 +226,7 @@ const calculateTxmitterCalibration = (
     if (((calErr > 5) && calPairs.length > MIN_LSR_PAIRS) || (calPairs.length > 8)) {
       const calResult = lsrCalibration(calPairs);
 
-      log(`CGM lsrCalibration: numPoints=${calPairs.length}, slope=${calResult.slope}, yIntercept=${calResult.yIntercept}`);
+      log(`CGM lsrCalibration: numPoints=${calPairs.length}, slope=${calResult.slope}, intercept=${calResult.intercept}`);
 
       if (!calResult) {
         error('CGM calculated calibration calculated denominator of zero');
@@ -232,7 +242,7 @@ const calculateTxmitterCalibration = (
       calReturn = {
         date: currSGV.readDateMills,
         scale: 1,
-        intercept: calResult.yIntercept,
+        intercept: calResult.intercept,
         slope: calResult.slope,
         type: calResult.calibrationType,
       };
@@ -240,12 +250,12 @@ const calculateTxmitterCalibration = (
     } else if ((calErr > 5) && (calPairs.length > 0)) {
       const calResult = singlePointCalibration(calPairs);
 
-      log(`CGM singlePointCalibration: glucose=${calPairs[calPairs.length - 1].glucose}, unfiltered=${calPairs[calPairs.length - 1].unfiltered}, slope=${calResult.slope}, yIntercept=0`);
+      log(`CGM singlePointCalibration: glucose=${calPairs[calPairs.length - 1].glucose}, unfiltered=${calPairs[calPairs.length - 1].unfiltered}, slope=${calResult.slope}, intercept=0`);
 
       calReturn = {
         date: currSGV.readDateMills,
         scale: 1,
-        intercept: calResult.yIntercept,
+        intercept: calResult.intercept,
         slope: calResult.slope,
         type: calResult.calibrationType,
       };
@@ -449,12 +459,12 @@ const expiredCalibration = async (
     const calResult = lsrCalibration(calPairs);
 
     if (calResult && (calResult.slope < MAXSLOPE) && (calResult.slope > MINSLOPE)) {
-      log(`expired lsrCalibration: numPoints=${calPairs.length}, slope=${calResult.slope}, yIntercept=${calResult.yIntercept}`);
+      log(`expired lsrCalibration: numPoints=${calPairs.length}, slope=${calResult.slope}, intercept=${calResult.intercept}`);
 
       calReturn = {
         date: calPairs[calPairs.length - 1].readDateMills,
         scale: 1,
-        intercept: calResult.yIntercept,
+        intercept: calResult.intercept,
         slope: calResult.slope,
         type: calResult.calibrationType,
       };
@@ -468,12 +478,12 @@ const expiredCalibration = async (
   if (!calReturn && (calPairs.length > 0)) {
     const calResult = singlePointCalibration(calPairs);
 
-    log(`expired singlePointCalibration: glucose=${calPairs[calPairs.length - 1].glucose}, unfiltered=${calPairs[calPairs.length - 1].unfiltered}, slope=${calResult.slope}, yIntercept=0`);
+    log(`expired singlePointCalibration: glucose=${calPairs[calPairs.length - 1].glucose}, unfiltered=${calPairs[calPairs.length - 1].unfiltered}, slope=${calResult.slope}, intercept=0`);
 
     calReturn = {
       date: calPairs[calPairs.length - 1].readDateMills,
       scale: 1,
-      intercept: calResult.yIntercept,
+      intercept: calResult.intercept,
       slope: calResult.slope,
       type: calResult.calibrationType,
     };

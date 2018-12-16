@@ -386,7 +386,7 @@ module.exports = () => ({
 
     /* eslint-disable-next-line no-unused-vars */
     request(optionsNS, (err, response, body) => {
-      if (error) {
+      if (err) {
         error('error posting BG Update to NS: ', err);
       } else {
         log(`updated BG Check to NS, statusCode = ${response.statusCode}`);
@@ -424,7 +424,7 @@ module.exports = () => ({
 
     /* eslint-disable-next-line no-unused-vars */
     request(optionsNS, (err, response, body) => {
-      if (error) {
+      if (err) {
         error('error posting Announcement to NS: ', err);
       } else {
         log(`uploaded new Announcement to NS, statusCode = ${response.statusCode}`);
@@ -523,7 +523,7 @@ module.exports = () => ({
 
     /* eslint-disable-next-line no-unused-vars */
     request(optionsNS, (err, response, body) => {
-      if (error) {
+      if (err) {
         error('error posting BG Check to NS: ', err);
       } else {
         log(`uploaded new BG Check to NS, statusCode = ${response.statusCode}`);
@@ -566,7 +566,7 @@ module.exports = () => ({
 
     /* eslint-disable-next-line no-unused-vars */
     request(optionsNS, (err, response, body) => {
-      if (error) {
+      if (err) {
         error('error posting calibration to NS: ', err);
       } else {
         log(`uploaded new calibration to NS, statusCode = ${response.statusCode}`);

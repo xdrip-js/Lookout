@@ -787,7 +787,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     // 5. The last successful calibration send to the transmitter is not the same
     //    as the last BG Check (prevents resending it on the next read)
     // 6. The BG Check occurred in the last 30 minutes
-    if (!pendingCalTime && (deltaTime > 5 * 60000) && (bgCheckAge < 15 * 60000)
+    if (!pendingCalTime && (deltaTime > 5 * 60000) && (bgCheckAge < 30 * 60000)
       && (timeSinceTxmitterControl < 15 * 60000) && latestTxmitterCalTime
       && (deltaFromLastCalSent > 2 * 60000)) {
       const { glucose } = bgChecks[bgChecks.length - 1];
@@ -795,6 +795,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       pending.push({ date: latestBGCheckTime, type: 'CalibrateSensor', glucose });
       pendingCalTime = latestBGCheckTime;
     }
+
+    return pendingCalTime;
   };
 
   const listenToTransmitter = async (id) => {
@@ -826,7 +828,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
           pending.push({ type: 'BatteryStatus' });
         }
 
-        pendingCalTime = await calibrateFromNS(pendingCalTime);
+        pendingCalTime = await calibrateFromNS();
 
         pending = pending.filter((msg) => {
           // Don't send certain messages older than 12 minutes

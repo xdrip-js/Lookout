@@ -1,20 +1,21 @@
+/* global angular io */
 angular.module('AngularOpenAPS.pump', [
   'ngRoute',
-  'AngularOpenAPS.pump.basal'
+  'AngularOpenAPS.pump.basal',
 ])
 
-  .config(function($routeProvider) {
+  .config(($routeProvider) => {
     $routeProvider.when('/pump', {
-      templateUrl: 'pump/pump.html'
+      templateUrl: 'pump/pump.html',
     });
     $routeProvider.when('/pump/bolus', {
-      templateUrl: 'pump/bolus/bolus.html'
+      templateUrl: 'pump/bolus/bolus.html',
     });
   })
 
-  .service('Pump', ['socketFactory', function (socketFactory) {
+  .service('Pump', ['socketFactory', (socketFactory) => {
     const socket = socketFactory({
-      ioSocket: io.connect('/pump')
+      ioSocket: io.connect('/pump'),
     });
 
     let basalProfile;// = [
@@ -28,10 +29,10 @@ angular.module('AngularOpenAPS.pump', [
     this.basal = {
       get profile() {
         return basalProfile;
-      }
+      },
     };
 
-    socket.on('basalProfile', value => {
+    socket.on('basalProfile', (value) => {
       basalProfile = value;
     });
   }]);

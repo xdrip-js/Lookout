@@ -5,12 +5,14 @@ const requestPromise = require('request-promise-native');
 const moment = require('moment');
 
 const Debug = require('debug');
+
 const log = Debug('xDripAPS:log');
 const error = Debug('xDripAPS:error');
 const debug = Debug('xDripAPS:debug');
 
-const _convertEntryToNS = (glucose) => {
+const convertEntryToNS = (glucose) => {
   let direction;
+  let sgv = glucose.glucose;
 
   if (glucose.trend <= -30) {
     direction = 'DoubleDown';
@@ -28,41 +30,39 @@ const _convertEntryToNS = (glucose) => {
     direction = 'DoubleUp';
   }
 
-  if (!glucose.glucose) {
+  if (!sgv) {
     // Set to 5 so NS will plot the unfiltered glucose values
-    glucose.glucose = 5;
+    sgv = 5;
   }
 
-  log('Glucose: ' + glucose.glucose + ' Time: ' + moment(glucose.readDateMills).format() + ' Trend: ' + Math.round(glucose.trend*10)/10 + ' direction: ' + direction);
+  log(`Glucose: ${sgv} Time: ${moment(glucose.readDateMills).format()} Trend: ${Math.round(glucose.trend * 10) / 10} direction: ${direction}`);
 
   return {
-    'device': 'xdripjs://' + os.hostname(),
-    'date': glucose.readDateMills,
-    'dateString': new Date(glucose.readDateMills).toISOString(),
-    'sgv': glucose.glucose,
-    'direction': direction,
-    'type': 'sgv',
-    'filtered': glucose.filtered,
-    'unfiltered': glucose.unfiltered,
-    'rssi': glucose.rssi,
-    'noise': glucose.nsNoise,
-    'trend': glucose.trend,
-    'glucose': glucose.glucose
+    device: `xdripjs://${os.hostname()}`,
+    date: glucose.readDateMills,
+    dateString: new Date(glucose.readDateMills).toISOString(),
+    sgv,
+    direction,
+    type: 'sgv',
+    filtered: glucose.filtered,
+    unfiltered: glucose.unfiltered,
+    rssi: glucose.rssi,
+    noise: glucose.nsNoise,
+    trend: glucose.trend,
+    glucose: sgv,
   };
 };
 
-const _convertEntryToxDrip = (glucose) => {
-  return {
-    'readDateMills': glucose.date,
-    'readDate': glucose.dateString,
-    'filtered': glucose.filtered,
-    'unfiltered': glucose.unfiltered,
-    'rssi': glucose.rssi,
-    'nsNoise': glucose.noise,
-    'trend': glucose.trend,
-    'glucose': glucose.glucose
-  };
-};
+const convertEntryToxDrip = glucose => ({
+  readDateMills: glucose.date,
+  readDate: glucose.dateString,
+  filtered: glucose.filtered,
+  unfiltered: glucose.unfiltered,
+  rssi: glucose.rssi,
+  nsNoise: glucose.noise,
+  trend: glucose.trend,
+  glucose: glucose.glucose,
+});
 
 
 const postToXdrip = (entry) => {
@@ -70,23 +70,22 @@ const postToXdrip = (entry) => {
 
   const optionsX = {
     url: 'http://127.0.0.1:5000/api/v1/entries',
-    timeout: 30*1000,
+    timeout: 30 * 1000,
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'API-SECRET': secret
+      'API-SECRET': secret,
     },
     body: entry,
-    json: true
+    json: true,
   };
 
-  /*eslint-disable no-unused-vars*/
-  request(optionsX, function (err, response, body) {
-  /*eslint-enable no-unused-vars*/
+  /* eslint-disable-next-line no-unused-vars */
+  request(optionsX, (err, response, body) => {
     if (err) {
       error('error posting SGV to xDripAPS: ', err);
     } else {
-      log('uploaded SGV to xDripAPS, statusCode = ' + response.statusCode);
+      log(`uploaded SGV to xDripAPS, statusCode = ${response.statusCode}`);
       debug('Entry:\n%O', entry);
     }
   });
@@ -94,33 +93,32 @@ const postToXdrip = (entry) => {
 
 const postToNS = (entry) => {
   const secret = process.env.API_SECRET;
-  let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json';
-  let ns_headers = {
-    'Content-Type': 'application/json'
+  let nsUrl = `${process.env.NIGHTSCOUT_HOST}/api/v1/entries.json`;
+  const nsHeaders = {
+    'Content-Type': 'application/json',
   };
 
   if (secret.startsWith('token=')) {
-    ns_url = ns_url + '?' + secret;
+    nsUrl = `${nsUrl}?${secret}`;
   } else {
-    ns_headers['API-SECRET'] = secret;
+    nsHeaders['API-SECRET'] = secret;
   }
 
   const optionsNS = {
-    url: ns_url,
-    timeout: 30*1000,
+    url: nsUrl,
+    timeout: 30 * 1000,
     method: 'POST',
-    headers: ns_headers,
+    headers: nsHeaders,
     body: entry,
-    json: true
+    json: true,
   };
 
-  /*eslint-disable no-unused-vars*/
-  request(optionsNS, function (err, response, body) {
-  /*eslint-enable no-unused-vars*/
+  /* eslint-disable-next-line no-unused-vars */
+  request(optionsNS, (err, response, body) => {
     if (err) {
       error('error posting SGV to NS: ', err);
     } else {
-      log('uploaded SGV to NS, statusCode = ' + response.statusCode);
+      log(`uploaded SGV to NS, statusCode = ${response.statusCode}`);
       debug('Entry:\n%O', entry);
     }
   });
@@ -128,29 +126,29 @@ const postToNS = (entry) => {
 
 const queryLatestCal = () => {
   const secret = process.env.API_SECRET;
-  let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json?';
+  let nsUrl = `${process.env.NIGHTSCOUT_HOST}/api/v1/entries.json?`;
 
   // time format needs to match the output of 'date -d "3 hours ago" -Iminutes -u'
-  let ns_query = 'find[type]=cal&count=1';
+  const nsQuery = 'find[type]=cal&count=1';
 
-  let ns_headers = {
-    'Content-Type': 'application/json'
+  const nsHeaders = {
+    'Content-Type': 'application/json',
   };
 
   if (secret.startsWith('token=')) {
-    ns_url = ns_url + secret + '&';
+    nsUrl = `${nsUrl + secret}&`;
   } else {
-    ns_headers['API-SECRET'] = secret;
+    nsHeaders['API-SECRET'] = secret;
   }
 
-  ns_url = ns_url + ns_query;
+  nsUrl += nsQuery;
 
-  let optionsNS = {
-    url: ns_url,
-    timeout: 30*1000,
+  const optionsNS = {
+    url: nsUrl,
+    timeout: 30 * 1000,
     method: 'GET',
-    headers: ns_headers,
-    json: true
+    headers: nsHeaders,
+    json: true,
   };
 
   return requestPromise(optionsNS);
@@ -158,29 +156,29 @@ const queryLatestCal = () => {
 
 const queryLatestSGVs = (numResults) => {
   const secret = process.env.API_SECRET;
-  let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json?';
+  let nsUrl = `${process.env.NIGHTSCOUT_HOST}/api/v1/entries.json?`;
 
   // time format needs to match the output of 'date -d "3 hours ago" -Iminutes -u'
-  let ns_query = 'find[type]=sgv&count=' + numResults;
+  const nsQuery = `find[type]=sgv&count=${numResults}`;
 
-  let ns_headers = {
-    'Content-Type': 'application/json'
+  const nsHeaders = {
+    'Content-Type': 'application/json',
   };
 
   if (secret.startsWith('token=')) {
-    ns_url = ns_url + secret + '&';
+    nsUrl = `${nsUrl + secret}&`;
   } else {
-    ns_headers['API-SECRET'] = secret;
+    nsHeaders['API-SECRET'] = secret;
   }
 
-  ns_url = ns_url + ns_query;
+  nsUrl += nsQuery;
 
-  let optionsNS = {
-    url: ns_url,
-    timeout: 30*1000,
+  const optionsNS = {
+    url: nsUrl,
+    timeout: 30 * 1000,
     method: 'GET',
-    headers: ns_headers,
-    json: true
+    headers: nsHeaders,
+    json: true,
   };
 
   return requestPromise(optionsNS);
@@ -188,29 +186,29 @@ const queryLatestSGVs = (numResults) => {
 
 const querySGVsBefore = (startTime, count) => {
   const secret = process.env.API_SECRET;
-  let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json?';
+  let nsUrl = `${process.env.NIGHTSCOUT_HOST}/api/v1/entries.json?`;
 
   // time format needs to match the output of 'date -d "3 hours ago" -Iminutes -u'
-  let ns_query = 'find[type]=sgv&find[dateString][$lte]=' + startTime.toISOString() + '&count=' + count;
+  const nsQuery = `find[type]=sgv&find[dateString][$lte]=${startTime.toISOString()}&count=${count}`;
 
-  let ns_headers = {
-    'Content-Type': 'application/json'
+  const nsHeaders = {
+    'Content-Type': 'application/json',
   };
 
   if (secret.startsWith('token=')) {
-    ns_url = ns_url + secret + '&';
+    nsUrl = `${nsUrl + secret}&`;
   } else {
-    ns_headers['API-SECRET'] = secret;
+    nsHeaders['API-SECRET'] = secret;
   }
 
-  ns_url = ns_url + ns_query;
+  nsUrl += nsQuery;
 
-  let optionsNS = {
-    url: ns_url,
-    timeout: 30*1000,
+  const optionsNS = {
+    url: nsUrl,
+    timeout: 30 * 1000,
     method: 'GET',
-    headers: ns_headers,
-    json: true
+    headers: nsHeaders,
+    json: true,
   };
 
   return requestPromise(optionsNS);
@@ -218,29 +216,29 @@ const querySGVsBefore = (startTime, count) => {
 
 const querySGVsBetween = (startTime, endTime, count) => {
   const secret = process.env.API_SECRET;
-  let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json?';
+  let nsUrl = `${process.env.NIGHTSCOUT_HOST}/api/v1/entries.json?`;
 
   // time format needs to match the output of 'date -d "3 hours ago" -Iminutes -u'
-  let ns_query = 'find[type]=sgv&find[dateString][$gte]=' + startTime.toISOString() + '&find[dateString][$lte]=' + endTime.toISOString() + '&count=' + count;
+  const nsQuery = `find[type]=sgv&find[dateString][$gte]=${startTime.toISOString()}&find[dateString][$lte]=${endTime.toISOString()}&count=${count}`;
 
-  let ns_headers = {
-    'Content-Type': 'application/json'
+  const nsHeaders = {
+    'Content-Type': 'application/json',
   };
 
   if (secret.startsWith('token=')) {
-    ns_url = ns_url + secret + '&';
+    nsUrl = `${nsUrl + secret}&`;
   } else {
-    ns_headers['API-SECRET'] = secret;
+    nsHeaders['API-SECRET'] = secret;
   }
 
-  ns_url = ns_url + ns_query;
+  nsUrl += nsQuery;
 
-  let optionsNS = {
-    url: ns_url,
-    timeout: 30*1000,
+  const optionsNS = {
+    url: nsUrl,
+    timeout: 30 * 1000,
     method: 'GET',
-    headers: ns_headers,
-    json: true
+    headers: nsHeaders,
+    json: true,
   };
 
   return requestPromise(optionsNS);
@@ -248,29 +246,29 @@ const querySGVsBetween = (startTime, endTime, count) => {
 
 const querySGVsSince = (startTime, count) => {
   const secret = process.env.API_SECRET;
-  let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json?';
+  let nsUrl = `${process.env.NIGHTSCOUT_HOST}/api/v1/entries.json?`;
 
   // time format needs to match the output of 'date -d "3 hours ago" -Iminutes -u'
-  let ns_query = 'find[type]=sgv&find[dateString][$gte]=' + startTime.toISOString() + '&count=' + count;
+  const nsQuery = `find[type]=sgv&find[dateString][$gte]=${startTime.toISOString()}&count=${count}`;
 
-  let ns_headers = {
-    'Content-Type': 'application/json'
+  const nsHeaders = {
+    'Content-Type': 'application/json',
   };
 
   if (secret.startsWith('token=')) {
-    ns_url = ns_url + secret + '&';
+    nsUrl = `${nsUrl + secret}&`;
   } else {
-    ns_headers['API-SECRET'] = secret;
+    nsHeaders['API-SECRET'] = secret;
   }
 
-  ns_url = ns_url + ns_query;
+  nsUrl += nsQuery;
 
-  let optionsNS = {
-    url: ns_url,
-    timeout: 30*1000,
+  const optionsNS = {
+    url: nsUrl,
+    timeout: 30 * 1000,
     method: 'GET',
-    headers: ns_headers,
-    json: true
+    headers: nsHeaders,
+    json: true,
   };
 
   return requestPromise(optionsNS);
@@ -278,29 +276,29 @@ const querySGVsSince = (startTime, count) => {
 
 const queryLatestEvent = (type) => {
   const secret = process.env.API_SECRET;
-  let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/treatments.json?';
-  let oldestTime = moment().utc().subtract(2400, 'hours');
+  let nsUrl = `${process.env.NIGHTSCOUT_HOST}/api/v1/treatments.json?`;
+  const oldestTime = moment().utc().subtract(2400, 'hours');
 
-  let ns_query = 'find[created_at][$gte]=' + oldestTime.format() + '&find[eventType][$regex]=' + type + '&count=1';
+  const nsQuery = `find[created_at][$gte]=${oldestTime.format()}&find[eventType][$regex]=${type}&count=1`;
 
-  let ns_headers = {
-    'Content-Type': 'application/json'
+  const nsHeaders = {
+    'Content-Type': 'application/json',
   };
 
   if (secret.startsWith('token=')) {
-    ns_url = ns_url + secret + '&';
+    nsUrl = `${nsUrl + secret}&`;
   } else {
-    ns_headers['API-SECRET'] = secret;
+    nsHeaders['API-SECRET'] = secret;
   }
 
-  ns_url = ns_url + ns_query;
+  nsUrl += nsQuery;
 
-  let optionsNS = {
-    url: ns_url,
-    timeout: 30*1000,
+  const optionsNS = {
+    url: nsUrl,
+    timeout: 30 * 1000,
     method: 'GET',
-    headers: ns_headers,
-    json: true
+    headers: nsHeaders,
+    json: true,
   };
 
   return requestPromise(optionsNS);
@@ -308,388 +306,369 @@ const queryLatestEvent = (type) => {
 
 const queryBGChecksSince = (startTime) => {
   const secret = process.env.API_SECRET;
-  let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/treatments.json?';
+  let nsUrl = `${process.env.NIGHTSCOUT_HOST}/api/v1/treatments.json?`;
 
   // time format needs to match the output of 'date -d "3 hours ago" -Iminutes -u'
-  let ns_query = 'find[eventType][$regex]=Check&find[created_at][$gte]=' + startTime.format();
+  const nsQuery = `find[eventType][$regex]=Check&find[created_at][$gte]=${startTime.format()}`;
 
-  let ns_headers = {
-    'Content-Type': 'application/json'
+  const nsHeaders = {
+    'Content-Type': 'application/json',
   };
 
   if (secret.startsWith('token=')) {
-    ns_url = ns_url + secret + '&';
+    nsUrl = `${nsUrl + secret}&`;
   } else {
-    ns_headers['API-SECRET'] = secret;
+    nsHeaders['API-SECRET'] = secret;
   }
 
-  ns_url = ns_url + ns_query;
+  nsUrl += nsQuery;
 
-  let optionsNS = {
-    url: ns_url,
-    timeout: 30*1000,
+  const optionsNS = {
+    url: nsUrl,
+    timeout: 30 * 1000,
     method: 'GET',
-    headers: ns_headers,
-    json: true
+    headers: nsHeaders,
+    json: true,
   };
 
   return requestPromise(optionsNS);
 };
 
-const convertBGCheck = (BGCheck) => {
-  return [{
-    'enteredBy': 'xdripjs://' + os.hostname(),
-    'eventType': 'BG Check',
-    'glucose': BGCheck.glucose,
-    'glucoseType': 'Finger',
-    'reason': 'Txmitter Calibration',
-    'duration': 0,
-    'units': 'mg/dl',
-    'created_at': moment(BGCheck.date).format()
-  }];
-};
+const convertBGCheck = BGCheck => [{
+  enteredBy: `xdripjs://${os.hostname()}`,
+  eventType: 'BG Check',
+  glucose: BGCheck.glucose,
+  glucoseType: 'Finger',
+  reason: 'Txmitter Calibration',
+  duration: 0,
+  units: 'mg/dl',
+  created_at: moment(BGCheck.date).format(),
+}];
 
-module.exports = () => {
-  return {
-    // API (public) functions
-    post: (glucose, sendToXdrip) => {
-      let entry = [ _convertEntryToNS(glucose) ];
+module.exports = () => ({
+  // API (public) functions
+  post: (glucose, sendToXdrip) => {
+    const entry = [convertEntryToNS(glucose)];
 
-      if (sendToXdrip) {
-        postToXdrip(entry);
-      }
-
-      postToNS(entry);
-    },
-
-    updateBGCheck: (id, BGCheck) => {
-      let entry = convertBGCheck(BGCheck);
-
-      entry._id = id;
-
-      const secret = process.env.API_SECRET;
-      let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/treatments/';
-      let ns_headers = {
-        'Content-Type': 'application/json'
-      };
-
-      if (secret.startsWith('token=')) {
-        ns_url = ns_url + '?' + secret;
-      } else {
-        ns_headers['API-SECRET'] = secret;
-      }
-
-      const optionsNS = {
-        url: ns_url,
-        timeout: 30*1000,
-        method: 'PUT',
-        headers: ns_headers,
-        data: entry,
-        json: true
-      };
-
-      /*eslint-disable no-unused-vars*/
-      request(optionsNS, function (err, response, body) {
-      /*eslint-enable no-unused-vars*/
-        if (error) {
-          error('error posting BG Update to NS: ', err);
-        } else {
-          log('updated BG Check to NS, statusCode = ' + response.statusCode);
-        }
-      });
-    },
-
-    postAnnouncement: (message) => {
-      const entry = [{
-        'created_at': moment().format(),
-        'enteredBy': 'xdripjs://' + os.hostname(),
-        'eventType': 'Announcement',
-        'notes': message
-      }];
-
-      const secret = process.env.API_SECRET;
-      let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/treatments.json';
-      let ns_headers = {
-        'Content-Type': 'application/json'
-      };
-
-      if (secret.startsWith('token=')) {
-        ns_url = ns_url + '?' + secret;
-      } else {
-        ns_headers['API-SECRET'] = secret;
-      }
-
-      const optionsNS = {
-        url: ns_url,
-        method: 'POST',
-        headers: ns_headers,
-        body: entry,
-        json: true
-      };
-
-      /*eslint-disable no-unused-vars*/
-      request(optionsNS, function (err, response, body) {
-      /*eslint-enable no-unused-vars*/
-        if (error) {
-          error('error posting Announcement to NS: ', err);
-        } else {
-          log('uploaded new Announcement to NS, statusCode = ' + response.statusCode);
-          debug('Announcement:\n%O', entry);
-        }
-      });
-    },
-
-    postStatus: (txId, sgv, txStatus, cal, lastTxmitterCalTime) => {
-      const entry = [{
-        'device': 'xdripjs://' + os.hostname(),
-        'xdripjs': {
-          'state': sgv.state,
-          'stateString': sgv.stateString,
-          'stateStringShort': sgv.stateStringShort,
-          'txId': txId,
-          'txStatus': sgv.status,
-          'txStatusString': sgv.txStatusString,
-          'txStatusStringShort': sgv.txStatusStringShort,
-          'txActivation': sgv.transmitterStartDate,
-          'mode': sgv.mode,
-          'timestamp': sgv.readDateMills,
-          'rssi': sgv.rssi,
-          'unfiltered': sgv.unfiltered,
-          'filtered': sgv.filtered,
-          'noise': sgv.noise,
-          'noiseString': sgv.noiseString,
-          'slope': (cal && cal.slope) || 1,
-          'intercept': (cal && cal.intercept) || 0,
-          'calType': (cal && cal.type) || 'None', // 'LeastSquaresRegression' or 'SinglePoint' or 'Unity'
-          'lastCalibrationDate': lastTxmitterCalTime,
-          'sessionStart': sgv.sessionStartDate,
-          'batteryTimestamp': (txStatus && txStatus.timestamp.valueOf()) || null,
-          'voltagea': (txStatus && txStatus.voltagea) || null,
-          'voltageb': (txStatus && txStatus.voltageb) || null,
-          'temperature': (txStatus && txStatus.temperature) || null,
-          'resistance': (txStatus && txStatus.resist) || null
-        },
-        'created_at': moment().utc().format()
-      }];
-
-      const secret = process.env.API_SECRET;
-      let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/devicestatus.json';
-      let ns_headers = {
-        'Content-Type': 'application/json'
-      };
-
-      if (secret.startsWith('token=')) {
-        ns_url = ns_url + '?' + secret;
-      } else {
-        ns_headers['API-SECRET'] = secret;
-      }
-
-      const optionsNS = {
-        url: ns_url,
-        method: 'POST',
-        headers: ns_headers,
-        body: entry,
-        json: true
-      };
-
-      /*eslint-disable no-unused-vars*/
-      request(optionsNS, function (err, response, body) {
-      /*eslint-enable no-unused-vars*/
-        if (err) {
-          error('error posting DeviceStatus to NS: ', err);
-        } else {
-          log('uploaded new DeviceStatus to NS, statusCode = ' + response.statusCode);
-          debug('Status:\n%O', entry);
-        }
-      });
-    },
-
-    postBGCheck: (BGCheck) => {
-      let entry = convertBGCheck(BGCheck);
-
-      const secret = process.env.API_SECRET;
-      let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/treatments.json';
-      let ns_headers = {
-        'Content-Type': 'application/json'
-      };
-
-      if (secret.startsWith('token=')) {
-        ns_url = ns_url + '?' + secret;
-      } else {
-        ns_headers['API-SECRET'] = secret;
-      }
-
-      const optionsNS = {
-        url: ns_url,
-        timeout: 30*1000,
-        method: 'POST',
-        headers: ns_headers,
-        body: entry,
-        json: true
-      };
-
-      /*eslint-disable no-unused-vars*/
-      request(optionsNS, function (err, response, body) {
-      /*eslint-enable no-unused-vars*/
-        if (error) {
-          error('error posting BG Check to NS: ', err);
-        } else {
-          log('uploaded new BG Check to NS, statusCode = ' + response.statusCode);
-          debug('BG Check:\n%O', entry);
-        }
-      });
-    },
-
-    postCalibration: (calData) => {
-
-      const entry = [{
-        'device': 'xdripjs://' + os.hostname(),
-        'type': 'cal',
-        'date': calData.date,
-        'dateString': new Date(calData.date).toISOString(),
-        'scale': calData.scale,
-        'intercept': calData.intercept,
-        'slope': calData.slope,
-      }];
-
-      const secret = process.env.API_SECRET;
-      let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/entries.json';
-      let ns_headers = {
-        'Content-Type': 'application/json'
-      };
-
-      if (secret.startsWith('token=')) {
-        ns_url = ns_url + '?' + secret;
-      } else {
-        ns_headers['API-SECRET'] = secret;
-      }
-
-      const optionsNS = {
-        url: ns_url,
-        timeout: 30*1000,
-        method: 'POST',
-        headers: ns_headers,
-        body: entry,
-        json: true
-      };
-
-      /*eslint-disable no-unused-vars*/
-      request(optionsNS, function (err, response, body) {
-      /*eslint-enable no-unused-vars*/
-        if (error) {
-          error('error posting calibration to NS: ', err);
-        } else {
-          log('uploaded new calibration to NS, statusCode = ' + response.statusCode);
-          debug('calibration:\n%O', entry);
-        }
-      });
-    },
-
-    postEvent: (eventType, eventTime) => {
-
-      const entry = [{
-        'enteredBy': 'xdripjs://' + os.hostname(),
-        'eventType': eventType,
-        'created_at': new Date(eventTime.valueOf()).toISOString(),
-      }];
-
-      const secret = process.env.API_SECRET;
-      let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/treatments.json';
-      let ns_headers = {
-        'Content-Type': 'application/json'
-      };
-
-      if (secret.startsWith('token=')) {
-        ns_url = ns_url + '?' + secret;
-      } else {
-        ns_headers['API-SECRET'] = secret;
-      }
-
-      const optionsNS = {
-        url: ns_url,
-        timeout: 30*1000,
-        method: 'POST',
-        headers: ns_headers,
-        body: entry,
-        json: true
-      };
-
-      /*eslint-disable no-unused-vars*/
-      request(optionsNS, function (err, response, body) {
-      /*eslint-enable no-unused-vars*/
-        if (err) {
-          error('error posting ' + eventType + ' to NS: ', err);
-        } else {
-          log('uploaded new ' + eventType + ' event to NS, statusCode = ' + response.statusCode);
-          debug('event:\n%O', entry);
-        }
-      });
-    },
-
-    latestCal: async () => {
-      let formattedCal = null;
-
-      let cal = await queryLatestCal();
-
-      if (cal && (cal.length > 0)) {
-        formattedCal = {
-          date: cal[0].date,
-          scale: cal[0].scale,
-          slope: cal[0].slope,
-          intercept: cal[0].intercept,
-          type: 'NightScoutSynced'
-        };
-
-        if ((cal[0].slope==1000) && (cal[0].intercept==0)) {
-          formattedCal.type = 'Unity';
-        }
-      }
-
-      return formattedCal;
-    },
-
-    latestSGVs: async (numResults) => {
-      return queryLatestSGVs(numResults);
-    },
-
-    SGVsSince: async (startTime, numResults) => {
-      return querySGVsSince(startTime, numResults);
-    },
-
-    SGVsBefore: async (startTime, numResults) => {
-      return querySGVsBefore(startTime, numResults);
-    },
-
-    SGVsBetween: async (startTime, endTime, numResults) => {
-      return querySGVsBetween(startTime, endTime, numResults);
-    },
-
-    BGChecksSince: async (startTime) => {
-      return queryBGChecksSince(startTime);
-    },
-
-    latestEvent: async (type) => {
-      let eventTime = null;
-
-      let eventRecord = await queryLatestEvent(type);
-
-      if (eventRecord && (eventRecord.length > 0)) {
-        eventTime = moment(eventRecord[0].created_at);
-      }
-
-      return eventTime;
-    },
-
-    convertEntryToNS: (glucose) => {
-      let retVal = _convertEntryToNS(glucose);
-
-      return retVal;
-    },
-
-    convertEntryToxDrip: (glucose) => {
-      let retVal = _convertEntryToxDrip(glucose);
-
-      return retVal;
+    if (sendToXdrip) {
+      postToXdrip(entry);
     }
-  };
-};
+
+    postToNS(entry);
+  },
+
+  updateBGCheck: (id, BGCheck) => {
+    const entry = convertBGCheck(BGCheck);
+
+    /* eslint-disable-next-line no-underscore-dangle */
+    entry._id = id;
+
+    const secret = process.env.API_SECRET;
+    let nsUrl = `${process.env.NIGHTSCOUT_HOST}/api/v1/treatments/`;
+    const nsHeaders = {
+      'Content-Type': 'application/json',
+    };
+
+    if (secret.startsWith('token=')) {
+      nsUrl = `${nsUrl}?${secret}`;
+    } else {
+      nsHeaders['API-SECRET'] = secret;
+    }
+
+    const optionsNS = {
+      url: nsUrl,
+      timeout: 30 * 1000,
+      method: 'PUT',
+      headers: nsHeaders,
+      data: entry,
+      json: true,
+    };
+
+    /* eslint-disable-next-line no-unused-vars */
+    request(optionsNS, (err, response, body) => {
+      if (err) {
+        error('error posting BG Update to NS: ', err);
+      } else {
+        log(`updated BG Check to NS, statusCode = ${response.statusCode}`);
+      }
+    });
+  },
+
+  postAnnouncement: (message) => {
+    const entry = [{
+      created_at: moment().format(),
+      enteredBy: `xdripjs://${os.hostname()}`,
+      eventType: 'Announcement',
+      notes: message,
+    }];
+
+    const secret = process.env.API_SECRET;
+    let nsUrl = `${process.env.NIGHTSCOUT_HOST}/api/v1/treatments.json`;
+    const nsHeaders = {
+      'Content-Type': 'application/json',
+    };
+
+    if (secret.startsWith('token=')) {
+      nsUrl = `${nsUrl}?${secret}`;
+    } else {
+      nsHeaders['API-SECRET'] = secret;
+    }
+
+    const optionsNS = {
+      url: nsUrl,
+      method: 'POST',
+      headers: nsHeaders,
+      body: entry,
+      json: true,
+    };
+
+    /* eslint-disable-next-line no-unused-vars */
+    request(optionsNS, (err, response, body) => {
+      if (err) {
+        error('error posting Announcement to NS: ', err);
+      } else {
+        log(`uploaded new Announcement to NS, statusCode = ${response.statusCode}`);
+        debug('Announcement:\n%O', entry);
+      }
+    });
+  },
+
+  postStatus: (txId, sgv, txStatus, cal, lastTxmitterCalTime) => {
+    const entry = [{
+      device: `xdripjs://${os.hostname()}`,
+      xdripjs: {
+        state: sgv.state,
+        stateString: sgv.stateString,
+        stateStringShort: sgv.stateStringShort,
+        txId,
+        txStatus: sgv.status,
+        txStatusString: sgv.txStatusString,
+        txStatusStringShort: sgv.txStatusStringShort,
+        txActivation: sgv.transmitterStartDate,
+        mode: sgv.mode,
+        timestamp: sgv.readDateMills,
+        rssi: sgv.rssi,
+        unfiltered: sgv.unfiltered,
+        filtered: sgv.filtered,
+        noise: sgv.noise,
+        noiseString: sgv.noiseString,
+        slope: (cal && cal.slope) || 1,
+        intercept: (cal && cal.intercept) || 0,
+        calType: (cal && cal.type) || 'None', // 'LeastSquaresRegression' or 'SinglePoint' or 'Unity'
+        lastCalibrationDate: lastTxmitterCalTime,
+        sessionStart: sgv.sessionStartDate,
+        batteryTimestamp: (txStatus && txStatus.timestamp.valueOf()) || null,
+        voltagea: (txStatus && txStatus.voltagea) || null,
+        voltageb: (txStatus && txStatus.voltageb) || null,
+        temperature: (txStatus && txStatus.temperature) || null,
+        resistance: (txStatus && txStatus.resist) || null,
+      },
+      created_at: moment().utc().format(),
+    }];
+
+    const secret = process.env.API_SECRET;
+    let nsUrl = `${process.env.NIGHTSCOUT_HOST}/api/v1/devicestatus.json`;
+    const nsHeaders = {
+      'Content-Type': 'application/json',
+    };
+
+    if (secret.startsWith('token=')) {
+      nsUrl = `${nsUrl}?${secret}`;
+    } else {
+      nsHeaders['API-SECRET'] = secret;
+    }
+
+    const optionsNS = {
+      url: nsUrl,
+      method: 'POST',
+      headers: nsHeaders,
+      body: entry,
+      json: true,
+    };
+
+    /* eslint-disable-next-line no-unused-vars */
+    request(optionsNS, (err, response, body) => {
+      if (err) {
+        error('error posting DeviceStatus to NS: ', err);
+      } else {
+        log(`uploaded new DeviceStatus to NS, statusCode = ${response.statusCode}`);
+        debug('Status:\n%O', entry);
+      }
+    });
+  },
+
+  postBGCheck: (BGCheck) => {
+    const entry = convertBGCheck(BGCheck);
+
+    const secret = process.env.API_SECRET;
+    let nsUrl = `${process.env.NIGHTSCOUT_HOST}/api/v1/treatments.json`;
+    const nsHeaders = {
+      'Content-Type': 'application/json',
+    };
+
+    if (secret.startsWith('token=')) {
+      nsUrl = `${nsUrl}?${secret}`;
+    } else {
+      nsHeaders['API-SECRET'] = secret;
+    }
+
+    const optionsNS = {
+      url: nsUrl,
+      timeout: 30 * 1000,
+      method: 'POST',
+      headers: nsHeaders,
+      body: entry,
+      json: true,
+    };
+
+    /* eslint-disable-next-line no-unused-vars */
+    request(optionsNS, (err, response, body) => {
+      if (err) {
+        error('error posting BG Check to NS: ', err);
+      } else {
+        log(`uploaded new BG Check to NS, statusCode = ${response.statusCode}`);
+        debug('BG Check:\n%O', entry);
+      }
+    });
+  },
+
+  postCalibration: (calData) => {
+    const entry = [{
+      device: `xdripjs://${os.hostname()}`,
+      type: 'cal',
+      date: calData.date,
+      dateString: new Date(calData.date).toISOString(),
+      scale: calData.scale,
+      intercept: calData.intercept,
+      slope: calData.slope,
+    }];
+
+    const secret = process.env.API_SECRET;
+    let nsUrl = `${process.env.NIGHTSCOUT_HOST}/api/v1/entries.json`;
+    const nsHeaders = {
+      'Content-Type': 'application/json',
+    };
+
+    if (secret.startsWith('token=')) {
+      nsUrl = `${nsUrl}?${secret}`;
+    } else {
+      nsHeaders['API-SECRET'] = secret;
+    }
+
+    const optionsNS = {
+      url: nsUrl,
+      timeout: 30 * 1000,
+      method: 'POST',
+      headers: nsHeaders,
+      body: entry,
+      json: true,
+    };
+
+    /* eslint-disable-next-line no-unused-vars */
+    request(optionsNS, (err, response, body) => {
+      if (err) {
+        error('error posting calibration to NS: ', err);
+      } else {
+        log(`uploaded new calibration to NS, statusCode = ${response.statusCode}`);
+        debug('calibration:\n%O', entry);
+      }
+    });
+  },
+
+  postEvent: (eventType, eventTime) => {
+    const entry = [{
+      enteredBy: `xdripjs://${os.hostname()}`,
+      eventType,
+      created_at: new Date(eventTime.valueOf()).toISOString(),
+    }];
+
+    const secret = process.env.API_SECRET;
+    let nsUrl = `${process.env.NIGHTSCOUT_HOST}/api/v1/treatments.json`;
+    const nsHeaders = {
+      'Content-Type': 'application/json',
+    };
+
+    if (secret.startsWith('token=')) {
+      nsUrl = `${nsUrl}?${secret}`;
+    } else {
+      nsHeaders['API-SECRET'] = secret;
+    }
+
+    const optionsNS = {
+      url: nsUrl,
+      timeout: 30 * 1000,
+      method: 'POST',
+      headers: nsHeaders,
+      body: entry,
+      json: true,
+    };
+
+    /* eslint-disable-next-line no-unused-vars */
+    request(optionsNS, (err, response, body) => {
+      if (err) {
+        error(`error posting ${eventType} to NS: `, err);
+      } else {
+        log(`uploaded new ${eventType} event to NS, statusCode = ${response.statusCode}`);
+        debug('event:\n%O', entry);
+      }
+    });
+  },
+
+  latestCal: async () => {
+    let formattedCal = null;
+
+    const cal = await queryLatestCal();
+
+    if (cal && (cal.length > 0)) {
+      formattedCal = {
+        date: cal[0].date,
+        scale: cal[0].scale,
+        slope: cal[0].slope,
+        intercept: cal[0].intercept,
+        type: 'NightScoutSynced',
+      };
+
+      if ((cal[0].slope === 1000) && (cal[0].intercept === 0)) {
+        formattedCal.type = 'Unity';
+      }
+    }
+
+    return formattedCal;
+  },
+
+  latestSGVs: async numResults => queryLatestSGVs(numResults),
+
+  SGVsSince: async (startTime, numResults) => querySGVsSince(startTime, numResults),
+
+  SGVsBefore: async (startTime, numResults) => querySGVsBefore(startTime, numResults),
+
+  SGVsBetween: async (startTime, endTime, numResults) => querySGVsBetween(
+    startTime, endTime, numResults,
+  ),
+
+  BGChecksSince: async startTime => queryBGChecksSince(startTime),
+
+  latestEvent: async (type) => {
+    let eventTime = null;
+
+    const eventRecord = await queryLatestEvent(type);
+
+    if (eventRecord && (eventRecord.length > 0)) {
+      eventTime = moment(eventRecord[0].created_at);
+    }
+
+    return eventTime;
+  },
+
+  convertEntryToNS: (glucose) => {
+    const retVal = convertEntryToNS(glucose);
+
+    return retVal;
+  },
+
+  convertEntryToxDrip: (glucose) => {
+    const retVal = convertEntryToxDrip(glucose);
+
+    return retVal;
+  },
+});

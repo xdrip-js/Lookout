@@ -1,7 +1,7 @@
 
+const Debug = require('debug');
 const exec = require('./childExecPromise');
 
-const Debug = require('debug');
 const log = Debug('fakemeter:log');
 const error = Debug('fakemeter:error');
 const debug = Debug('fakemeter:debug');
@@ -10,22 +10,22 @@ let storage = null;
 let options = null;
 let online = false;
 
-const test_online = async () => {
+const testOnline = async () => {
   let status = true;
   let stdout = null;
   let stderr = null;
 
-  let retVal = await exec('lookout_online')
-    .catch( (err) => {
-      error('Online test failed with error: ' + err.err);
-      stdout = err.stdout;
-      stderr = err.stderr;
+  const retVal = await exec('lookout_online')
+    .catch((err) => {
+      error('Online test failed with error:\n%O', err);
+      ({ stdout } = err);
+      ({ stderr } = err);
       status = false;
     });
 
   // replace it if we got a return value. If we didn't, we likely caught an error
-  stdout = retVal && retVal.stdout || stdout;
-  stderr = retVal && retVal.stderr || stderr;
+  stdout = retVal ? retVal.stdout : stdout;
+  stderr = retVal ? retVal.stderr : stderr;
 
   debug(`lookout_online stdout: ${stdout}`);
   debug(`lookout_online stderr: ${stderr}`);
@@ -33,17 +33,17 @@ const test_online = async () => {
   return status;
 };
 
-const _getMeterId = async () => {
+const getMeterId = async () => {
   let meterId = await storage.getItem('meterid')
-    .catch(err => {
-      error('Unable to get meterid storage item: ' + err);
+    .catch((err) => {
+      error(`Unable to get meterid storage item: ${err}`);
     });
 
   if (!meterId) {
     meterId = '000000';
     storage.setItem('meterid', meterId)
-      .catch(err => {
-        error('Unable to store meterid storage item: ' + err);
+      .catch((err) => {
+        error(`Unable to store meterid storage item: ${err}`);
       });
   }
 
@@ -59,13 +59,13 @@ module.exports = (_options, _storage, client) => {
   // to interact with the transmitter.
   const fakeMeter = {
     // provide the current transmitter ID
-    getMeterId: _getMeterId,
+    getMeterId,
 
     // Set the meter Id to the value provided
     setMeterId: (value) => {
       storage.setItem('meterid', value)
-        .catch(err => {
-          error('Error saving meterid: ' + err);
+        .catch((err) => {
+          error(`Error saving meterid: ${err}`);
         });
 
       client.meterId(value);
@@ -75,35 +75,35 @@ module.exports = (_options, _storage, client) => {
     glucose: async (value) => {
       // trigger online status update. It lags by 1 glucose reading, but
       // doesn't waste time waiting for response from Internet
-      test_online().then( (value) => {
-        online = value;
+      testOnline().then((onlineValue) => {
+        online = onlineValue;
       });
 
-      let meterId = await _getMeterId();
+      const meterId = await getMeterId();
 
       if (options.fakemeter || (!online && options.offline_fakemeter)) {
-        log('Sending glucose to fakemeter: ' + value);
+        log(`Sending glucose to fakemeter: ${value}`);
 
         let stdout = null;
         let stderr = null;
 
-        let retVal = await exec('lookout_fakemeter '+meterId+' '+value+' '+options.openaps)
-          .catch( (err) => {
-            error('Unable to send glucose to fakemeter: ' + err.err);
-            stdout = err.stdout;
-            stderr = err.stderr;
+        const retVal = await exec(`lookout_fakemeter ${meterId} ${value} ${options.openaps}`)
+          .catch((err) => {
+            error('Unable to send glucose to fakemeter:\n%O', err);
+            ({ stdout } = err);
+            ({ stderr } = err);
           });
 
         // replace it if we got a return value. If we didn't, we likely caught an error
-        stdout = retVal && retVal.stdout || stdout;
-        stderr = retVal && retVal.stderr || stderr;
+        stdout = retVal ? retVal.stdout : stdout;
+        stderr = retVal ? retVal.stderr : stderr;
 
         debug(`fakemeter stdout: ${stdout}`);
         debug(`fakemeter stderr: ${stderr}`);
       } else if (online && options.offline_fakemeter) {
         log('Not sending glucose to fakemeter because rig is online');
       }
-    }
+    },
   };
 
   // Provide the object to the client
@@ -111,4 +111,3 @@ module.exports = (_options, _storage, client) => {
 
   return fakeMeter;
 };
-

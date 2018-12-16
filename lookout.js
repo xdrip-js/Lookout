@@ -1,38 +1,41 @@
 #!/usr/bin/env node
 
+/* eslint-disable no-console */
+
 const io = require('socket.io-client');
 const moment = require('moment');
+const yargs = require('yargs');
 const prompt = require('./prompt');
 
-let command = null;
+let sendCommand = null;
 
-const argv = require('yargs')
-  .command('cal <sgv>', 'Calibrate the transmitter with provided glucose meter reading', (yargs) => {
-    yargs.positional('sgv', {
+const argv = yargs
+  .command('cal <sgv>', 'Calibrate the transmitter with provided glucose meter reading', (yargsp) => {
+    yargsp.positional('sgv', {
       describe: 'glucose value from meter',
       type: 'number',
-      required: true
+      required: true,
     });
   })
-  .command('id <id>', 'Set transmitter ID', (yargs) => {
-    yargs.positional('id', {
+  .command('id <id>', 'Set transmitter ID', (yargsp) => {
+    yargsp.positional('id', {
       describe: 'transmitter serial number',
       type: 'string',
-      required: true
+      required: true,
     });
   })
-  .command('meterid <meterid>', 'Set fake meter ID', (yargs) => {
-    yargs.positional('meterid', {
+  .command('meterid <meterid>', 'Set fake meter ID', (yargsp) => {
+    yargsp.positional('meterid', {
       describe: 'fake meter id',
       type: 'string',
-      required: true
+      required: true,
     });
   })
   .option('mmol', {
     alias: 'm',
     boolean: true,
     describe: 'Use mmol instead of mg/dL',
-    default: false
+    default: false,
   })
   .command('start', 'Start sensor session')
   .command('back-start', 'Start sensor session back dated by 2 hours')
@@ -45,9 +48,39 @@ const argv = require('yargs')
   .help('help');
 
 const params = argv.argv;
-command = params._.shift();
+sendCommand = params._.shift();
 
-const processCommand = async (command, params) => {
+const processGlucose = (glucose) => {
+  const sessionStart = moment(glucose.sessionStartDate);
+  const sessionAge = moment.duration(moment().diff(sessionStart));
+
+  const transmitterStart = moment(glucose.transmitterStartDate);
+  const transmitterAge = moment.duration(moment().diff(transmitterStart));
+
+  let sgv = glucose.glucose;
+
+  if (params.mmol) {
+    sgv = Math.round(sgv / 18 * 10) / 10;
+  }
+
+  console.log(`          glucose: ${sgv}`);
+  console.log(`            noise: ${Math.round(glucose.noise * 10) / 10}`);
+  console.log(`      noise index: ${glucose.nsNoise}`);
+  console.log(`        inSession: ${glucose.inSession}`);
+  console.log(`     sensor state: ${glucose.stateString}`);
+  console.log(`transmitter state: ${glucose.txStatusString}`);
+  console.log(`         readDate: ${moment(glucose.readDate).format()}`);
+  console.log(`    session start: ${sessionStart.format()}`);
+  console.log(`      session age: ${sessionAge.days()} days ${sessionAge.hours()} hours ${sessionAge.minutes()} minutes`);
+  console.log(`transmitter start: ${transmitterStart.format()}`);
+  console.log(`  transmitter age: ${transmitterAge.days()} days ${transmitterAge.hours()} hours ${transmitterAge.minutes()} minutes`);
+  console.log(`        voltage a: ${glucose.voltagea}`);
+  console.log(`        voltage b: ${glucose.voltageb}`);
+  console.log('\nPress Ctrl-C to Exit');
+  console.log('=====================================');
+};
+
+const processCommand = async (command) => {
   let sendCmd = null;
   let sendArg = null;
 
@@ -57,19 +90,19 @@ const processCommand = async (command, params) => {
     sendArg = params.sgv;
 
     if (params.mmol) {
-      sendArg = sendArg * 18;
+      sendArg *= 18;
     }
   } else if (command === 'start') {
     sendCmd = 'startSensor';
   } else if (command === 'back-start') {
     sendCmd = 'backStartSensor';
   } else if (command === 'stop') {
-    let promptStr = [
+    const promptStr = [
       'Your current session will be lost and will have to be restarted using \'lookout start\'\n',
-      'Are you sure? (y/n) '
+      'Are you sure? (y/n) ',
     ].join('\n');
 
-    let answer = await prompt(promptStr);
+    const answer = await prompt(promptStr);
 
     if (answer === 'y' || answer === 'Y') {
       sendCmd = 'stopSensor';
@@ -83,13 +116,13 @@ const processCommand = async (command, params) => {
     sendCmd = 'meterid';
     sendArg = params.meterid.padStart(6, 0);
   } else if (command === 'reset') {
-    let promptStr = [
+    const promptStr = [
       'Running this command will instruct Logger to reset the Dexcom Transmitter!',
       'Your current session will be lost and will have to be restarted using \'lookout start\'\n',
-      'Are you sure? (y/n) '
+      'Are you sure? (y/n) ',
     ].join('\n');
 
-    let answer = await prompt(promptStr);
+    const answer = await prompt(promptStr);
 
     if (answer === 'y' || answer === 'Y') {
       sendCmd = 'resetTx';
@@ -98,10 +131,12 @@ const processCommand = async (command, params) => {
     }
   }
 
-  let socket = io('http://localhost:3000/cgm');
+  const socket = io('http://localhost:3000/cgm');
 
   socket.on('connect', () => {
-    sendCmd && socket.emit(sendCmd, sendArg);
+    if (sendCmd) {
+      socket.emit(sendCmd, sendArg);
+    }
 
     // Only send it once
     sendCmd = null;
@@ -111,50 +146,19 @@ const processCommand = async (command, params) => {
     console.log('          Pending: ', pending);
   });
 
-  socket.on('id', id => {
+  socket.on('id', (id) => {
     console.log('   Transmitter ID: ', id);
   });
 
-  socket.on('meterid', id => {
+  socket.on('meterid', (id) => {
     console.log('    Fake Meter ID: ', id);
   });
 
-  socket.on('glucose', glucose => {
+  socket.on('glucose', (glucose) => {
     processGlucose(glucose);
   });
 
   console.log('\nPress Ctrl-C to Exit');
 };
 
-const processGlucose = glucose => {
-  let sessionStart = moment(glucose.sessionStartDate);
-  let sessionAge = moment.duration(moment().diff(sessionStart));
-
-  let transmitterStart = moment(glucose.transmitterStartDate);
-  let transmitterAge = moment.duration(moment().diff(transmitterStart));
-
-  let sgv = glucose.glucose;
-
-  if (params.mmol) {
-    sgv = Math.round(sgv / 18 * 10) / 10;
-  }
-
-  console.log('          glucose: ' + sgv);
-  console.log('            noise: ' + Math.round(glucose.noise*10)/10);
-  console.log('      noise index: ' + glucose.nsNoise);
-  console.log('        inSession: ' + glucose.inSession);
-  console.log('     sensor state: ' + glucose.stateString);
-  console.log('transmitter state: ' + glucose.txStatusString);
-  console.log('         readDate: ' + moment(glucose.readDate).format());
-  console.log('    session start: ' + sessionStart.format());
-  console.log('      session age: ' + sessionAge.days() + ' days ' + sessionAge.hours() + ' hours ' + sessionAge.minutes() + ' minutes');
-  console.log('transmitter start: ' + transmitterStart.format());
-  console.log('  transmitter age: ' + transmitterAge.days() + ' days ' + transmitterAge.hours() + ' hours ' + transmitterAge.minutes() + ' minutes');
-  console.log('        voltage a: ' + glucose.voltagea);
-  console.log('        voltage b: ' + glucose.voltageb);
-  console.log('\nPress Ctrl-C to Exit');
-  console.log('=====================================');
-};
-
-processCommand(command, params);
-
+processCommand(sendCommand);

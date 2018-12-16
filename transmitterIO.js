@@ -710,14 +710,21 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
           if ((gap.gapStart.diff(sgvDate) < 0) && (gap.gapEnd.diff(sgvDate) > 0)) {
             debug(`Storing backfill glucose: ${glucose.glucose} time: ${sgvDate.format()}`);
-            glucoseHist.push({
+
+            const newSGV = {
               readDateMills,
               glucose: glucose.glucose,
               readDate: sgvDate.format(),
               trend: 0,
               state: glucose.type,
               inSession: true,
-            });
+            };
+
+            glucoseHist.push(newSGV);
+
+            if (options.nightscout) {
+              xDripAPS.post(newSGV, true);
+            }
           }
         });
       }

@@ -17,7 +17,7 @@ const testOnline = async () => {
 
   const retVal = await exec('lookout_online')
     .catch((err) => {
-      error('Online test failed with error: %O', err);
+      error('Online test failed with error:\n%O', err);
       ({ stdout } = err);
       ({ stderr } = err);
       status = false;
@@ -89,7 +89,7 @@ module.exports = (_options, _storage, client) => {
 
         const retVal = await exec(`lookout_fakemeter ${meterId} ${value} ${options.openaps}`)
           .catch((err) => {
-            error(`Unable to send glucose to fakemeter: ${err.err}`);
+            error('Unable to send glucose to fakemeter:\n%O', err);
             ({ stdout } = err);
             ({ stderr } = err);
           });

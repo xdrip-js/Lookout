@@ -706,7 +706,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
       if (glucose.type === 7 || glucose.type === 6) {
         _.each(gaps, (gap) => {
-          const readDateMills = moment(glucose.readDate).valueOf();
+          const readDateMills = sgvDate.valueOf();
 
           if ((gap.gapStart.diff(sgvDate) < 0) && (gap.gapEnd.diff(sgvDate) > 0)) {
             debug(`Storing backfill glucose: ${glucose.glucose} time: ${sgvDate.format()}`);

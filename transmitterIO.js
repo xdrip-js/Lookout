@@ -123,9 +123,9 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       });
     } else {
       error(
-        '============================\n'
+        '\n============================\n'
         + `Too many read failures: ${txFailedReads} failures, but not rebooting because not controlling rig\n`
-        + '============================',
+        + '\n============================\n',
       );
     }
   };

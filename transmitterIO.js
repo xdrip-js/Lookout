@@ -863,6 +863,11 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
           }
         });
 
+        // don't ask for a backfill of the reading glucose reading about to receive
+        if (Math.abs(now.diff(maxGapDate, 'minutes')) < 1) {
+          maxGapDate.subtract(2, 'minutes');
+        }
+
         if ((minGapDate !== null) && glucoseHist
           && transmitterInSession(glucoseHist[glucoseHist.length - 1])) {
           log(`Requesting backfill - start: ${minGapDate.format()} end: ${maxGapDate.format()}`);

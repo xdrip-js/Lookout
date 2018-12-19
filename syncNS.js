@@ -557,7 +557,7 @@ const syncNS = async (storage_, storageLock_, transmitter_) => {
   log(
     '\n====================================\n'
     + 'syncNS started'
-    + '\n====================================\n',
+    + '\n====================================',
   );
 
   storage = storage_;
@@ -585,9 +585,9 @@ const syncNS = async (storage_, storageLock_, transmitter_) => {
 
   if (nsQueryError) {
     log(
-      '\n=================\n'
+      '\n====================================\n'
       + 'syncNS - No known sensor insert -  Setting 5 minute timer to try again'
-      + '\n=================\n',
+      + '\n====================================',
     );
 
     setTimeout(() => {
@@ -636,9 +636,9 @@ const syncNS = async (storage_, storageLock_, transmitter_) => {
 
   const timeDelay = calcNextSyncTimeDelay(latestSGV);
   log(
-    '\n=================\n'
+    '\n====================================\n'
     + `syncNS complete - setting ${Math.round(timeDelay / 6000) / 10} minute timer`
-    + '\n=================\n',
+    + '\n====================================',
   );
 
   setTimeout(() => {

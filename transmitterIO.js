@@ -107,9 +107,9 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
   const rebootRig = async () => {
     if (await isControlling()) {
       error(
-        '\n============================\n'
+        '\n====================================\n'
         + `Too many read failures: ${txFailedReads} failures, rebooting rig`
-        + '\n============================\n',
+        + '\n====================================',
       );
 
       cp.exec('bash -c "wall Rebooting Due to Transmitter Read Errors; sleep 5; shutdown -r now"', (err, stdout, stderr) => {
@@ -123,9 +123,9 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       });
     } else {
       error(
-        '\n============================\n'
+        '\n====================================\n'
         + `Too many read failures: ${txFailedReads} failures, but not rebooting because not controlling rig\n`
-        + '\n============================\n',
+        + '\n====================================',
       );
     }
   };
@@ -918,7 +918,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         log(
           '\n====================================\n'
           + 'Received Glucose Message'
-          + '\n====================================\n',
+          + '\n====================================',
         );
 
         processNewGlucose(glucose);

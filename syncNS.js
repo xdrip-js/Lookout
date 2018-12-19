@@ -554,7 +554,11 @@ const syncNS = async (storage_, storageLock_, transmitter_) => {
   let bgChecks = null;
   let nsQueryError = false;
 
-  log('syncNS started');
+  log(
+    '\n====================================\n'
+    + 'syncNS started'
+    + '\n====================================',
+  );
 
   storage = storage_;
   storageLock = storageLock_;
@@ -580,7 +584,11 @@ const syncNS = async (storage_, storageLock_, transmitter_) => {
     });
 
   if (nsQueryError) {
-    log('syncNS - No known sensor insert -  Setting 5 minute timer to try again');
+    log(
+      '\n====================================\n'
+      + 'syncNS - No known sensor insert -  Setting 5 minute timer to try again'
+      + '\n====================================',
+    );
 
     setTimeout(() => {
       // Restart the syncNS after 5 minute
@@ -627,7 +635,11 @@ const syncNS = async (storage_, storageLock_, transmitter_) => {
   }
 
   const timeDelay = calcNextSyncTimeDelay(latestSGV);
-  log(`syncNS complete - setting ${Math.round(timeDelay / 6000) / 10} minute timer`);
+  log(
+    '\n====================================\n'
+    + `syncNS complete - setting ${Math.round(timeDelay / 6000) / 10} minute timer`
+    + '\n====================================',
+  );
 
   setTimeout(() => {
     // Restart the syncNS after 5 minute

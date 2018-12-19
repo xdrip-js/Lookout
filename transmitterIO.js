@@ -86,18 +86,48 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     });
   };
 
-  const rebootRig = () => {
-    error(`============================\nRebooting rig due to too many read failures: ${txFailedReads} failures.\n============================`);
+  // Return true if there is no SGV or the most recent SGV was received from transmitter
+  // Also return true if the latest SGV we have is more than 15 minutes old
+  // Return false if most recent SGV was received from NS
+  const isControlling = async () => {
+    const sgv = await getGlucose();
 
-    cp.exec('bash -c "wall Rebooting Due to Transmitter Read Errors; sleep 5; shutdown -r now"', (err, stdout, stderr) => {
-      if (err) {
-        error(`Unable to reboot rig: - ${err}`);
-        return;
-      }
+    // inSession is only in the SGV record if it came from transmitter
+    if (!sgv || (typeof sgv.inSession !== 'undefined')) {
+      return true;
+    }
 
-      debug(`stdout: ${stdout}`);
-      debug(`stderr: ${stderr}`);
-    });
+    if ((moment().valueOf() - sgv.readDateMills) > 15 * 60000) {
+      return true;
+    }
+
+    return false;
+  };
+
+  const rebootRig = async () => {
+    if (await isControlling()) {
+      error(
+        '\n====================================\n'
+        + `Too many read failures: ${txFailedReads} failures, rebooting rig`
+        + '\n====================================',
+      );
+
+      cp.exec('bash -c "wall Rebooting Due to Transmitter Read Errors; sleep 5; shutdown -r now"', (err, stdout, stderr) => {
+        if (err) {
+          error(`Unable to reboot rig: - ${err}`);
+          return;
+        }
+
+        debug(`stdout: ${stdout}`);
+        debug(`stderr: ${stderr}`);
+      });
+    } else {
+      error(
+        '\n====================================\n'
+        + `Too many read failures: ${txFailedReads} failures, but not rebooting because not controlling rig\n`
+        + '\n====================================',
+      );
+    }
   };
 
   const stopSensorSession = async () => {
@@ -884,6 +914,12 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         lastSuccessfulRead = glucose.readDateMills;
         // restart txFailedReads counter since we were successfull
         txFailedReads = 0;
+
+        log(
+          '\n====================================\n'
+          + 'Received Glucose Message'
+          + '\n====================================',
+        );
 
         processNewGlucose(glucose);
       } else if (m.msg === 'messageProcessed') {

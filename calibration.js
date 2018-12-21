@@ -140,7 +140,7 @@ const lsrCalibration = (calibrationPairs) => {
 
     debug(`LSR Cal - record ${j},`
      + ` ${new Date(calibrationPairs[j].readDateMills)},`
-     + ` unfiltered: ${Math.round(calibrationPairs[j].unfiltered)},`
+     + ` unfiltered: ${leftPadString(Math.round(calibrationPairs[j].unfiltered), 6)},`
      + ` glucose: ${calibrationPairs[j].glucose},`
      + ` calculated: ${calcGlucose(calibrationPairs[j], returnVal)},`
      + ` multiplier: ${leftPadString(multipliers[j].toFixed(3), 5)}`);

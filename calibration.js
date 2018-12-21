@@ -141,8 +141,8 @@ const lsrCalibration = (calibrationPairs) => {
     debug(`LSR Cal - record ${j},`
      + ` ${new Date(calibrationPairs[j].readDateMills)},`
      + ` unfiltered: ${leftPadString(Math.round(calibrationPairs[j].unfiltered), 6)},`
-     + ` glucose: ${calibrationPairs[j].glucose},`
-     + ` calculated: ${calcGlucose(calibrationPairs[j], returnVal)},`
+     + ` glucose: ${leftPadString(calibrationPairs[j].glucose, 3)},`
+     + ` calculated: ${leftPadString(calcGlucose(calibrationPairs[j], returnVal), 3)},`
      + ` multiplier: ${leftPadString(multipliers[j].toFixed(3), 5)}`);
 
     varSum += varVal * varVal;

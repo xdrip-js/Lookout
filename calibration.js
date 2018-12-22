@@ -650,7 +650,8 @@ const validateTxmitterCalibration = (sensorInsert, sensorStop, latestBgCheckTime
     || (bgCheckDelta > 0)) {
     debug('No valid Transmitter Calibration -\n'
       + ` lastCalType: ${lastCal.type}\n`
-      + `     lastCal: ${moment(lastCal.date).format()}    lastBgCheck: ${bgCheckTime} bgCheckDelta: ${bgCheckDelta}\n`
+      + `     lastCal: ${moment(lastCal.date).format()}\n`
+      + ` lastBgCheck: ${bgCheckTime}      bgCheckDelta: ${bgCheckDelta}\n`
       + `sensorInsert: ${sensorInsertTime} sensorInsertDelta: ${sensorInsertDelta}\n`
       + `  sensorStop: ${sensorStopTime}   sensorStopDelta: ${sensorStopDelta}`);
     return false;

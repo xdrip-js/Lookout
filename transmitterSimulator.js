@@ -89,4 +89,4 @@ setInterval(async () => {
   process.send({ msg: 'sawTransmitter', data: {} });
 
   process.exit();
-}, 0.5 * 60000);
+}, 0.2 * 60000);

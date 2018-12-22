@@ -12,23 +12,27 @@ let online = false;
 
 const testOnline = async () => {
   let status = true;
-  let stdout = null;
-  let stderr = null;
 
   const retVal = await exec('lookout_online')
     .catch((err) => {
-      error('Online test failed with error:\n%O', err);
-      ({ stdout } = err);
-      ({ stderr } = err);
+      const { stdout } = err;
+      const { stderr } = err;
+
+      /* eslint-disable no-param-reassign */
+      delete err.stdout;
+      delete err.stderr;
+      /* eslint-enable no-param-reassign */
+
+      error('Online test failed:\n%O', err);
+      error('Online test stderr: {%s}', stderr);
+      error('Online test stdout: {%s}', stdout);
       status = false;
     });
 
-  // replace it if we got a return value. If we didn't, we likely caught an error
-  stdout = retVal ? retVal.stdout : stdout;
-  stderr = retVal ? retVal.stderr : stderr;
-
-  debug(`lookout_online stdout: ${stdout}`);
-  debug(`lookout_online stderr: ${stderr}`);
+  if (retVal) {
+    debug(`lookout_online stdout: ${retVal.stdout}`);
+    debug(`lookout_online stderr: ${retVal.stderr}`);
+  }
 
   return status;
 };
@@ -84,22 +88,25 @@ module.exports = (_options, _storage, client) => {
       if (options.fakemeter || (!online && options.offline_fakemeter)) {
         log(`Sending glucose to fakemeter: ${value}`);
 
-        let stdout = null;
-        let stderr = null;
-
         const retVal = await exec(`lookout_fakemeter ${meterId} ${value} ${options.openaps}`)
           .catch((err) => {
-            error('Unable to send glucose to fakemeter:\n%O', err);
-            ({ stdout } = err);
-            ({ stderr } = err);
+            const { stdout } = err;
+            const { stderr } = err;
+
+            /* eslint-disable no-param-reassign */
+            delete err.stdout;
+            delete err.stderr;
+            /* eslint-enable no-param-reassign */
+
+            error('Fakemeter failed:\n%O', err);
+            error('Fakemeter stderr: {%s}', stderr);
+            error('Fakemeter stdout: {%s}', stdout);
           });
 
-        // replace it if we got a return value. If we didn't, we likely caught an error
-        stdout = retVal ? retVal.stdout : stdout;
-        stderr = retVal ? retVal.stderr : stderr;
-
-        debug(`fakemeter stdout: ${stdout}`);
-        debug(`fakemeter stderr: ${stderr}`);
+        if (retVal) {
+          debug(`fakemeter stdout: ${retVal.stdout}`);
+          debug(`fakemeter stderr: ${retVal.stderr}`);
+        }
       } else if (online && options.offline_fakemeter) {
         log('Not sending glucose to fakemeter because rig is online');
       }

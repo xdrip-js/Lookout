@@ -76,6 +76,8 @@ const processGlucose = (glucose) => {
   console.log(`  transmitter age: ${transmitterAge.days()} days ${transmitterAge.hours()} hours ${transmitterAge.minutes()} minutes`);
   console.log(`        voltage a: ${glucose.voltagea}`);
   console.log(`        voltage b: ${glucose.voltageb}`);
+  console.log(`      temperature: ${glucose.temperature}`);
+  console.log(`       resistance: ${glucose.resistance}`);
   console.log('\nPress Ctrl-C to Exit');
   console.log('=====================================');
 };

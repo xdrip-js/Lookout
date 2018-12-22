@@ -917,9 +917,14 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       } else if (m.msg === 'glucose') {
         const glucose = m.data;
         glucose.readDateMills = moment(glucose.readDate).valueOf();
-        glucose.voltagea = txStatus ? txStatus.voltagea : null;
-        glucose.voltageb = txStatus ? txStatus.voltageb : null;
-        glucose.voltageTime = txStatus ? txStatus.timestamp.valueOf() : null;
+
+        if (txStatus) {
+          glucose.voltagea = txStatus.voltagea;
+          glucose.voltageb = txStatus.voltageb;
+          glucose.voltageTime = txStatus.timestamp.valueOf();
+          glucose.temperature = txStatus.temperature;
+          glucose.resistance = txStatus.resist;
+        }
 
         log(`got glucose: ${glucose.glucose} unfiltered: ${glucose.unfiltered / 1000}`);
 

@@ -348,7 +348,7 @@ const syncSGVs = async () => {
 const syncBGChecks = async (sensorInsert, sensorStop) => {
   let NSBGChecks = null;
   let nsQueryError = false;
-  let bgCheckFromNS = false;
+  const bgChecksFromNS = [];
   let sliceStart = 0;
   let validBGCheckStartTime = sensorInsert;
 
@@ -451,7 +451,7 @@ const syncBGChecks = async (sensorInsert, sensorStop) => {
       rigBGChecks.push(rigValue);
 
       // we found a new BG check
-      bgCheckFromNS = true;
+      bgChecksFromNS.push(rigValue);
     }
   }
 
@@ -516,8 +516,8 @@ const syncBGChecks = async (sensorInsert, sensorStop) => {
     }
   }
 
-  if (bgCheckFromNS && transmitter) {
-    transmitter.sendBgCheckToTxmitter(rigBGChecks[rigBGChecks.length - 1]);
+  if (transmitter) {
+    transmitter.sendBgChecksToTxmitter(bgChecksFromNS);
   }
 
   log('syncBGChecks complete');

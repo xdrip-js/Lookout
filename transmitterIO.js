@@ -1162,7 +1162,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
           error(`Error getting rig SGVs: ${err}`);
         });
 
-      calibration.getUnfiltered(valueTime, rigSGVs);
+      return calibration.getUnfiltered(valueTime, rigSGVs);
     },
   };
 

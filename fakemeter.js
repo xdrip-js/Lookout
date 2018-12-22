@@ -15,11 +15,13 @@ const testOnline = async () => {
 
   const retVal = await exec('lookout_online')
     .catch((err) => {
-      const stdout = err.stdout;
-      const stderr = err.stderr;
+      const { stdout } = err;
+      const { stderr } = err;
 
+      /* eslint-disable no-param-reassign */
       delete err.stdout;
       delete err.stderr;
+      /* eslint-enable no-param-reassign */
 
       error('Online test failed:\n%O', err);
       error('Online test stderr: {%s}', stderr);
@@ -88,11 +90,13 @@ module.exports = (_options, _storage, client) => {
 
         const retVal = await exec(`lookout_fakemeter ${meterId} ${value} ${options.openaps}`)
           .catch((err) => {
-            const stdout = err.stdout;
-            const stderr = err.stderr;
+            const { stdout } = err;
+            const { stderr } = err;
 
+            /* eslint-disable no-param-reassign */
             delete err.stdout;
             delete err.stderr;
+            /* eslint-enable no-param-reassign */
 
             error('Fakemeter failed:\n%O', err);
             error('Fakemeter stderr: {%s}', stderr);

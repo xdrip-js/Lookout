@@ -633,7 +633,7 @@ const validateTxmitterCalibration = (sensorInsert, sensorStop, latestBgCheckTime
     bgCheckTime = latestBgCheckTime.format();
   }
 
-  if (sensorInsertTime) {
+  if (sensorInsert) {
     sensorInsertDelta = sensorInsert.diff(lastCalTime);
     sensorInsertTime = sensorInsert.format();
   }

@@ -86,17 +86,23 @@ module.exports = (_options, _storage, client) => {
 
         let stdout = null;
         let stderr = null;
+        let errMsg = null;
 
         const retVal = await exec(`lookout_fakemeter ${meterId} ${value} ${options.openaps}`)
           .catch((err) => {
             error('Unable to send glucose to fakemeter:\n%O', err);
             ({ stdout } = err);
             ({ stderr } = err);
+            errMsg = err.err;
           });
 
         // replace it if we got a return value. If we didn't, we likely caught an error
         stdout = retVal ? retVal.stdout : stdout;
         stderr = retVal ? retVal.stderr : stderr;
+
+        if (errMsg) {
+          debug(`fakemeter error: ${errMsg}`);
+        }
 
         debug(`fakemeter stdout: ${stdout}`);
         debug(`fakemeter stderr: ${stderr}`);

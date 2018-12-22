@@ -622,6 +622,10 @@ calibrationExports.haveCalibration = async (storage) => {
 const validateTxmitterCalibration = (sensorInsert, sensorStop, latestBgCheckTime, lastCal) => {
   let bgCheckDelta = 0;
   let bgCheckTime = null;
+  let sensorInsertTime = null;
+  let sensorInsertDelta = 0;
+  let sensorStopTime = null;
+  let sensorStopDelta = 0;
   const lastCalTime = moment(lastCal.date).subtract(6, 'minutes');
 
   if (latestBgCheckTime) {
@@ -629,8 +633,15 @@ const validateTxmitterCalibration = (sensorInsert, sensorStop, latestBgCheckTime
     bgCheckTime = latestBgCheckTime.format();
   }
 
-  const sensorInsertDelta = (sensorInsert && sensorInsert.diff(lastCalTime)) || 0;
-  const sensorStopDelta = (sensorStop && sensorStop.diff(lastCalTime)) || 0;
+  if (sensorInsertTime) {
+    sensorInsertDelta = sensorInsert.diff(lastCalTime);
+    sensorInsertTime = sensorInsert.format();
+  }
+
+  if (sensorStop) {
+    sensorStopDelta = sensorStop.diff(lastCalTime);
+    sensorStopTime = sensorStop.format();
+  }
 
   if (!sensorInsert || !lastCal
     || (lastCal.type === 'Unity')
@@ -638,9 +649,10 @@ const validateTxmitterCalibration = (sensorInsert, sensorStop, latestBgCheckTime
     || (sensorStopDelta > 0)
     || (bgCheckDelta > 0)) {
     debug('No valid Transmitter Calibration -\n'
-      + `sensorInsert: ${moment(sensorInsert).format()} sensorInsertDelta: ${sensorInsertDelta}\n`
-      + `  sensorStop: ${moment(sensorStop).format()} sensorStopDelta: ${sensorStopDelta}\n`
-      + `     lastCal: ${moment(lastCal.date).format()} ${bgCheckTime} bgCheckDelta: ${bgCheckDelta}`);
+      + ` lastCalType: ${lastCal.type}`
+      + `     lastCal: ${moment(lastCal.date).format()}    lastBgCheck: ${bgCheckTime} bgCheckDelta: ${bgCheckDelta}\n`
+      + `sensorInsert: ${sensorInsertTime} sensorInsertDelta: ${sensorInsertDelta}\n`
+      + `  sensorStop: ${sensorStopTime}   sensorStopDelta: ${sensorStopDelta}`);
     return false;
   }
   debug('Have valid Transmitter Calibration');

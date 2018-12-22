@@ -621,10 +621,12 @@ calibrationExports.haveCalibration = async (storage) => {
 
 const validateTxmitterCalibration = (sensorInsert, sensorStop, latestBgCheckTime, lastCal) => {
   let bgCheckDelta = 0;
+  let bgCheckTime = null;
   const lastCalTime = moment(lastCal.date).subtract(6, 'minutes');
 
   if (latestBgCheckTime) {
     bgCheckDelta = latestBgCheckTime.diff(lastCalTime);
+    bgCheckTime = latestBgCheckTime.format();
   }
 
   const sensorInsertDelta = (sensorInsert && sensorInsert.diff(lastCalTime)) || 0;
@@ -635,7 +637,10 @@ const validateTxmitterCalibration = (sensorInsert, sensorStop, latestBgCheckTime
     || (sensorInsertDelta > 0)
     || (sensorStopDelta > 0)
     || (bgCheckDelta > 0)) {
-    debug(`No valid Transmitter Calibration - sensorInsert: ${moment(sensorInsert).format()} lastCal: ${moment(lastCal.date).format()} sensorInsertDelta: ${sensorInsertDelta} sensorStopDelta: ${sensorStopDelta} bgCheckDelta: ${bgCheckDelta}`);
+    debug('No valid Transmitter Calibration -\n'
+      + `sensorInsert: ${moment(sensorInsert).format()} sensorInsertDelta: ${sensorInsertDelta}\n`
+      + `  sensorStop: ${moment(sensorStop).format()} sensorStopDelta: ${sensorStopDelta}\n`
+      + `     lastCal: ${moment(lastCal.date).format()} ${bgCheckTime} bgCheckDelta: ${bgCheckDelta}`);
     return false;
   }
   debug('Have valid Transmitter Calibration');

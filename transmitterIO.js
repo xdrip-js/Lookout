@@ -1094,8 +1094,10 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       }
     },
 
-    sendBgCheckToTxmitter: (bgCheck) => {
-      pending.push({ date: bgCheck.dateMills, type: 'CalibrateSensor', glucose: bgCheck.glucose });
+    sendBgChecksToTxmitter: (bgChecks) => {
+      _.each(bgChecks, (bgCheck) => {
+        pending.push({ date: bgCheck.dateMills, type: 'CalibrateSensor', glucose: bgCheck.glucose });
+      });
 
       client.newPending(pending);
     },

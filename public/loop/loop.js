@@ -3,14 +3,15 @@ angular.module('AngularOpenAPS.loop', [
   'ngRoute',
 ])
 
-  .config(($routeProvider) => {
+  /* eslint-disable-next-line prefer-arrow-callback */
+  .config(function loopConfig($routeProvider) {
     $routeProvider.when('/loop', {
       templateUrl: 'loop/loop.html',
       controller: 'LoopController',
     });
   })
 
-  .service('OpenAPS', ['socketFactory', (socketFactory) => {
+  .service('OpenAPS', ['socketFactory', function loopService(socketFactory) {
     const socket = socketFactory({
       ioSocket: io.connect('/loop'),
     });

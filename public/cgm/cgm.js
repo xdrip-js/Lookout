@@ -5,13 +5,14 @@ angular.module('AngularOpenAPS.cgm', [
   'AngularOpenAPS.cgm.sensor',
 ])
 
-  .config(($routeProvider) => {
+  /* eslint-disable-next-line prefer-arrow-callback */
+  .config(function CGMConfig($routeProvider) {
     $routeProvider.when('/cgm', {
       templateUrl: 'cgm/cgm.html',
     });
   })
 
-  .service('CGM', ['socketFactory', (socketFactory) => {
+  .service('CGM', ['socketFactory', function CGMService(socketFactory) {
     const socket = socketFactory({
       ioSocket: io.connect('/cgm'),
     });

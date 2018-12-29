@@ -3,7 +3,8 @@ angular.module('AngularOpenAPS.cgm.sensor', [
   'ngRoute',
 ])
 
-  .config(($routeProvider) => {
+  /* eslint-disable-next-line prefer-arrow-callback */
+  .config(function sensorConfig($routeProvider) {
     $routeProvider.when('/cgm/sensor', {
       templateUrl: 'cgm/sensor/sensor.html',
       controller: 'SensorController',
@@ -62,4 +63,7 @@ angular.module('AngularOpenAPS.cgm.sensor', [
     };
   }])
 
-  .filter('state', () => state => (state ? `State: 0x${state.toString(16)}` : '--'));
+  /* eslint-disable-next-line prefer-arrow-callback */
+  .filter('state', function sensorFilter() {
+    return function filterSensorState(state) { return (state ? `State: 0x${state.toString(16)}` : '--'); };
+  });

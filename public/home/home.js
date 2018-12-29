@@ -4,7 +4,8 @@ angular.module('AngularOpenAPS.home', [
   'ngSanitize',
 ])
 
-  .config(($routeProvider) => {
+  /* eslint-disable-next-line prefer-arrow-callback */
+  .config(function homeConfig($routeProvider) {
     $routeProvider.when('/', {
       templateUrl: 'home/home.html',
       controller: 'HomeController',

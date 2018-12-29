@@ -3,7 +3,8 @@ angular.module('AngularOpenAPS.cgm.transmitter', [
   'ngRoute',
 ])
 
-  .config(($routeProvider) => {
+  /* eslint-disable-next-line prefer-arrow-callback */
+  .config(function transmitterConfig($routeProvider) {
     $routeProvider.when('/cgm/transmitter', {
       templateUrl: 'cgm/transmitter/transmitter.html',
       controller: 'TransmitterController',

@@ -3,7 +3,8 @@ angular.module('AngularOpenAPS.preferences', [
   'ngRoute',
 ])
 
-  .config(($routeProvider) => {
+  /* eslint-disable-next-line prefer-arrow-callback */
+  .config(function preferencesConfig($routeProvider) {
     $routeProvider.when('/preferences', {
       templateUrl: 'preferences/preferences.html',
       controller: 'PreferencesController',

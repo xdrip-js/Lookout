@@ -4,7 +4,8 @@ angular.module('AngularOpenAPS.pump', [
   'AngularOpenAPS.pump.basal',
 ])
 
-  .config(($routeProvider) => {
+  /* eslint-disable-next-line prefer-arrow-callback */
+  .config(function pumpConfig($routeProvider) {
     $routeProvider.when('/pump', {
       templateUrl: 'pump/pump.html',
     });
@@ -13,7 +14,7 @@ angular.module('AngularOpenAPS.pump', [
     });
   })
 
-  .service('Pump', ['socketFactory', (socketFactory) => {
+  .service('Pump', ['socketFactory', function pumpService(socketFactory) {
     const socket = socketFactory({
       ioSocket: io.connect('/pump'),
     });

@@ -16,7 +16,8 @@ angular.module('AngularOpenAPS', [
   'angularMoment',
 ])
 
-  .config(($locationProvider) => {
+  /* eslint-disable-next-line prefer-arrow-callback */
+  .config(function AngularOpenAPSConfig($locationProvider) {
     $locationProvider.html5Mode(true);
   })
 

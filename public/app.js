@@ -20,12 +20,12 @@ angular.module('AngularOpenAPS', [
     $locationProvider.html5Mode(true);
   })
 
-  .controller('MyCtrl', ['$rootScope', '$scope', '$localStorage', 'SharedState', (
+  .controller('MyCtrl', ['$rootScope', '$scope', '$localStorage', 'SharedState', function MyCtrl(
     $rootScope,
     $scope,
     $localStorage,
     SharedState,
-  ) => {
+  ) {
     /* eslint-disable no-param-reassign */
     $rootScope.$on('$routeChangeStart', () => {
       $rootScope.loading = true;

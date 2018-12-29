@@ -11,4 +11,4 @@ angular.module('AngularOpenAPS.preferences', [
   })
 
   /* eslint-disable-next-line no-unused-vars */
-  .controller('PreferencesController', ['$scope', 'SharedState', ($scope, SharedState) => { }]);
+  .controller('PreferencesController', ['$scope', 'SharedState', function PreferencesController($scope, SharedState) { }]);

@@ -22,7 +22,7 @@ angular.module('AngularOpenAPS.cgm.transmitter', [
     });
   })
 
-  .controller('TransmitterController', ['$scope', '$interval', '$location', 'CGM', ($scope, $interval, $location, CGM) => {
+  .controller('TransmitterController', ['$scope', '$interval', '$location', 'CGM', function TransmitterController($scope, $interval, $location, CGM) {
     /* eslint-disable no-param-reassign */
     $scope.transmitter = CGM.transmitter;
 

@@ -26,7 +26,7 @@ angular.module('AngularOpenAPS.cgm.sensor', [
     });
   })
 
-  .controller('SensorController', ['$scope', 'SharedState', '$interval', '$location', 'CGM', ($scope, SharedState, $interval, $location, CGM) => {
+  .controller('SensorController', ['$scope', 'SharedState', '$interval', '$location', 'CGM', function SensorController($scope, SharedState, $interval, $location, CGM) {
     $scope.sensor = CGM.sensor;
 
     const units = SharedState.get('glucoseUnits');

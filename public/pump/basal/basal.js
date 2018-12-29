@@ -10,7 +10,7 @@ angular.module('AngularOpenAPS.pump.basal', [
     });
   })
 
-  .controller('BasalController', ['$scope', 'Pump', ($scope, Pump) => {
+  .controller('BasalController', ['$scope', 'Pump', function BasalController($scope, Pump) {
     $scope.basal = Pump.basal;
   }])
 

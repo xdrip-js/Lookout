@@ -11,7 +11,7 @@ angular.module('AngularOpenAPS.home', [
     });
   })
 
-  .controller('HomeController', ['$scope', '$interval', '$document', '$location', 'CGM', 'OpenAPS', ($scope, $interval, $document, $location, CGM, OpenAPS) => {
+  .controller('HomeController', ['$scope', '$interval', '$document', '$location', 'CGM', 'OpenAPS', function HomeController($scope, $interval, $document, $location, CGM, OpenAPS) {
     $scope.sensor = CGM.sensor;
     $scope.loop = OpenAPS.loop;
 

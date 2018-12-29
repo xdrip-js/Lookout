@@ -39,7 +39,7 @@ angular.module('AngularOpenAPS.loop', [
     });
   }])
 
-  .controller('LoopController', ['$scope', 'OpenAPS', ($scope, OpenAPS) => {
+  .controller('LoopController', ['$scope', 'OpenAPS', function LoopController($scope, OpenAPS) {
   // $http.get('iob.json').then(data => {
   // $http.get('./../../../myopenaps/monitor/iob.json').then(data => {
   //   console.log(data.data);

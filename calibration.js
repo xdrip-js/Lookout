@@ -626,6 +626,11 @@ const validateTxmitterCalibration = (sensorInsert, sensorStop, latestBgCheckTime
   let sensorInsertDelta = 0;
   let sensorStopTime = null;
   let sensorStopDelta = 0;
+
+  if (!lastCal) {
+    return false;
+  }
+
   const lastCalTime = moment(lastCal.date).subtract(6, 'minutes');
 
   if (latestBgCheckTime) {
@@ -643,7 +648,7 @@ const validateTxmitterCalibration = (sensorInsert, sensorStop, latestBgCheckTime
     sensorStopTime = sensorStop.format();
   }
 
-  if (!sensorInsert || !lastCal
+  if (!sensorInsert
     || (lastCal.type === 'Unity')
     || (sensorInsertDelta > 0)
     || (sensorStopDelta > 0)

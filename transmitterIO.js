@@ -572,11 +572,18 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       sgv.mode = 'txmitter cal';
     }
 
-    sgv.stateString = stateString(sgv.state);
-    sgv.stateStringShort = stateStringShort(sgv.state);
-
-    sgv.txStatusString = txStatusString(sgv.status);
-    sgv.txStatusStringShort = txStatusStringShort(sgv.status);
+    if (sgv.inExtendedSession || sgv.inExpiredSession) {
+      if (moment().diff(sensorStart, 'days') <= 4 && bgChecks.length > 0 && moment().diff(moment(bgChecks[bgChecks.length - 1].dateMills), 'hours') > 12) {
+        // set session state to Need Calibration - cal every 12 hours for first 4 days
+        sgv.state = 0x7;
+      } else if (moment().diff(sensorStart, 'days') > 4 && bgChecks.length > 0 && moment().diff(moment(bgChecks[bgChecks.length - 1].dateMills), 'hours') > 24) {
+        // set session state to Need Calibration - cal every 24 hours after first 4 days
+        sgv.state = 0x7;
+      } else {
+        // set session state to OK
+        sgv.state = 0x6;
+      }
+    }
 
     if (glucoseHist.length > 0) {
       const prevSgv = await getGlucose();
@@ -586,13 +593,19 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       }
     }
 
-    log(`sensor state: ${sgv.stateString}`);
-
     if (!sgv.glucose || sgv.glucose < 20) {
       sgv.glucose = null;
       log('No valid glucose to send.');
       sendSGV = false;
     }
+
+    sgv.stateString = stateString(sgv.state);
+    sgv.stateStringShort = stateStringShort(sgv.state);
+
+    sgv.txStatusString = txStatusString(sgv.status);
+    sgv.txStatusStringShort = txStatusStringShort(sgv.status);
+
+    log(`sensor state: ${sgv.stateString}`);
 
     await storeNewGlucose(glucoseHist, sgv)
       .catch(() => {

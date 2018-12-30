@@ -560,8 +560,14 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     if (sgv.inExtendedSession) {
       sgv.mode = 'extended cal';
+      // set the sessionStartDate from the known start since transmitter
+      // no longer reports it
+      sgv.sessionStartDate = sensorStart.format();
     } else if (sgv.inExpiredSession) {
       sgv.mode = 'expired cal';
+      // set the sessionStartDate from the known start since transmitter
+      // no longer reports it
+      sgv.sessionStartDate = sensorStart.format();
     } else {
       sgv.mode = 'txmitter cal';
     }

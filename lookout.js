@@ -66,7 +66,8 @@ const processGlucose = (glucose) => {
   console.log(`          glucose: ${sgv}`);
   console.log(`            noise: ${Math.round(glucose.noise * 10) / 10}`);
   console.log(`      noise index: ${glucose.nsNoise}`);
-  console.log(`        inSession: ${glucose.inSession}`);
+  console.log(`inTxmitterSession: ${glucose.inSession}`);
+  console.log(`     session type: ${glucose.mode}`);
   console.log(`     sensor state: ${glucose.stateString}`);
   console.log(`transmitter state: ${glucose.txStatusString}`);
   console.log(`         readDate: ${moment(glucose.readDate).format()}`);

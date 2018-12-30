@@ -585,6 +585,14 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       }
     }
 
+    sgv.stateString = stateString(sgv.state);
+    sgv.stateStringShort = stateStringShort(sgv.state);
+
+    sgv.txStatusString = txStatusString(sgv.status);
+    sgv.txStatusStringShort = txStatusStringShort(sgv.status);
+
+    log(`sensor state: ${sgv.stateString}`);
+
     if (glucoseHist.length > 0) {
       const prevSgv = await getGlucose();
 
@@ -598,14 +606,6 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       log('No valid glucose to send.');
       sendSGV = false;
     }
-
-    sgv.stateString = stateString(sgv.state);
-    sgv.stateStringShort = stateStringShort(sgv.state);
-
-    sgv.txStatusString = txStatusString(sgv.status);
-    sgv.txStatusStringShort = txStatusStringShort(sgv.status);
-
-    log(`sensor state: ${sgv.stateString}`);
 
     await storeNewGlucose(glucoseHist, sgv)
       .catch(() => {

@@ -78,9 +78,10 @@ angular.module('AngularOpenAPS.cgm', [
       // - we don't need the rest
         return glucose
           ? (({
-            sgv, filtered, unfiltered, readDate, readDateMills, trend,
+            /* eslint-disable-next-line no-shadow */
+            glucose, filtered, unfiltered, readDate, readDateMills, trend,
           }) => ({
-            glucose: sgv, filtered, unfiltered, readDate, readDateMills, trend,
+            glucose, filtered, unfiltered, readDate, readDateMills, trend,
           }))(glucose)
           : null;
       },

@@ -158,7 +158,7 @@ const syncEvent = async (itemName, eventType) => {
       latestEvent = rigItem;
       xDripAPS.postEvent(eventType, rigItem);
     } else {
-      debug('Rig and NS dates match - no sync needed');
+      debug(`Rig and NS ${eventType} dates match - no sync needed`);
     }
   } else if (rigItem) {
     debug(`No NS ${eventType} - uploading rig sensor insert`);

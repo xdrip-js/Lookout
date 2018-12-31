@@ -256,7 +256,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
   const sendCGMStatus = async (sgv) => {
     const activeCal = await calibration.getActiveCal(options, storage);
 
-    const activeCalTime = (activeCal && activeCal.dateMills) || null;
+    const activeCalTime = (activeCal && activeCal.date) || null;
 
     if (options.nightscout) {
       xDripAPS.postStatus(txId, sgv, txStatus, activeCal, activeCalTime);

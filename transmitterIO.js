@@ -253,13 +253,17 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     }
   };
 
-  const sendCGMStatus = async (sgv) => {
+  const sendCGMStatus = async (sgv, bgChecks) => {
+    let latestBGCheckTime = null;
+
+    if (bgChecks.length > 0) {
+      latestBGCheckTime = bgChecks[bgChecks.length - 1].dateMills;
+    }
+
     const activeCal = await calibration.getActiveCal(options, storage);
 
-    const activeCalTime = (activeCal && activeCal.date) || null;
-
     if (options.nightscout) {
-      xDripAPS.postStatus(txId, sgv, txStatus, activeCal, activeCalTime);
+      xDripAPS.postStatus(txId, sgv, txStatus, activeCal, latestBGCheckTime);
     }
   };
 
@@ -591,7 +595,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     storageLock.unlockStorage();
 
-    sendCGMStatus(sgv);
+    sendCGMStatus(sgv, bgChecks);
 
     sendNewGlucose(sgv, sendSGV);
   };

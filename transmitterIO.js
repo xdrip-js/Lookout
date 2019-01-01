@@ -872,8 +872,13 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         pendingCalTime = await calibrateFromNS();
 
         pending = pending.filter((msg) => {
-          // Don't send certain messages older than 12 minutes
-          if ((Date.now() - msg.date) > 12 * 60000) {
+          // Don't send stop or start sensors older than 2 hours and 12 minutes
+          if (((msg.type === 'StopSensor') || (msg.type === 'StartSensor')) && ((Date.now() - msg.date) > 132 * 60000)) {
+            return false;
+          }
+
+          // Don't send other messages older than 12 minutes
+          if (((msg.type !== 'StopSensor') && (msg.type !== 'StartSensor')) && (Date.now() - msg.date) > 12 * 60000) {
             return false;
           }
 

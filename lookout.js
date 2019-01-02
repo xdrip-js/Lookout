@@ -146,7 +146,13 @@ const processCommand = async (command) => {
   });
 
   socket.on('pending', (pending) => {
-    console.log('          Pending: ', pending);
+    console.log('          Pending: [');
+    for (let i = 0; i < pending.length; i += 1) {
+      const record = pending[i];
+      record.date = moment(record.date).format();
+      console.log('                    ', JSON.stringify(record, null, null), ',');
+    }
+    console.log('                   ]');
   });
 
   socket.on('id', (id) => {

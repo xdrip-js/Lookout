@@ -628,6 +628,7 @@ const validateTxmitterCalibration = (sensorInsert, sensorStop, latestBgCheckTime
   let sensorStopDelta = 0;
 
   if (!lastCal) {
+    log('No Transmitter Calibration');
     return false;
   }
 
@@ -653,35 +654,56 @@ const validateTxmitterCalibration = (sensorInsert, sensorStop, latestBgCheckTime
     || (sensorInsertDelta > 0)
     || (sensorStopDelta > 0)
     || (bgCheckDelta > 0)) {
-    debug('No valid Transmitter Calibration -\n'
-      + ` lastCalType: ${lastCal.type}\n`
+    log('No valid Transmitter Calibration -\n'
+      + ` lastCalType: ${lastCal.type} - if set to 'Unity', calibration is not valid to use\n`
       + `     lastCal: ${moment(lastCal.date).format()}\n`
-      + ` lastBgCheck: ${bgCheckTime}      bgCheckDelta: ${bgCheckDelta}\n`
-      + `sensorInsert: ${sensorInsertTime} sensorInsertDelta: ${sensorInsertDelta}\n`
-      + `  sensorStop: ${sensorStopTime}   sensorStopDelta: ${sensorStopDelta}`);
+      + ` lastBgCheck: ${bgCheckTime}      bgCheckDelta: ${bgCheckDelta}`
+      + ' - if bgCheckDelta > 0, latest BG check is after latest calibration calculation, invalidating calibration\n'
+      + `sensorInsert: ${sensorInsertTime} sensorInsertDelta: ${sensorInsertDelta}`
+      + ' - if sensorInsertDelta > 0, latest sensor insert is after latest calibration calculation invalidating calibration\n'
+      + `  sensorStop: ${sensorStopTime}   sensorStopDelta: ${sensorStopDelta}`
+      + ' - if sensorStop > 0, latest sensor stop is after last calibration calculation, invalidating calibration');
     return false;
   }
-  debug('Have valid Transmitter Calibration');
+  log('Have valid Transmitter Calibration');
   return true;
 };
 
 const validateExpiredCalibration = (sensorInsert, sensorStop, lastExpiredCal) => {
+  let sensorInsertTime = null;
+  let sensorInsertDelta = 0;
+  let sensorStopTime = null;
+  let sensorStopDelta = 0;
+
   if (!lastExpiredCal) {
+    log('No Expired Calibration');
     return false;
   }
 
   const lastExpiredCalTime = moment(lastExpiredCal.date).subtract(6, 'minutes');
 
-  const sensorInsertDelta = (sensorInsert && sensorInsert.diff(lastExpiredCalTime)) || 0;
-  const sensorStopDelta = (sensorStop && sensorStop.diff(lastExpiredCalTime)) || 0;
+  if (sensorInsert) {
+    sensorInsertDelta = sensorInsert.diff(lastExpiredCalTime);
+    sensorInsertTime = sensorInsert.format();
+  }
+
+  if (sensorStop) {
+    sensorStopDelta = sensorStop.diff(lastExpiredCalTime);
+    sensorStopTime = sensorStop.format();
+  }
 
   if (!sensorInsert || !lastExpiredCal
     || (sensorInsertDelta > 0)
     || (sensorStopDelta > 0)) {
-    debug('No valid Expired Calibration');
+    log('No valid Expired Calibration -\n'
+      + `lastExpiredCal: ${moment(lastExpiredCal.date).format()}\n`
+      + `  sensorInsert: ${sensorInsertTime} sensorInsertDelta: ${sensorInsertDelta}`
+      + ' - if sensorInsertDelta > 0, latest sensor insert is after latest calibration calculation invalidating calibration\n'
+      + `    sensorStop: ${sensorStopTime}   sensorStopDelta: ${sensorStopDelta}`
+      + ' - if sensorStop > 0, latest sensor stop is after last calibration calculation, invalidating calibration');
     return false;
   }
-  debug('Have valid Expired Calibration');
+  log('Have valid Expired Calibration');
   return true;
 };
 

@@ -654,7 +654,7 @@ const validateTxmitterCalibration = (sensorInsert, sensorStop, latestBgCheckTime
     || (sensorInsertDelta > 0)
     || (sensorStopDelta > 0)
     || (bgCheckDelta > 0)) {
-    log('-----------------------------------------------\n'
+    log('\n-----------------------------------------------\n'
       + 'No valid Transmitter Calibration -\n'
       + ` lastCalType: ${lastCal.type}\n`
       + `     lastCal: ${moment(lastCal.date).format()}\n`
@@ -663,7 +663,7 @@ const validateTxmitterCalibration = (sensorInsert, sensorStop, latestBgCheckTime
       + `  sensorStop: ${sensorStopTime}   sensorStopDelta: ${sensorStopDelta}\n`
       + ' - if lastCalType set to "Unity", calibration is not valid to use\n'
       + ' - if bgCheckDelta > 0, latest BG check is after latest calibration calculation, invalidating calibration\n'
-      + ' - if sensorInsertDelta > 0, latest sensor insert is after latest calibration calculation invalidating calibration\n'
+      + ' - if sensorInsertDelta > 0, latest sensor insert is after latest calibration calculation, invalidating calibration\n'
       + ' - if sensorStop > 0, latest sensor stop is after last calibration calculation, invalidating calibration\n'
       + '-----------------------------------------------');
     return false;
@@ -698,12 +698,12 @@ const validateExpiredCalibration = (sensorInsert, sensorStop, lastExpiredCal) =>
   if (!sensorInsert || !lastExpiredCal
     || (sensorInsertDelta > 0)
     || (sensorStopDelta > 0)) {
-    log('-----------------------------------------------\n'
+    log('\n-----------------------------------------------\n'
       + 'No valid Expired Calibration -\n'
       + `lastExpiredCal: ${moment(lastExpiredCal.date).format()}\n`
       + `  sensorInsert: ${sensorInsertTime} sensorInsertDelta: ${sensorInsertDelta}`
       + `    sensorStop: ${sensorStopTime}   sensorStopDelta: ${sensorStopDelta}`
-      + ' - if sensorInsertDelta > 0, latest sensor insert is after latest calibration calculation invalidating calibration\n'
+      + ' - if sensorInsertDelta > 0, latest sensor insert is after latest calibration calculation, invalidating calibration\n'
       + ' - if sensorStop > 0, latest sensor stop is after last calibration calculation, invalidating calibration\n'
       + '-----------------------------------------------');
     return false;

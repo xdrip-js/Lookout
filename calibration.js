@@ -654,15 +654,18 @@ const validateTxmitterCalibration = (sensorInsert, sensorStop, latestBgCheckTime
     || (sensorInsertDelta > 0)
     || (sensorStopDelta > 0)
     || (bgCheckDelta > 0)) {
-    log('No valid Transmitter Calibration -\n'
-      + ` lastCalType: ${lastCal.type} - if set to 'Unity', calibration is not valid to use\n`
+    log('-----------------------------------------------\n'
+      + 'No valid Transmitter Calibration -\n'
+      + ` lastCalType: ${lastCal.type}\n`
       + `     lastCal: ${moment(lastCal.date).format()}\n`
-      + ` lastBgCheck: ${bgCheckTime}      bgCheckDelta: ${bgCheckDelta}`
+      + ` lastBgCheck: ${bgCheckTime}      bgCheckDelta: ${bgCheckDelta}\n`
+      + `sensorInsert: ${sensorInsertTime} sensorInsertDelta: ${sensorInsertDelta}\n`
+      + `  sensorStop: ${sensorStopTime}   sensorStopDelta: ${sensorStopDelta}\n`
+      + ' - if lastCalType set to "Unity", calibration is not valid to use\n'
       + ' - if bgCheckDelta > 0, latest BG check is after latest calibration calculation, invalidating calibration\n'
-      + `sensorInsert: ${sensorInsertTime} sensorInsertDelta: ${sensorInsertDelta}`
       + ' - if sensorInsertDelta > 0, latest sensor insert is after latest calibration calculation invalidating calibration\n'
-      + `  sensorStop: ${sensorStopTime}   sensorStopDelta: ${sensorStopDelta}`
-      + ' - if sensorStop > 0, latest sensor stop is after last calibration calculation, invalidating calibration');
+      + ' - if sensorStop > 0, latest sensor stop is after last calibration calculation, invalidating calibration\n'
+      + '-----------------------------------------------');
     return false;
   }
   log('Have valid Transmitter Calibration');
@@ -695,12 +698,14 @@ const validateExpiredCalibration = (sensorInsert, sensorStop, lastExpiredCal) =>
   if (!sensorInsert || !lastExpiredCal
     || (sensorInsertDelta > 0)
     || (sensorStopDelta > 0)) {
-    log('No valid Expired Calibration -\n'
+    log('-----------------------------------------------\n'
+      + 'No valid Expired Calibration -\n'
       + `lastExpiredCal: ${moment(lastExpiredCal.date).format()}\n`
       + `  sensorInsert: ${sensorInsertTime} sensorInsertDelta: ${sensorInsertDelta}`
-      + ' - if sensorInsertDelta > 0, latest sensor insert is after latest calibration calculation invalidating calibration\n'
       + `    sensorStop: ${sensorStopTime}   sensorStopDelta: ${sensorStopDelta}`
-      + ' - if sensorStop > 0, latest sensor stop is after last calibration calculation, invalidating calibration');
+      + ' - if sensorInsertDelta > 0, latest sensor insert is after latest calibration calculation invalidating calibration\n'
+      + ' - if sensorStop > 0, latest sensor stop is after last calibration calculation, invalidating calibration\n'
+      + '-----------------------------------------------');
     return false;
   }
   log('Have valid Expired Calibration');

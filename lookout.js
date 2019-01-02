@@ -50,6 +50,16 @@ const argv = yargs
 const params = argv.argv;
 sendCommand = params._.shift();
 
+const validTxId = (id) => {
+  const prefix = id.substr(0, 1);
+
+  if (id.length !== 6 || (prefix !== '8' && prefix !== '4')) {
+    return false;
+  }
+
+  return true;
+};
+
 const processGlucose = (glucose) => {
   const sessionStart = moment(glucose.sessionStartDate);
   const sessionAge = moment.duration(moment().diff(sessionStart));
@@ -66,7 +76,8 @@ const processGlucose = (glucose) => {
   console.log(`          glucose: ${sgv}`);
   console.log(`            noise: ${Math.round(glucose.noise * 10) / 10}`);
   console.log(`      noise index: ${glucose.nsNoise}`);
-  console.log(`        inSession: ${glucose.inSession}`);
+  console.log(`inTxmitterSession: ${glucose.inSession}`);
+  console.log(`     session type: ${glucose.mode}`);
   console.log(`     sensor state: ${glucose.stateString}`);
   console.log(`transmitter state: ${glucose.txStatusString}`);
   console.log(`         readDate: ${moment(glucose.readDate).format()}`);
@@ -112,8 +123,12 @@ const processCommand = async (command) => {
       console.log('Aborting stop session');
     }
   } else if (command === 'id') {
-    sendCmd = 'id';
-    sendArg = params.id;
+    if (validTxId(params.id)) {
+      sendCmd = 'id';
+      sendArg = params.id;
+    } else {
+      console.log(`ERROR: Invalid Transmitter Id: ${params.id}`);
+    }
   } else if (command === 'meterid') {
     sendCmd = 'meterid';
     sendArg = params.meterid.padStart(6, 0);
@@ -145,11 +160,21 @@ const processCommand = async (command) => {
   });
 
   socket.on('pending', (pending) => {
-    console.log('          Pending: ', pending);
+    console.log('          Pending: [');
+    for (let i = 0; i < pending.length; i += 1) {
+      const record = pending[i];
+      record.date = moment(record.date).format();
+      console.log('                    ', JSON.stringify(record, null, null), ',');
+    }
+    console.log('                   ]');
   });
 
   socket.on('id', (id) => {
-    console.log('   Transmitter ID: ', id);
+    if (validTxId(id)) {
+      console.log('   Transmitter ID: ', id);
+    } else {
+      console.log('   Transmitter ID: ', id, ' <<< ID is invalid and needs to be set');
+    }
   });
 
   socket.on('meterid', (id) => {

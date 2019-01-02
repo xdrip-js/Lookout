@@ -28,6 +28,24 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     return false;
   };
 
+  const filterPending = (oldPending) => {
+    const newPending = oldPending.filter((msg) => {
+      // Don't send stop or start sensors older than 2 hours and 12 minutes
+      if (((msg.type === 'StopSensor') || (msg.type === 'StartSensor')) && ((Date.now() - msg.date) > 132 * 60000)) {
+        return false;
+      }
+
+      // Don't send other messages older than 12 minutes
+      if (((msg.type !== 'StopSensor') && (msg.type !== 'StartSensor')) && (Date.now() - msg.date) > 12 * 60000) {
+        return false;
+      }
+
+      return true;
+    });
+
+    return newPending;
+  };
+
   const sgvGaps = (rigSGVs) => {
     const now = moment().valueOf();
     const minDate = moment().subtract(24, 'hours').valueOf();
@@ -151,6 +169,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     // if one is desired.
     pending.push({ date: Date.now() - 2 * 60 * 60 * 1000, type: 'StopSensor' });
 
+    pending = filterPending(pending);
+
     client.newPending(pending);
   };
 
@@ -233,6 +253,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
       if (!startPending) {
         pending.push({ date: startTime, type: 'StartSensor' });
+
+        pending = filterPending(pending);
 
         client.newPending(pending);
       }
@@ -560,10 +582,29 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     if (sgv.inExtendedSession) {
       sgv.mode = 'extended cal';
+      // set the sessionStartDate from the known start since transmitter
+      // no longer reports it
+      sgv.sessionStartDate = sensorStart.format();
     } else if (sgv.inExpiredSession) {
       sgv.mode = 'expired cal';
+      // set the sessionStartDate from the known start since transmitter
+      // no longer reports it
+      sgv.sessionStartDate = sensorStart.format();
     } else {
       sgv.mode = 'txmitter cal';
+    }
+
+    if (sgv.state === 0x1 && (sgv.inExtendedSession || sgv.inExpiredSession)) {
+      if (moment().diff(sensorStart, 'days') <= 4 && bgChecks.length > 0 && moment().diff(moment(bgChecks[bgChecks.length - 1].dateMills), 'hours') > 12) {
+        // set session state to Need Calibration - cal every 12 hours for first 4 days
+        sgv.state = 0x7;
+      } else if (moment().diff(sensorStart, 'days') > 4 && bgChecks.length > 0 && moment().diff(moment(bgChecks[bgChecks.length - 1].dateMills), 'hours') > 24) {
+        // set session state to Need Calibration - cal every 24 hours after first 4 days
+        sgv.state = 0x7;
+      } else {
+        // set session state to OK
+        sgv.state = 0x6;
+      }
     }
 
     sgv.stateString = stateString(sgv.state);
@@ -572,6 +613,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     sgv.txStatusString = txStatusString(sgv.status);
     sgv.txStatusStringShort = txStatusStringShort(sgv.status);
 
+    log(`sensor state: ${sgv.stateString}`);
+
     if (glucoseHist.length > 0) {
       const prevSgv = await getGlucose();
 
@@ -579,8 +622,6 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         xDripAPS.postAnnouncement(`Sensor: ${sgv.stateString}`);
       }
     }
-
-    log(`sensor state: ${sgv.stateString}`);
 
     if (!sgv.glucose || sgv.glucose < 20) {
       sgv.glucose = null;
@@ -871,19 +912,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
         pendingCalTime = await calibrateFromNS();
 
-        pending = pending.filter((msg) => {
-          // Don't send stop or start sensors older than 2 hours and 12 minutes
-          if (((msg.type === 'StopSensor') || (msg.type === 'StartSensor')) && ((Date.now() - msg.date) > 132 * 60000)) {
-            return false;
-          }
-
-          // Don't send other messages older than 12 minutes
-          if (((msg.type !== 'StopSensor') && (msg.type !== 'StartSensor')) && (Date.now() - msg.date) > 12 * 60000) {
-            return false;
-          }
-
-          return true;
-        });
+        pending = filterPending(pending);
 
         const glucoseHist = await storage.getItem('glucoseHist');
         const gaps = sgvGaps(glucoseHist);
@@ -922,6 +951,9 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         // shuts down before acting on them, or in the
         // event of lost comms
         // better to return something from the worker
+
+        pending = filterPending(pending);
+
         client.newPending(pending);
       } else if (m.msg === 'glucose') {
         const glucose = m.data;
@@ -1049,7 +1081,11 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     getTxId: () => txId,
 
     // provide the pending list
-    getPending: () => pending,
+    getPending: () => {
+      pending = filterPending(pending);
+
+      return pending;
+    },
 
     // provide the most recent glucose reading
     getGlucose: async () => getGlucose(),
@@ -1074,6 +1110,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     // Reset the transmitter
     resetTx: () => {
       pending.push({ date: Date.now(), type: 'ResetTx' });
+
+      pending = filterPending(pending);
 
       client.newPending(pending);
     },
@@ -1107,6 +1145,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       _.each(bgChecks, (bgCheck) => {
         pending.push({ date: bgCheck.dateMills, type: 'CalibrateSensor', glucose: bgCheck.glucose });
       });
+
+      pending = filterPending(pending);
 
       client.newPending(pending);
     },
@@ -1149,6 +1189,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       if (options.nightscout) {
         xDripAPS.postBGCheck(calData);
       }
+
+      pending = filterPending(pending);
 
       client.newPending(pending);
     },

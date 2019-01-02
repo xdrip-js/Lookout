@@ -42,6 +42,19 @@ angular.module('AngularOpenAPS.cgm', [
       set id(value) {
         socket.emit('id', value);
       },
+      get idValid() {
+        if (!id) {
+          return false;
+        }
+
+        const prefix = id.substr(0, 1);
+
+        if (id.length !== 6 || (prefix !== '8' && prefix !== '4')) {
+          return false;
+        }
+
+        return true;
+      },
       get meterid() {
         return meterid;
       },

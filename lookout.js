@@ -50,6 +50,16 @@ const argv = yargs
 const params = argv.argv;
 sendCommand = params._.shift();
 
+const validTxId = (id) => {
+  const prefix = id.substr(0, 1);
+
+  if (id.length !== 6 || (prefix !== '8' && prefix !== '4')) {
+    return false;
+  }
+
+  return true;
+};
+
 const processGlucose = (glucose) => {
   const sessionStart = moment(glucose.sessionStartDate);
   const sessionAge = moment.duration(moment().diff(sessionStart));
@@ -113,8 +123,12 @@ const processCommand = async (command) => {
       console.log('Aborting stop session');
     }
   } else if (command === 'id') {
-    sendCmd = 'id';
-    sendArg = params.id;
+    if (validTxId(params.id)) {
+      sendCmd = 'id';
+      sendArg = params.id;
+    } else {
+      console.log(`ERROR: Invalid Transmitter Id: ${params.id}`);
+    }
   } else if (command === 'meterid') {
     sendCmd = 'meterid';
     sendArg = params.meterid.padStart(6, 0);
@@ -156,7 +170,11 @@ const processCommand = async (command) => {
   });
 
   socket.on('id', (id) => {
-    console.log('   Transmitter ID: ', id);
+    if (validTxId(id)) {
+      console.log('   Transmitter ID: ', id);
+    } else {
+      console.log('   Transmitter ID: ', id, ' <<< ID is invalid and needs to be set');
+    }
   });
 
   socket.on('meterid', (id) => {

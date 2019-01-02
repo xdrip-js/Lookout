@@ -17,6 +17,10 @@
         </div>
       </div>
 
+      <div class="list-group-item list-group-item-home list-group-item-warning" ng-if="!transmitter.idValid">
+        Current Transmitter ID is invalid: "{{ transmitter.id }}"
+      </div>
+
       <div class="list-group-item list-group-item-home" ng-if="!sensor.inSession">
         <button class="btn btn-warning" ng-click="start()">Start sensor</button>
         <button class="btn btn-warning" ng-click="backstart()">Start sensor 2 hours ago</button>

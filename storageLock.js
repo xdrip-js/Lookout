@@ -23,7 +23,7 @@ storageLockExports.lockStorage = async () => {
     count += 1;
 
     if (count > 5) {
-      error('Storage locked... waiting 1 second');
+      debug('Storage locked... waiting 1 second');
     }
 
     /* eslint-disable-next-line no-await-in-loop */

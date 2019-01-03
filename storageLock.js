@@ -2,9 +2,10 @@
 
 const Debug = require('debug');
 
-/* eslint-disable-next-line no-unused-vars */
+/* eslint-disable no-unused-vars */
 const log = Debug('storageLock:log');
 const error = Debug('storageLock:error');
+/* eslint-enable no-unused-vars */
 const debug = Debug('storageLock:debug');
 
 module.exports = {};

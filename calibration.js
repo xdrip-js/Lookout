@@ -139,9 +139,9 @@ const lsrCalibration = (calibrationPairs) => {
     );
 
     debug(`LSR Cal - record ${j},`
-     + ` ${new Date(calibrationPairs[j].readDateMills)},`
+     + ` ${moment(calibrationPairs[j].readDateMills).format('ddd YYYY-MM-DDTHH:MM:SSG\\M\\TZZ')},`
      + ` unfiltered: ${leftPadString(Math.round(calibrationPairs[j].unfiltered), 6)},`
-     + ` glucose: ${leftPadString(calibrationPairs[j].glucose, 3)},`
+     + ` sgv: ${leftPadString(calibrationPairs[j].glucose, 3)},`
      + ` calculated: ${leftPadString(calcGlucose(calibrationPairs[j], returnVal), 3)},`
      + ` multiplier: ${leftPadString(multipliers[j].toFixed(3), 5)}`);
 
@@ -503,7 +503,7 @@ const expiredCalibration = async (
   }
 
   if ((slopeDelta < 1) && (interceptDelta < 1)) {
-    log(`No calibration update: slopeDelta=${Math.round(slopeDelta * 10) / 10} interceptDelta=${Math.round(interceptDelta * 10) / 10}`);
+    log(`No calibration update required: slopeDelta=${Math.round(slopeDelta * 10) / 10} interceptDelta=${Math.round(interceptDelta * 10) / 10}`);
 
     return lastExpiredCal;
   }
@@ -797,7 +797,7 @@ calibrationExports.calibrateGlucose = async (
       sgv.g5calibrated = false;
     } else {
       const calErr = expiredCalGlucose - sgv.glucose;
-      log(`Current expired calibration error: ${Math.round(calErr * 10) / 10} calibrated value: ${Math.round(expiredCalGlucose * 10) / 10} slope: ${Math.round(expiredCal.slope * 10) / 10} intercept: ${Math.round(expiredCal.intercept * 10) / 10} type: ${expiredCal.type}`);
+      log(`Current Expired Cal error: ${Math.round(calErr * 10) / 10} calibrated value: ${Math.round(expiredCalGlucose * 10) / 10} slope: ${Math.round(expiredCal.slope * 10) / 10} intercept: ${Math.round(expiredCal.intercept * 10) / 10} type: ${expiredCal.type}`);
     }
   }
 

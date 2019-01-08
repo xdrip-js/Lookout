@@ -232,7 +232,7 @@ describe('Test Calibration', () => {
     }];
 
     const lastCal = await calibration.expiredCalibration(
-      null, bgChecks, null, null, glucoseHist, null,
+      { }, null, bgChecks, null, null, glucoseHist, null,
     );
 
     lastCal.slope.should.be.greaterThan(1050);

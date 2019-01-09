@@ -591,7 +591,9 @@ const getActiveCal = async (options, storage) => {
 
   if (lastCal && (lastCal.type !== 'Unity')) {
     return lastCal;
-  } if (lastExpiredCal) {
+  }
+
+  if (lastExpiredCal) {
     return lastExpiredCal;
   }
   return false;

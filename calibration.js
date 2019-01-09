@@ -32,8 +32,8 @@ const MINSLOPE = 450;
 const SENSOR_STABLE = 12; // hours
 const SENSOR_WARM = 2; // hours
 const MIN_LSR_PAIRS = 2;
-const MAX_LSR_PAIRS = 5;
-const MAX_LSR_PAIRS_AGE = 4; // days
+const MAX_LSR_PAIRS = 10;
+const MAX_LSR_PAIRS_AGE = 6; // days
 
 const leftPadString = (str, len) => ' '.repeat(len - str.toString().length) + str;
 

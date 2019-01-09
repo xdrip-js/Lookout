@@ -196,7 +196,21 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     if (txmitterInSession && (sensorStartDelta > 0 || sensorStopDelta > 0)) {
       // give a 2 hour play between the sensor insert record
       // and the session start date from the transmitter
-      log('Found sensor change, start, or stop after transmitter start date. Stopping Sensor Session.');
+      if (sensorStartDelta > 0) {
+        log(
+          '\n===================================='
+          + `\nSensor Insert, ${sensorInsert.format()}, is after Sensor Start, ${sessionStart.format()}`
+          + '\nStopping Sensor Session'
+          + '\n====================================',
+        );
+      } else {
+        log(
+          '\n===================================='
+          + `\nSensor Stop, ${sensorStop.format()}, is after Sensor Start, ${sessionStart.format()}`
+          + '\nStopping Sensor Session'
+          + '\n====================================',
+        );
+      }
       debug(`Session Start: ${sessionStart} sensorStart: ${sensorInsert} sensorStop: ${sensorStop}`);
       stopTransmitterSession();
       await stopSensorSession();
@@ -214,7 +228,12 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       );
 
       if (haveCal && !haveValidCal) {
-        log('Transmitter not in session and found sensor change, start, or stop after latest calibration and transmitter not in session. Stopping Sensor Session.');
+        log(
+          '\n===================================='
+          + '\nTransmitter not in session and found sensor change, start, or stop after latest calibration and transmitter not in session. Stopping Sensor Session.'
+          + '\nSee calibration log messages above for details'
+          + '\n====================================',
+        );
         await stopSensorSession();
       }
     }

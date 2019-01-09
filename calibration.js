@@ -423,6 +423,8 @@ const expiredCalibration = async (
   const minLsrPairs = options.min_lsr_pairs || MIN_LSR_PAIRS;
   let maxLsrPairsAge = options.max_lsr_pairs_age || MAX_LSR_PAIRS_AGE;
 
+  log(`options: %O\nmaxLsrPairs: ${maxLsrPairs}\nminLsrPairs: ${minLsrPairs}\nmaxLsrPairsAge: ${maxLsrPairsAge}`, options);
+
   // convert to milliseconds
   maxLsrPairsAge *= 24 * 60 * 60000;
 
@@ -450,8 +452,9 @@ const expiredCalibration = async (
     const latestCalTime = calPairs[calPairs.length - 1].readDateMills;
 
     for (let i = 0; i < (calPairs.length - 1); i += 1) {
-      if (!sensorInsert
-        || ((calPairs[i].readDateMills - sensorInsert.valueOf()) < SENSOR_STABLE * 60 * 60000)
+      if (
+        (sensorInsert
+        && (calPairs[i].readDateMills - sensorInsert.valueOf()) < SENSOR_STABLE * 60 * 60000)
         || ((latestCalTime - calPairs[i].readDateMills) > maxLsrPairsAge)) {
         calPairsStart = i + 1;
       }

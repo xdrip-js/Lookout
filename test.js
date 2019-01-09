@@ -235,11 +235,198 @@ describe('Test Calibration', () => {
       { }, null, bgChecks, null, null, glucoseHist, null,
     );
 
-    lastCal.slope.should.be.greaterThan(1050);
-    lastCal.slope.should.be.lessThan(1060);
-    lastCal.intercept.should.be.greaterThan(-24000);
-    lastCal.intercept.should.be.lessThan(-23000);
     lastCal.type.should.equal('LeastSquaresRegression');
+    lastCal.slope.should.be.within(1045, 1055);
+    lastCal.intercept.should.be.within(-24000, -23000);
+  });
+
+  it('should calculate expired calibration using max_lsr_pairs option', async () => {
+    const bgChecks = [
+      {
+        date: 1544133780000,
+        dateMills: 1544133780000,
+        glucose: 127,
+        type: 'NS',
+        unfiltered: 110298.86094477712,
+      },
+      {
+        date: 1544237557000,
+        dateMills: 1544237557000,
+        glucose: 130,
+        type: 'NS',
+        unfiltered: 113266.57133129044,
+      },
+      {
+        date: 1544391573000,
+        dateMills: 1544391573000,
+        glucose: 125,
+        type: 'NS',
+      },
+    ];
+
+    const glucoseHist = [{
+      inSession: true,
+      status: 0,
+      state: 7,
+      readDate: 1544391333000,
+      readDateMills: 1544391333000,
+      filtered: 161056,
+      unfiltered: 106000,
+      glucose: 105,
+      trend: -3.9982585362819747,
+      canBeCalibrated: true,
+      rssi: -59,
+      g5calibrated: true,
+      stateString: 'Need calibration',
+    }, {
+      inSession: true,
+      status: 0,
+      state: 7,
+      readDate: 1544391633000,
+      readDateMills: 1544391633000,
+      filtered: 148544,
+      unfiltered: 108500,
+      glucose: 106,
+      trend: -6.002474353316756,
+      canBeCalibrated: true,
+      rssi: -77,
+      g5calibrated: true,
+      stateString: 'Need calibration',
+    }];
+
+    const lastCal = await calibration.expiredCalibration(
+      { max_lsr_pairs: 3 }, null, bgChecks, null, null, glucoseHist, null,
+    );
+
+    lastCal.type.should.equal('LeastSquaresRegression');
+    lastCal.slope.should.be.within(1050, 1060);
+    lastCal.intercept.should.be.within(-24000, -23000);
+  });
+
+  it('should calculate expired calibration using min_lsr_pairs option', async () => {
+    const bgChecks = [
+      {
+        date: 1544133780000,
+        dateMills: 1544133780000,
+        glucose: 127,
+        type: 'NS',
+        unfiltered: 110298.86094477712,
+      },
+      {
+        date: 1544237557000,
+        dateMills: 1544237557000,
+        glucose: 130,
+        type: 'NS',
+        unfiltered: 113266.57133129044,
+      },
+      {
+        date: 1544391573000,
+        dateMills: 1544391573000,
+        glucose: 125,
+        type: 'NS',
+      },
+    ];
+
+    const glucoseHist = [{
+      inSession: true,
+      status: 0,
+      state: 7,
+      readDate: 1544391333000,
+      readDateMills: 1544391333000,
+      filtered: 161056,
+      unfiltered: 106000,
+      glucose: 105,
+      trend: -3.9982585362819747,
+      canBeCalibrated: true,
+      rssi: -59,
+      g5calibrated: true,
+      stateString: 'Need calibration',
+    }, {
+      inSession: true,
+      status: 0,
+      state: 7,
+      readDate: 1544391633000,
+      readDateMills: 1544391633000,
+      filtered: 148544,
+      unfiltered: 108500,
+      glucose: 106,
+      trend: -6.002474353316756,
+      canBeCalibrated: true,
+      rssi: -77,
+      g5calibrated: true,
+      stateString: 'Need calibration',
+    }];
+
+    const lastCal = await calibration.expiredCalibration(
+      { min_lsr_pairs: 5 }, null, bgChecks, null, null, glucoseHist, null,
+    );
+
+    lastCal.type.should.equal('SinglePoint');
+    lastCal.slope.should.be.within(860, 870);
+    lastCal.intercept.should.equal(0);
+  });
+
+  it('should calculate expired calibration using max_lsr_pairs option', async () => {
+    const bgChecks = [
+      {
+        date: 1544133780000,
+        dateMills: 1544133780000,
+        glucose: 127,
+        type: 'NS',
+        unfiltered: 110298.86094477712,
+      },
+      {
+        date: 1544237557000,
+        dateMills: 1544237557000,
+        glucose: 130,
+        type: 'NS',
+        unfiltered: 113266.57133129044,
+      },
+      {
+        date: 1544391573000,
+        dateMills: 1544391573000,
+        glucose: 125,
+        type: 'NS',
+      },
+    ];
+
+    const glucoseHist = [{
+      inSession: true,
+      status: 0,
+      state: 7,
+      readDate: 1544391333000,
+      readDateMills: 1544391333000,
+      filtered: 161056,
+      unfiltered: 106000,
+      glucose: 105,
+      trend: -3.9982585362819747,
+      canBeCalibrated: true,
+      rssi: -59,
+      g5calibrated: true,
+      stateString: 'Need calibration',
+    }, {
+      inSession: true,
+      status: 0,
+      state: 7,
+      readDate: 1544391633000,
+      readDateMills: 1544391633000,
+      filtered: 148544,
+      unfiltered: 108500,
+      glucose: 106,
+      trend: -6.002474353316756,
+      canBeCalibrated: true,
+      rssi: -77,
+      g5calibrated: true,
+      stateString: 'Need calibration',
+    }];
+
+    const lastCal = await calibration.expiredCalibration(
+      { max_lsr_pairs_age: 2 }, null, bgChecks, null, null, glucoseHist, null,
+    );
+
+    lastCal.type.should.equal('LeastSquaresRegression');
+    lastCal.slope.should.be.within(1050, 1060);
+    lastCal.intercept.should.be.within(-24000, -23000);
   });
 });
 

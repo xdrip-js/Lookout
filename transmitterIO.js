@@ -370,78 +370,114 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     switch (sgv.state) {
       case 0x00:
         state = 'None';
+        break;
       case 0x01:
         state = 'Stopped';
+        break;
       case 0x02:
         state = 'Warmup';
+        break;
       case 0x03:
         state = 'Unused';
+        break;
       case 0x04:
         state = 'First calibration';
+        break;
       case 0x05:
         state = 'Second calibration';
+        break;
       case 0x06:
         state = 'OK';
+        break;
       case 0x07:
         state = 'Need calibration';
+        break;
       case 0x08:
         state = 'Calibration Error 1';
+        break;
       case 0x09:
         state = 'Calibration Error 0';
+        break;
       case 0x0a:
         state = 'Calibration Linearity Fit Failure';
+        break;
       case 0x0b:
         state = 'Sensor Failed Due to Counts Aberration';
+        break;
       case 0x0c:
         state = 'Sensor Failed Due to Residual Aberration';
+        break;
       case 0x0d:
         state = 'Out of Calibration Due To Outlier';
+        break;
       case 0x0e:
         state = 'Outlier Calibration Request - Need a Calibration';
+        break;
       case 0x0f:
         state = 'Session Expired';
+        break;
       case 0x10:
         state = 'Session Failed Due To Unrecoverable Error';
+        break;
       case 0x11:
         state = 'Session Failed Due To Transmitter Error';
+        break;
       case 0x12:
         state = 'Temporary Session Failure - ???';
+        break;
       case 0x13:
         state = 'Reserved';
+        break;
       case 0x80:
         state = 'Calibration State - Start';
+        break;
       case 0x81:
         state = 'Calibration State - Start Up';
+        break;
       case 0x82:
         state = 'Calibration State - First of Two Calibrations Needed';
+        break;
       case 0x83:
         state = 'Calibration State - High Wedge Display With First BG';
+        break;
       case 0x84:
         state = 'Unused Calibration State - Low Wedge Display With First BG';
+        break;
       case 0x85:
         state = 'Calibration State - Second of Two Calibrations Needed';
+        break;
       case 0x86:
         state = 'Calibration State - In Calibration Transmitter';
+        break;
       case 0x87:
         state = 'Calibration State - In Calibration Display';
+        break;
       case 0x88:
         state = 'Calibration State - High Wedge Transmitter';
+        break;
       case 0x89:
         state = 'Calibration State - Low Wedge Transmitter';
+        break;
       case 0x8a:
         state = 'Calibration State - Linearity Fit Transmitter';
+        break;
       case 0x8b:
         state = 'Calibration State - Out of Cal Due to Outlier Transmitter';
+        break;
       case 0x8c:
         state = 'Calibration State - High Wedge Display';
+        break;
       case 0x8d:
         state = 'Calibration State - Low Wedge Display';
+        break;
       case 0x8e:
         state = 'Calibration State - Linearity Fit Display';
+        break;
       case 0x8f:
         state = 'Calibration State - Session Not in Progress';
+        break;
       default:
-        state = state ? `Unknown: 0x${state.toString(16)}` : '--';
+        state = sgv.state ? `Unknown: 0x${sgv.state.toString(16)}` : '--';
     }
 
     return state;
@@ -453,78 +489,114 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     switch (sgv.state) {
       case 0x00:
         state = 'None';
+        break;
       case 0x01:
         state = 'Stopped';
+        break;
       case 0x02:
         state = 'Warmup';
+        break;
       case 0x03:
         state = 'Unused';
+        break;
       case 0x04:
         state = '1st Cal';
+        break;
       case 0x05:
         state = '2nd Cal';
+        break;
       case 0x06:
         state = 'OK';
+        break;
       case 0x07:
         state = 'Need Cal';
+        break;
       case 0x08:
         state = 'Cal Err 1';
+        break;
       case 0x09:
         state = 'Cal Err 0';
+        break;
       case 0x0a:
         state = 'Cal Lin Fit';
+        break;
       case 0x0b:
         state = 'Fail Counts';
+        break;
       case 0x0c:
         state = 'Fail Resid';
+        break;
       case 0x0d:
         state = 'Outlier';
+        break;
       case 0x0e:
         state = 'Cal NOW';
+        break;
       case 0x0f:
         state = 'Expired';
+        break;
       case 0x10:
         state = 'Unrecoverable';
+        break;
       case 0x11:
         state = 'Failed Tx';
+        break;
       case 0x12:
         state = 'Temp Fail';
+        break;
       case 0x13:
         state = 'Reserved';
+        break;
       case 0x80:
         state = 'Cal - Start';
+        break;
       case 0x81:
         state = 'Cal - Start Up';
+        break;
       case 0x82:
         state = '1 of 2 Cal';
+        break;
       case 0x83:
         state = 'Hi Wedge Display';
+        break;
       case 0x84:
         state = 'Unused Cal';
+        break;
       case 0x85:
         state = '2 of 2 Cal';
+        break;
       case 0x86:
         state = 'In Cal Tx';
+        break;
       case 0x87:
         state = 'In Cal Display';
+        break;
       case 0x88:
         state = 'Hi Wedge Tx';
+        break;
       case 0x89:
         state = 'Lo Wedge Tx';
+        break;
       case 0x8a:
         state = 'Lin Fit Tx';
+        break;
       case 0x8b:
         state = 'Outlier Cal Tx';
+        break;
       case 0x8c:
         state = 'Hi Wedge Display';
+        break;
       case 0x8d:
         state = 'Lo Wedge Display';
+        break;
       case 0x8e:
         state = 'Lin Fit Display';
+        break;
       case 0x8f:
         state = 'No Session';
+        break;
       default:
-        state = state ? `Unknown: 0x${state.toString(16)}` : '--';
+        state = sgv.state ? `Unknown: 0x${sgv.state.toString(16)}` : '--';
     }
 
     if (sgv.inExtendedSession) {

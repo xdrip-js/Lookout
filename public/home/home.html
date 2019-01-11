@@ -12,7 +12,7 @@
               {{ sensor.glucose.glucose | glucose: true }}
               <span ng-bind-html="arrow()"></span>
             </h1>
-            (filtered: {{ sensor.glucose.filtered | glucose: true }}, unfiltered: {{ sensor.glucose.unfiltered | glucose }})
+            (filtered: {{ sensor.glucose.filtered }}, unfiltered: {{ sensor.glucose.unfiltered }})
             <!-- +4 mg/dl -->
         </div>
       </div>

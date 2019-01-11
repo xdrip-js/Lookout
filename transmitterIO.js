@@ -444,12 +444,6 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         state = state ? `Unknown: 0x${state.toString(16)}` : '--';
     }
 
-    if (sgv.inExtendedSession) {
-      state += '-Extended Session';
-    } else if (sgv.inExpiredSession) {
-      state += '-Expired Session';
-    }
-
     return state;
   };
 

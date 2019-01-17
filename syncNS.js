@@ -142,7 +142,7 @@ const syncEvent = async (itemName, eventType) => {
         .catch(() => {
           error(`Unable to store ${itemName}`);
         });
-    } else if (rigItem && (rigItem.valueOf() < nsEvent.valueOf())) {
+    } else if (rigItem && ((nsEvent.valueOf() - rigItem.valueOf()) > 1000)) {
       debug(`NS ${eventType} more recent than rig ${itemName} NS date: ${nsEvent.format()} Rig date: ${rigItem.format()}`);
 
       latestEvent = nsEvent;
@@ -151,7 +151,7 @@ const syncEvent = async (itemName, eventType) => {
         .catch(() => {
           error(`Unable to store ${itemName}`);
         });
-    } else if (rigItem && (rigItem.valueOf() > nsEvent.valueOf())) {
+    } else if (rigItem && ((rigItem.valueOf() - nsEvent.valueOf()) > 1000)) {
       debug(`Rig ${itemName} more recent than NS ${eventType} NS date: ${nsEvent.format()} Rig date: ${rigItem.format()}`);
       debug(`Uploading rig ${itemName}`);
 

@@ -203,7 +203,7 @@ const calculateTxmitterCalibration = (
   }
 
   // Check if we need a calibration
-  if (!lastCal || (calErr > 5) || (lastCal.type === 'SinglePoint')) {
+  if (!lastCal || (calErr > 5) || (lastCal.type === 'Unity') || (lastCal.type === 'SinglePoint')) {
     calPairs.push(currSGV);
 
     // Suitable values need to be:

@@ -542,42 +542,46 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         error(`Error getting rig sensorStart: ${err}`);
       });
 
-    if (!sensorStart && transmitterInSession(sgv)) {
-      sensorStart = moment(sgv.sessionStartDate);
+    if (sensorStart) {
+      sensorStart = moment(sensorStart);
+    }
 
-      storage.setItem('sensorStart', sensorStart.valueOf())
-        .catch((err) => {
-          error(`Error saving rig sensorStart: ${err}`);
-        });
+    if (transmitterInSession(sgv)) {
+      const txmitterSessionStart = moment(sgv.sessionStartDate);
+      let updatedStart = false;
+
+      // If we don't have a sensor start, use the transmitter's session start
+      // Else, check if the sensor session start time reported by the transmitter is
+      // after the stored sensor start.
+      if (!sensorStart) {
+        sensorStart = txmitterSessionStart;
+        updatedStart = true;
+      } else if (txmitterSessionStart.diff(sensorStart, 'hours') > 2) {
+        log(
+          '\n===================================='
+          + '\nTransmitter session start date more than 2 hours after stored sensorStart'
+          + `\nSetting stored sensorStart to ${txmitterSessionStart.format()}`
+          + '\n====================================',
+        );
+        sensorStart = txmitterSessionStart;
+        updatedStart = true;
+      }
+
+      if (updatedStart) {
+        storage.setItem('sensorStart', sensorStart.valueOf())
+          .catch((err) => {
+            error(`Error saving rig sensorStart: ${err}`);
+          });
+      }
     }
 
     if (sensorStart) {
-      sensorStart = moment(sensorStart);
       debug(`SyncNS Rig sensor start - date: ${sensorStart.format()}`);
 
       if (!sensorInsert || (sensorStart.valueOf() > sensorInsert.valueOf())) {
         // allow the user to enter either to reset the session.
         sensorInsert = sensorStart;
       }
-    }
-
-    // Check to see if the sensor session start time reported by the transmitter is
-    // after the stored sensor start.
-    const txmitterSessionStart = moment(sgv.sessionStartDate);
-
-    if (transmitterInSession(sgv) && (txmitterSessionStart.diff(sensorStart, 'hours') > 2)) {
-      log(
-        '\n===================================='
-        + '\nTransmitter session start date more than 2 hours after stored sensorStart'
-        + `\nSetting stored sensorStart to ${txmitterSessionStart.format()}`
-        + '\n====================================',
-      );
-      sensorStart = txmitterSessionStart;
-
-      await storage.setItem('sensorStart', sensorStart.valueOf())
-        .catch((err) => {
-          error(`Error setting rig sensorStart: ${err}`);
-        });
     }
 
     let sensorStop = await storage.getItem('sensorStop')

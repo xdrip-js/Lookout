@@ -107,15 +107,19 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
   // Return true if there is no SGV or the most recent SGV was received from transmitter
   // Also return true if the latest SGV we have is more than 15 minutes old
   // Return false if most recent SGV was received from NS
-  const isControlling = async () => {
-    const sgv = await getGlucose();
+  const isControlling = async (sgv) => {
+    let latestSgv = sgv;
+
+    if (!latestSgv) {
+      latestSgv = await getGlucose();
+    }
 
     // inSession is only in the SGV record if it came from transmitter
-    if (!sgv || (typeof sgv.inSession !== 'undefined')) {
+    if (!latestSgv || (typeof latestSgv.inSession !== 'undefined')) {
       return true;
     }
 
-    if ((moment().valueOf() - sgv.readDateMills) > 15 * 60000) {
+    if ((moment().valueOf() - latestSgv.readDateMills) > 15 * 60000) {
       return true;
     }
 
@@ -214,7 +218,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       debug(`Session Start: ${sessionStart} sensorStart: ${sensorInsert} sensorStop: ${sensorStop}`);
       stopTransmitterSession();
       await stopSensorSession();
-    } else {
+    } else if (isControlling(sgv)) {
       const haveCal = await calibration.haveCalibration(storage);
 
       let latestBgCheckTime = null;

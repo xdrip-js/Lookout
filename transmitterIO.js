@@ -257,7 +257,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       // in either a transmitter session, extend session, or expired session
       await storage.setItem('sensorStart', Date.now())
         .catch((err) => {
-          error(`Error getting rig sensorStart: ${err}`);
+          error(`Error setting rig sensorStart: ${err}`);
         });
     }
 
@@ -559,6 +559,25 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         // allow the user to enter either to reset the session.
         sensorInsert = sensorStart;
       }
+    }
+
+    // Check to see if the sensor session start time reported by the transmitter is
+    // after the stored sensor start.
+    const txmitterSessionStart = moment(sgv.sessionStartDate);
+
+    if (transmitterInSession(sgv) && (txmitterSessionStart.diff(sensorStart, 'hours') > 2)) {
+      log(
+        '\n===================================='
+        + '\nTransmitter session start date more than 2 hours after stored sensorStart'
+        + `\nSetting stored sensorStart to ${txmitterSessionStart.format()}`
+        + '\n====================================',
+      );
+      sensorStart = txmitterSessionStart;
+
+      await storage.setItem('sensorStart', sensorStart.valueOf())
+        .catch((err) => {
+          error(`Error setting rig sensorStart: ${err}`);
+        });
     }
 
     let sensorStop = await storage.getItem('sensorStop')

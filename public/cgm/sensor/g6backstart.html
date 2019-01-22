@@ -1,0 +1,27 @@
+<div ui-content-for="title">
+  <span>Back Start G6 Sensor</span>
+</div>
+
+<div ui-content-for="navbar-left">
+  <a href="/cgm/sensor" class="btn btn-navbar btn-icon-only"><i class="fa fa-chevron-left fa-navbar"></i></a>
+</div>
+
+<div class="scrollable">
+  <div class="scrollable-content section">
+    <form role="form" ng-submit="backStartSensor(sensorSerialCode)">
+      <fieldset>
+        <legend>Enter Sensor Serial Code</legend>
+        <div class="form-group has-success has-feedback">
+          <!-- <label>Sensor Serial Code</label> -->
+          <input type="text"
+                 ng-model="sensorSerialCode"
+                 class="form-control">
+        </div>
+      </fieldset>
+      <hr>
+      <button class="btn btn-primary btn-block">
+        Back Start G6 Sensor Session
+      </button>
+    </form>
+  </div>
+ </div>

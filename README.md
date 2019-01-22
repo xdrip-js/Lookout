@@ -20,7 +20,7 @@ Lookout provides a rig-based interface to a Dexcom G5 CGM using Bluetooth Low En
 - report raw unfiltered values to Nightscout during warmup for trend visibility
 - report detail transmitter and device status to Nightscout (requires Nightscout xdrip-js plugin to be enabled)
 
-Lookout can be used with unexpired G5 transmitters relying on the official calibration built into the transmitter to calibrate the raw sensor values.  Lookout provides the user with the ability to reset expired transmitters allowing them to be used past their normal expiration dates.  Lokout can also be used with expired transmitters, providing a least squares regression calibration method to calculate calibration values for raw sensor values based on user entered glucose checks.
+Lookout can be used with unexpired G5 transmitters relying on the official calibration built into the transmitter to calibrate the raw sensor values.  Lookout provides the user with the ability to reset expired transmitters allowing them to be used past their normal expiration dates.  Lookout can also be used with expired transmitters, providing a least squares regression calibration method to calculate calibration values for raw sensor values based on user entered glucose checks.
 
 Lookout can be monitored and controlled via a web-based graphical interface, the `lookout` command line interface, or Nightscout.
 
@@ -183,14 +183,14 @@ Once the browser is open to your Lookout page (see above steps), you can:
 ## Using the command line to control your CGM
 The commands below can be entered on the rig command line to control the CGM. Regardless of which command is entered, after executing the command the command will enter a status loop indefinately printing the CGM status at each glucose read event. Enter `Ctrl-C` to exit the command.
 ```
-  lookout cal <sgv>         # Calibrate the transmitter with provided glucose meter reading
-  lookout id <id>           # Set transmitter ID
-  lookout meterid <meterid> # Set transmitter ID
-  lookout start             # Start sensor session
-  lookout back-start        # Start sensor session back dated by 2 hours
-  lookout stop              # Stop sensor session
-  lookout reset             # Reset transmitter
-  lookout status            # Show status  [default]
+  lookout cal <sgv>                  # Calibrate the transmitter with provided glucose meter reading
+  lookout id <id>                    # Set transmitter ID
+  lookout meterid <meterid>          # Set transmitter ID
+  lookout start [sensor_serial]      # Start sensor session; sensor serial required for G6
+  lookout back-start [sensor_serial] # Start sensor session back dated by 2 hours; sensor serial required for G6
+  lookout stop                       # Stop sensor session
+  lookout reset                      # Reset transmitter
+  lookout status                     # Show status  [default]
 ```
 
 Use `-m` option for mmol instead of mg/dL. For example, `lookout -m cal 4.1` will calibrate with 4.1 mmol.

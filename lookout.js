@@ -51,6 +51,10 @@ const params = argv.argv;
 sendCommand = params._.shift();
 
 const validTxId = (id) => {
+  if (!id) {
+    return false;
+  }
+
   const prefix = id.substr(0, 1);
 
   if (id.length !== 6 || (prefix !== '8' && prefix !== '4')) {

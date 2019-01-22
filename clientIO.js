@@ -40,9 +40,7 @@ module.exports = (options) => {
     const txId = transmitter ? transmitter.getTxId() : null;
     debug(`about to emit id ${txId}`);
 
-    if (txId) {
-      socket.emit('id', txId);
-    }
+    socket.emit('id', txId);
 
     const meterId = fakeMeter ? await fakeMeter.getMeterId() : null;
     if (meterId) {

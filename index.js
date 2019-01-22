@@ -3,6 +3,9 @@
 const storage = require('node-persist');
 
 const Debug = require('debug');
+
+const log = Debug('Lookout:log');
+
 const yargs = require('yargs');
 const syncNS = require('./syncNS');
 const FakeMeter = require('./fakemeter');
@@ -110,6 +113,11 @@ const init = async () => {
   let lookoutDebug = 'calcStats:*,calibration:*,clientIO:*,fakemeter:*,loopIO:*';
   lookoutDebug += ',pumpIO:*,storageLock:*,syncNS:*,transmitterIO:*,transmitterWorker:*';
   lookoutDebug += ',xDripAPS:*,transmitter';
+
+  // Disable hangup signal so we don't terminate unexpectedly
+  process.on('SIGHUP', (signal) => {
+    log(`Received SIGHUP signal: ${signal}`);
+  });
 
   // DEBUG environment variable takes precedence over verbose flag
   if (typeof process.env.DEBUG === 'undefined') {

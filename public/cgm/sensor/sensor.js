@@ -42,13 +42,13 @@ angular.module('AngularOpenAPS.cgm.sensor', [
 
     switch (units) {
       case 'mmol/L':
-        $scope.calMin = 2.2;
-        $scope.calMax = 22;
+        $scope.calMin = 3.3;
+        $scope.calMax = 13.8;
         break;
       case 'mg/dL':
       default:
-        $scope.calMin = 40;
-        $scope.calMax = 400;
+        $scope.calMin = 60;
+        $scope.calMax = 250;
     }
 
     const tick = () => {

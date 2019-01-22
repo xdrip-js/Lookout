@@ -6,6 +6,7 @@ const io = require('socket.io-client');
 const moment = require('moment');
 const yargs = require('yargs');
 const prompt = require('./prompt');
+const constants = require('./constants');
 
 let sendCommand = null;
 
@@ -114,10 +115,23 @@ const processCommand = async (command) => {
   if (command === 'cal') {
     sendCmd = 'calibrate';
 
+    if (Number.isNaN(params.sgv)) {
+      console.log('Invalid number argument for cal command');
+      process.exit(1);
+    }
+
     sendArg = params.sgv;
 
     if (params.mmol) {
       sendArg *= 18;
+    }
+
+    if (sendArg > constants.MAX_CAL_SGV) {
+      console.log(`Calibration, ${sendArg} mg/dL, greater than maximum allowed value: ${constants.MAX_CAL_SGV} mg/dL`);
+      process.exit(1);
+    } else if (sendArg < constants.MIN_CAL_SGV) {
+      console.log(`Calibration, ${sendArg} mg/dL, less than minimum allowed value: ${constants.MIN_CAL_SGV} mg/dL`);
+      process.exit(1);
     }
   } else if (command === 'start') {
     sendCmd = 'startSensor';
@@ -137,6 +151,7 @@ const processCommand = async (command) => {
       sendCmd = 'stopSensor';
     } else {
       console.log('Aborting stop session');
+      process.exit(1);
     }
   } else if (command === 'id') {
     if (validTxId(params.id)) {
@@ -161,6 +176,7 @@ const processCommand = async (command) => {
       sendCmd = 'resetTx';
     } else {
       console.log('Aborting reset');
+      process.exit(1);
     }
   }
 
@@ -191,10 +207,10 @@ const processCommand = async (command) => {
       // validate command accounting for G5 vs G6 differences
       if ((id.substr(0, 1) === '8') && !sendArg) {
         console.log('\n\nG6 Start Requires Sensor Serial Code\n\n');
-        sendCmd = null;
+        process.exit(1);
       } else if ((id.substr(0, 1) !== '8') && sendArg) {
         console.log('\n\nCommand Had Sensor Serial Code, But No Code Required for G5\n\n');
-        sendCmd = null;
+        process.exit(1);
       }
     }
 

@@ -21,6 +21,7 @@ const debug = Debug('calibration:debug');
 
 const moment = require('moment');
 const _ = require('lodash');
+const constants = require('./constants');
 const stats = require('./calcStats');
 const xDripAPS = require('./xDripAPS')();
 
@@ -184,7 +185,7 @@ const calculateTxmitterCalibration = (
 
   // Do not calculate a new calibration value
   // if we don't have a valid calibrated glucose reading
-  if (currSGV.glucose > 300 || currSGV.glucose < 80) {
+  if (currSGV.glucose > constants.MAX_CAL_SGV || currSGV.glucose < constants.MIN_CAL_SGV) {
     log(`Current glucose out of range to calibrate: ${currSGV.glucose}`);
     return null;
   }
@@ -199,7 +200,12 @@ const calculateTxmitterCalibration = (
     calValue = calcGlucose(currSGV, lastCal);
     calErr = Math.abs(calValue - currSGV.glucose);
 
-    log(`Current CGM calculated calibration error: ${Math.round(calErr * 10) / 10} calibrated value: ${Math.round(calValue * 10) / 10} slope: ${Math.round(lastCal.slope * 10) / 10} intercept: ${Math.round(lastCal.intercept * 10) / 10}`);
+    log(
+      `Current CGM calculated calibration error: ${Math.round(calErr * 10) / 10} `
+      + `calibrated value: ${Math.round(calValue * 10) / 10} `
+      + `slope: ${Math.round(lastCal.slope * 10) / 10} `
+      + `intercept: ${Math.round(lastCal.intercept * 10) / 10}`,
+    );
   }
 
   // Check if we need a calibration
@@ -217,7 +223,9 @@ const calculateTxmitterCalibration = (
       // Only use up to 10 of the most recent suitable readings
       const sgv = glucoseHist[i];
 
-      if (('unfiltered' in sgv) && (sgv.readDateMills > (lastTxmitterCalTime + 12 * 60 * 1000)) && (sgv.glucose < 300) && (sgv.glucose > 80) && sgv.g5calibrated && (!sensorInsert || (sgv.readDateMills > sensorInsert.valueOf()))) {
+      if (('unfiltered' in sgv) && (sgv.readDateMills > (lastTxmitterCalTime + 12 * 60 * 1000))
+        && (sgv.glucose < constants.MAX_CAL_SGV) && (sgv.glucose > constants.MIN_CAL_SGV)
+        && sgv.g5calibrated && (!sensorInsert || (sgv.readDateMills > sensorInsert.valueOf()))) {
         calPairs.unshift(sgv);
       }
     }
@@ -252,7 +260,10 @@ const calculateTxmitterCalibration = (
     } else if ((calErr > 5) && (calPairs.length > 0)) {
       const calResult = singlePointCalibration(calPairs);
 
-      log(`CGM singlePointCalibration: glucose=${calPairs[calPairs.length - 1].glucose}, unfiltered=${calPairs[calPairs.length - 1].unfiltered}, slope=${calResult.slope}, intercept=0`);
+      log(
+        `CGM singlePointCalibration: glucose=${calPairs[calPairs.length - 1].glucose}, `
+        + `unfiltered=${calPairs[calPairs.length - 1].unfiltered}, slope=${calResult.slope}, intercept=0`,
+      );
 
       calReturn = {
         date: currSGV.readDateMills,
@@ -439,7 +450,9 @@ const expiredCalibration = async (
       ({ unfiltered } = bgChecks[i]);
     }
 
-    if ((bgChecks[i].type !== 'Unity') && (unfiltered)) {
+    if ((bgChecks[i].type !== 'Unity') && (unfiltered)
+      && (bgChecks[i].glucose > constants.MIN_CAL_SGV)
+      && (bgChecks[i].glucose < constants.MAX_CAL_SGV)) {
       calPairs.push({
         unfiltered,
         glucose: bgChecks[i].glucose,

@@ -171,7 +171,7 @@ const processCommand = async (command) => {
   });
 
   socket.on('pending', (pending) => {
-    console.log('          Pending: [');
+    console.log(`          Pending: [ // Messages queued as of ${moment().format()}`);
     for (let i = 0; i < pending.length; i += 1) {
       const record = pending[i];
       record.date = moment(record.date).format();

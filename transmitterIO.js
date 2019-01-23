@@ -636,7 +636,10 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       sgv.mode = 'txmitter cal';
     }
 
-    if (sgv.state === 0x1 && (sgv.inExtendedSession || sgv.inExpiredSession)) {
+    // Only override the state if expired calibration enabled
+    // Otherwise, the session would be immediately stopped if a BG Check is entered
+    if (sgv.state === 0x1 && options.expired_cal
+      && (sgv.inExtendedSession || sgv.inExpiredSession)) {
       if (moment().diff(sensorStart, 'days') <= 4 && bgChecks.length > 0 && moment().diff(moment(bgChecks[bgChecks.length - 1].dateMills), 'hours') > 12) {
         // set session state to Need Calibration - cal every 12 hours for first 4 days
         sgv.state = 0x7;

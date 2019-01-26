@@ -528,7 +528,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     }
   };
 
-  const processNewGlucose = async (newSgv) => {
+  const processNewGlucose = async (newSgv, startingSession) => {
     let glucoseHist = null;
     let sendSGV = true;
 
@@ -671,6 +671,16 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
       if ((!prevSgv || (sgv.state !== prevSgv.state)) && options.nightscout) {
         xDripAPS.postAnnouncement(`Sensor: ${sgv.stateString}`);
+      } else if (startingSession && sgv.state !== 0x02) {
+        xDripAPS.postAnnouncement(`Unable to Start Session: ${sgv.stateString} should have been 'Warmup'`);
+        log('============================================='
+          + '\nLookout sent start session command to transmitter; however,'
+          + '\ntransmitter did not start the session. Possible causes:'
+          + '\n  * Attempting to back start session at a time prior to the transmitter start time'
+          + '\n  * Attempting to back start session at a time prior to the prior session stop time'
+          + '\n  * Attempting to back start session (sometimes it just does not work)'
+          + '\n  * Previous session not stopped'
+          + '\n=============================================');
       }
     }
 
@@ -938,6 +948,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       return;
     }
 
+    let startingSession = false;
+
     // Remove the BT device so it starts from scratch
     removeBTDevice(id);
 
@@ -997,6 +1009,12 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
           log('Not requesting backfill - no glucose history');
         }
 
+        _.each(pending, (msg) => {
+          if (msg.type === 'StartSensor') {
+            startingSession = true;
+          }
+        });
+
         worker.send(pending);
         // NOTE: this will lead to missed messages if the rig
         // shuts down before acting on them, or in the
@@ -1030,7 +1048,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
           + '\n====================================',
         );
 
-        processNewGlucose(glucose);
+        processNewGlucose(glucose, startingSession);
       } else if (m.msg === 'messageProcessed') {
         // TODO: check that dates match
 
@@ -1053,10 +1071,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       }
     });
 
-    /* eslint-disable no-unused-vars */
-    worker.on('exit', (m) => {
-    /* eslint-enable no-unused-vars */
-
+    worker.on('exit', () => {
       worker = null;
 
       // Receive results from child process

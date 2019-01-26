@@ -431,7 +431,7 @@ const syncBGChecks = async (sensorInsert, sensorStop) => {
     for (; rigIndex < rigDataLength; rigIndex += 1) {
       const timeDiff = nsValue.dateMills - rigBGChecks[rigIndex].dateMills;
 
-      if (Math.abs(timeDiff) < 60 * 1000) {
+      if (Math.abs(timeDiff) < 10 * 1000) {
         rigValue = rigBGChecks[rigIndex];
         break;
       } else if (timeDiff < 0) {
@@ -502,7 +502,7 @@ const syncBGChecks = async (sensorInsert, sensorStop) => {
     for (; nsIndex < NSBGChecks.length; nsIndex += 1) {
       const timeDiff = NSBGChecks[nsIndex].dateMills - rigValue.dateMills;
 
-      if (Math.abs(timeDiff) < 60 * 1000) {
+      if (Math.abs(timeDiff) < 10 * 1000) {
         nsValue = NSBGChecks[nsIndex];
         break;
       } else if (timeDiff > 0) {

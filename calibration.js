@@ -811,7 +811,7 @@ calibrationExports.calibrateGlucose = async (
       sgv.inExpiredSession = true;
 
       log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value from expired calibration algorithm');
-      log(`Calibrated SGV: ${sgv.glucose} unfiltered: ${sgv.unfiltered} slope: ${lastCal.slope} intercept: ${lastCal.intercept}`);
+      log(`Calibrated SGV: ${sgv.glucose} unfiltered: ${sgv.unfiltered} slope: ${expiredCal.slope} intercept: ${expiredCal.intercept}`);
 
       sgv.g5calibrated = false;
     } else {

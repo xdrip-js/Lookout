@@ -47,13 +47,21 @@ angular.module('AngularOpenAPS.home', [
     };
 
     $scope.start = () => {
-      CGM.sensor.start();
-      $location.path('/cgm/sensor/pending');
+      if (CGM.transmitter.isG6) {
+        $location.path('/cgm/sensor/g6start.html');
+      } else {
+        CGM.sensor.start();
+        $location.path('/cgm/sensor/pending');
+      }
     };
 
     $scope.backstart = () => {
-      CGM.sensor.backstart();
-      $location.path('/cgm/sensor/pending');
+      if (CGM.transmitter.isG6) {
+        $location.path('/cgm/sensor/g6backstart.html');
+      } else {
+        CGM.sensor.backstart();
+        $location.path('/cgm/sensor/pending');
+      }
     };
   }])
 

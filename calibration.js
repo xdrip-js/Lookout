@@ -32,8 +32,10 @@ const MINSLOPE = 450;
 const SENSOR_STABLE = 12; // hours
 const SENSOR_WARM = 2; // hours
 const MIN_LSR_PAIRS = 2;
+const MAX_LSR_PAIRS = 10;
+const MAX_LSR_PAIRS_AGE = 6; // days
 
-const leftPadString = (str, len) => ' '.repeat(len - str.toString().length) + str;
+const leftPadString = (str, len) => ' '.repeat(Math.max(0, len - str.toString().length)) + str;
 
 const calcGlucose = (sgv, calibration) => {
   let glucose = Math.round((sgv.unfiltered - calibration.intercept) / calibration.slope);
@@ -201,7 +203,7 @@ const calculateTxmitterCalibration = (
   }
 
   // Check if we need a calibration
-  if (!lastCal || (calErr > 5) || (lastCal.type === 'SinglePoint')) {
+  if (!lastCal || (calErr > 5) || (lastCal.type === 'Unity') || (lastCal.type === 'SinglePoint')) {
     calPairs.push(currSGV);
 
     // Suitable values need to be:
@@ -412,11 +414,19 @@ const getUnfiltered = async (valueTime, glucoseHist, sgv) => {
 calibrationExports.getUnfiltered = getUnfiltered;
 
 const expiredCalibration = async (
-  storage, bgChecks, lastExpiredCal, sensorInsert, glucoseHist, sgv,
+  options, storage, bgChecks, lastExpiredCal, sensorInsert, glucoseHist, sgv,
 ) => {
   let calPairs = [];
   let calReturn = null;
   let calPairsStart = 0;
+  const maxLsrPairs = options.max_lsr_pairs || MAX_LSR_PAIRS;
+  const minLsrPairs = options.min_lsr_pairs || MIN_LSR_PAIRS;
+  let maxLsrPairsAge = options.max_lsr_pairs_age || MAX_LSR_PAIRS_AGE;
+
+  debug(`options: %O\nmaxLsrPairs: ${maxLsrPairs}\nminLsrPairs: ${minLsrPairs}\nmaxLsrPairsAge: ${maxLsrPairsAge}`, options);
+
+  // convert to milliseconds
+  maxLsrPairsAge *= 24 * 60 * 60000;
 
   for (let i = 0; i < bgChecks.length; i += 1) {
     let unfiltered = null;
@@ -437,11 +447,15 @@ const expiredCalibration = async (
       });
     }
   }
-  // remove calPairs that are less than SENSOR_STABLE hours from the sensor insert
+
   if (calPairs.length > 0) {
+    const latestCalTime = calPairs[calPairs.length - 1].readDateMills;
+
     for (let i = 0; i < (calPairs.length - 1); i += 1) {
-      if (!sensorInsert
-        || ((calPairs[i].readDateMills - sensorInsert.valueOf()) < SENSOR_STABLE * 60 * 60000)) {
+      if (
+        (sensorInsert
+        && (calPairs[i].readDateMills - sensorInsert.valueOf()) < SENSOR_STABLE * 60 * 60000)
+        || ((latestCalTime - calPairs[i].readDateMills) > maxLsrPairsAge)) {
         calPairsStart = i + 1;
       }
     }
@@ -454,8 +468,11 @@ const expiredCalibration = async (
     calPairs = calPairs.slice(calPairsStart);
   }
 
+  // don't use too many
+  calPairs = calPairs.slice(Math.max(0, calPairs.length - maxLsrPairs + 1));
+
   // If we have at least 3 good pairs, use LSR
-  if (calPairs.length >= MIN_LSR_PAIRS) {
+  if (calPairs.length >= minLsrPairs) {
     const calResult = lsrCalibration(calPairs);
 
     if (calResult && (calResult.slope < MAXSLOPE) && (calResult.slope > MINSLOPE)) {
@@ -574,7 +591,9 @@ const getActiveCal = async (options, storage) => {
 
   if (lastCal && (lastCal.type !== 'Unity')) {
     return lastCal;
-  } if (lastExpiredCal) {
+  }
+
+  if (lastExpiredCal) {
     return lastExpiredCal;
   }
   return false;
@@ -765,7 +784,7 @@ calibrationExports.calibrateGlucose = async (
     );
 
     expiredCal = await expiredCalibration(
-      storage, bgChecks, expiredCal, sensorInsert, glucoseHist, sgv,
+      options, storage, bgChecks, expiredCal, sensorInsert, glucoseHist, sgv,
     );
   }
 
@@ -792,7 +811,7 @@ calibrationExports.calibrateGlucose = async (
       sgv.inExpiredSession = true;
 
       log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value from expired calibration algorithm');
-      log(`Calibrated SGV: ${sgv.glucose} unfiltered: ${sgv.unfiltered} slope: ${lastCal.slope} intercept: ${lastCal.intercept}`);
+      log(`Calibrated SGV: ${sgv.glucose} unfiltered: ${sgv.unfiltered} slope: ${expiredCal.slope} intercept: ${expiredCal.intercept}`);
 
       sgv.g5calibrated = false;
     } else {

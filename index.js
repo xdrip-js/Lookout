@@ -3,6 +3,9 @@
 const storage = require('node-persist');
 
 const Debug = require('debug');
+
+const log = Debug('Lookout:log');
+
 const yargs = require('yargs');
 const syncNS = require('./syncNS');
 const FakeMeter = require('./fakemeter');
@@ -65,6 +68,24 @@ const argv = yargs
     alias: 'n',
     default: false,
   })
+  .option('min_lsr_pairs', {
+    nargs: 1,
+    describe: 'Minimum number of pairs required for LSR calibration',
+    alias: 'l',
+    default: 0,
+  })
+  .option('max_lsr_pairs', {
+    nargs: 1,
+    describe: 'Maximum number of pairs allowed for LSR calibration',
+    alias: 'm',
+    default: 0,
+  })
+  .option('max_lsr_pairs_age', {
+    nargs: 1,
+    describe: 'Maximum age of pairs relative to latest pair allowed for LSR calibration',
+    alias: 'a',
+    default: 0,
+  })
   .wrap(null)
   .strict(true)
   .help('help');
@@ -83,12 +104,20 @@ const options = {
   offline_fakemeter: params.offline_fakemeter,
   verbose: params.verbose,
   nightscout: !params.no_nightscout,
+  min_lsr_pairs: params.min_lsr_pairs,
+  max_lsr_pairs: params.max_lsr_pairs,
+  max_lsr_pairs_age: params.max_lsr_pairs_age,
 };
 
 const init = async () => {
   let lookoutDebug = 'calcStats:*,calibration:*,clientIO:*,fakemeter:*,loopIO:*';
   lookoutDebug += ',pumpIO:*,storageLock:*,syncNS:*,transmitterIO:*,transmitterWorker:*';
   lookoutDebug += ',xDripAPS:*,transmitter';
+
+  // Disable hangup signal so we don't terminate unexpectedly
+  process.on('SIGHUP', (signal) => {
+    log(`Received SIGHUP signal: ${signal}`);
+  });
 
   // DEBUG environment variable takes precedence over verbose flag
   if (typeof process.env.DEBUG === 'undefined') {

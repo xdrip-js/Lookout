@@ -37,8 +37,18 @@ const argv = yargs
     describe: 'Use mmol instead of mg/dL',
     default: false,
   })
-  .command('start', 'Start sensor session')
-  .command('back-start', 'Start sensor session back dated by 2 hours')
+  .command('start [sensor_serial_code]', 'Start sensor session (G6 requies serial)', (yargsp) => {
+    yargsp.positional('sensor_serial_code', {
+      describe: 'G6 Sensor Serial Code',
+      type: 'string',
+    });
+  })
+  .command('back-start [sensor_serial_code]', 'Start sensor session back dated by 2 hours (G6 requires serial)', (yargsp) => {
+    yargsp.positional('sensor_serial_code', {
+      describe: 'G6 Sensor Serial Code',
+      type: 'string',
+    });
+  })
   .command('stop', 'Stop sensor session')
   .command('reset', 'Reset transmitter')
   .command(['status', '$0'], 'Show status')
@@ -51,6 +61,10 @@ const params = argv.argv;
 sendCommand = params._.shift();
 
 const validTxId = (id) => {
+  if (!id) {
+    return false;
+  }
+
   const prefix = id.substr(0, 1);
 
   if (id.length !== 6 || (prefix !== '8' && prefix !== '4')) {
@@ -107,8 +121,10 @@ const processCommand = async (command) => {
     }
   } else if (command === 'start') {
     sendCmd = 'startSensor';
+    sendArg = params.sensor_serial_code;
   } else if (command === 'back-start') {
     sendCmd = 'backStartSensor';
+    sendArg = params.sensor_serial_code;
   } else if (command === 'stop') {
     const promptStr = [
       'Your current session will be lost and will have to be restarted using \'lookout start\'\n',
@@ -151,16 +167,11 @@ const processCommand = async (command) => {
   const socket = io('http://localhost:3000/cgm');
 
   socket.on('connect', () => {
-    if (sendCmd) {
-      socket.emit(sendCmd, sendArg);
-    }
-
-    // Only send it once
-    sendCmd = null;
+    console.log('Connected');
   });
 
   socket.on('pending', (pending) => {
-    console.log('          Pending: [');
+    console.log(`          Pending: [ // Messages queued as of ${moment().format()}`);
     for (let i = 0; i < pending.length; i += 1) {
       const record = pending[i];
       record.date = moment(record.date).format();
@@ -175,6 +186,24 @@ const processCommand = async (command) => {
     } else {
       console.log('   Transmitter ID: ', id, ' <<< ID is invalid and needs to be set');
     }
+
+    if (sendCmd && sendCmd === 'startSensor') {
+      // validate command accounting for G5 vs G6 differences
+      if ((id.substr(0, 1) === '8') && !sendArg) {
+        console.log('\n\nG6 Start Requires Sensor Serial Code\n\n');
+        sendCmd = null;
+      } else if ((id.substr(0, 1) !== '8') && sendArg) {
+        console.log('\n\nCommand Had Sensor Serial Code, But No Code Required for G5\n\n');
+        sendCmd = null;
+      }
+    }
+
+    if (sendCmd) {
+      socket.emit(sendCmd, sendArg);
+    }
+
+    // Only send it once
+    sendCmd = null;
   });
 
   socket.on('meterid', (id) => {

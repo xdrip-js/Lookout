@@ -342,7 +342,7 @@ const convertBGCheck = BGCheck => [{
   reason: 'Txmitter Calibration',
   duration: 0,
   units: 'mg/dl',
-  created_at: moment(BGCheck.date).format(),
+  created_at: moment(BGCheck.date).utc().format(),
 }];
 
 module.exports = () => ({
@@ -396,7 +396,7 @@ module.exports = () => ({
 
   postAnnouncement: (message) => {
     const entry = [{
-      created_at: moment().format(),
+      created_at: moment().utc().format(),
       enteredBy: `xdripjs://${os.hostname()}`,
       eventType: 'Announcement',
       notes: message,
@@ -579,7 +579,7 @@ module.exports = () => ({
     const entry = [{
       enteredBy: `xdripjs://${os.hostname()}`,
       eventType,
-      created_at: new Date(eventTime.valueOf()).toISOString(),
+      created_at: eventTime.utc().format(),
     }];
 
     const secret = process.env.API_SECRET;

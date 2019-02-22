@@ -21,6 +21,14 @@ angular.module('AngularOpenAPS.cgm.sensor', [
       templateUrl: 'cgm/sensor/pending.html',
       controller: 'SensorController',
     });
+    $routeProvider.when('/cgm/sensor/g6start', {
+      templateUrl: 'cgm/sensor/g6start.html',
+      controller: 'SensorController',
+    });
+    $routeProvider.when('/cgm/sensor/g6backstart', {
+      templateUrl: 'cgm/sensor/g6backstart.html',
+      controller: 'SensorController',
+    });
     $routeProvider.when('/cgm/sensor/stop', {
       templateUrl: 'cgm/sensor/stop.html',
       controller: 'SensorController',
@@ -57,6 +65,14 @@ angular.module('AngularOpenAPS.cgm.sensor', [
       }
     };
 
+    $scope.startSensor = (sensorSerialCode) => {
+      CGM.sensor.start(sensorSerialCode);
+      $location.path('/cgm/sensor/pending');
+    };
+    $scope.backStartSensor = (sensorSerialCode) => {
+      CGM.sensor.backstart(sensorSerialCode);
+      $location.path('/cgm/sensor/pending');
+    };
     $scope.stopSensor = () => {
       CGM.sensor.stop();
       $location.path('/cgm/sensor/pending');

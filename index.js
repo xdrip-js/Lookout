@@ -89,7 +89,7 @@ const argv = yargs
   .option('include_mode', {
     boolean: true,
     describe: 'Include mode in short state string',
-    alias: 'm',
+    alias: 'i',
     default: false,
   })
   .wrap(null)

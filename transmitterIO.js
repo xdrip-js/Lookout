@@ -605,9 +605,9 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         state = sgv.state ? `Unknown: 0x${sgv.state.toString(16)}` : '--';
     }
 
-    if (sgv.inExtendedSession) {
+    if (options.include_mode && sgv.inExtendedSession) {
       state += '-ext';
-    } else if (sgv.inExpiredSession) {
+    } else if (options.include_mode && sgv.inExpiredSession) {
       state += '-exp';
     }
 

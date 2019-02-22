@@ -13,7 +13,7 @@ const TransmitterIO = require('./transmitterIO');
 const ClientIO = require('./clientIO');
 
 const argv = yargs
-  .usage('$0 [--extend_sensor] [--expired_cal] [--port <port>] [--openaps <directory>] [--sim] [--fakemeter] [--offline_fakemeter] [--no_nightscout]')
+  .usage('$0 [--extend_sensor] [--expired_cal] [--port <port>] [--openaps <directory>] [--sim] [--fakemeter] [--offline_fakemeter] [--no_nightscout] [--include_mode')
   .option('extend_sensor', {
     boolean: true,
     describe: 'Enables extended sensor session mode',
@@ -86,6 +86,12 @@ const argv = yargs
     alias: 'a',
     default: 0,
   })
+  .option('include_mode', {
+    boolean: true,
+    describe: 'Include mode in short state string',
+    alias: 'm',
+    default: false,
+  })
   .wrap(null)
   .strict(true)
   .help('help');
@@ -107,12 +113,13 @@ const options = {
   min_lsr_pairs: params.min_lsr_pairs,
   max_lsr_pairs: params.max_lsr_pairs,
   max_lsr_pairs_age: params.max_lsr_pairs_age,
+  include_mode: params.include_mode,
 };
 
 const init = async () => {
   let lookoutDebug = 'calcStats:*,calibration:*,clientIO:*,fakemeter:*,loopIO:*';
   lookoutDebug += ',pumpIO:*,storageLock:*,syncNS:*,transmitterIO:*,transmitterWorker:*';
-  lookoutDebug += ',xDripAPS:*,transmitter';
+  lookoutDebug += ',xDripAPS:*,transmitter,smp,bluetooth-manager';
 
   // Disable hangup signal so we don't terminate unexpectedly
   process.on('SIGHUP', (signal) => {

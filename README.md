@@ -249,6 +249,8 @@ To look at the Lookout log, for debug purposes, type `cat /var/log/openaps/xdrip
 
 * `--no_nightscout`, `-n`: Disable Nightscout interaction.
 
+* `--include_mode`, `-i`: Append algorithm mode to the short state string displayed in Nightscout pill.
+
 ## Reverting NodeJS
 
 in the future if you decide you do not want to use xdrip-js, or you are having trouble updating OpenAPS with the nodejs update, you can revert the nodejs install with:

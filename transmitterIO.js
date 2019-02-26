@@ -370,162 +370,248 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     }
   };
 
-  const stateString = (state) => {
-    switch (state) {
+  const stateString = (sgv) => {
+    let state = null;
+
+    switch (sgv.state) {
       case 0x00:
-        return 'None';
+        state = 'None';
+        break;
       case 0x01:
-        return 'Stopped';
+        state = 'Stopped';
+        break;
       case 0x02:
-        return 'Warmup';
+        state = 'Warmup';
+        break;
       case 0x03:
-        return 'Unused';
+        state = 'Unused';
+        break;
       case 0x04:
-        return 'First calibration';
+        state = 'First calibration';
+        break;
       case 0x05:
-        return 'Second calibration';
+        state = 'Second calibration';
+        break;
       case 0x06:
-        return 'OK';
+        state = 'OK';
+        break;
       case 0x07:
-        return 'Need calibration';
+        state = 'Need calibration';
+        break;
       case 0x08:
-        return 'Calibration Error 1';
+        state = 'Calibration Error 1';
+        break;
       case 0x09:
-        return 'Calibration Error 0';
+        state = 'Calibration Error 0';
+        break;
       case 0x0a:
-        return 'Calibration Linearity Fit Failure';
+        state = 'Calibration Linearity Fit Failure';
+        break;
       case 0x0b:
-        return 'Sensor Failed Due to Counts Aberration';
+        state = 'Sensor Failed Due to Counts Aberration';
+        break;
       case 0x0c:
-        return 'Sensor Failed Due to Residual Aberration';
+        state = 'Sensor Failed Due to Residual Aberration';
+        break;
       case 0x0d:
-        return 'Out of Calibration Due To Outlier';
+        state = 'Out of Calibration Due To Outlier';
+        break;
       case 0x0e:
-        return 'Outlier Calibration Request - Need a Calibration';
+        state = 'Outlier Calibration Request - Need a Calibration';
+        break;
       case 0x0f:
-        return 'Session Expired';
+        state = 'Session Expired';
+        break;
       case 0x10:
-        return 'Session Failed Due To Unrecoverable Error';
+        state = 'Session Failed Due To Unrecoverable Error';
+        break;
       case 0x11:
-        return 'Session Failed Due To Transmitter Error';
+        state = 'Session Failed Due To Transmitter Error';
+        break;
       case 0x12:
-        return 'Temporary Session Failure - ???';
+        state = 'Temporary Session Failure - ???';
+        break;
       case 0x13:
-        return 'Reserved';
+        state = 'Reserved';
+        break;
       case 0x80:
-        return 'Calibration State - Start';
+        state = 'Calibration State - Start';
+        break;
       case 0x81:
-        return 'Calibration State - Start Up';
+        state = 'Calibration State - Start Up';
+        break;
       case 0x82:
-        return 'Calibration State - First of Two Calibrations Needed';
+        state = 'Calibration State - First of Two Calibrations Needed';
+        break;
       case 0x83:
-        return 'Calibration State - High Wedge Display With First BG';
+        state = 'Calibration State - High Wedge Display With First BG';
+        break;
       case 0x84:
-        return 'Unused Calibration State - Low Wedge Display With First BG';
+        state = 'Unused Calibration State - Low Wedge Display With First BG';
+        break;
       case 0x85:
-        return 'Calibration State - Second of Two Calibrations Needed';
+        state = 'Calibration State - Second of Two Calibrations Needed';
+        break;
       case 0x86:
-        return 'Calibration State - In Calibration Transmitter';
+        state = 'Calibration State - In Calibration Transmitter';
+        break;
       case 0x87:
-        return 'Calibration State - In Calibration Display';
+        state = 'Calibration State - In Calibration Display';
+        break;
       case 0x88:
-        return 'Calibration State - High Wedge Transmitter';
+        state = 'Calibration State - High Wedge Transmitter';
+        break;
       case 0x89:
-        return 'Calibration State - Low Wedge Transmitter';
+        state = 'Calibration State - Low Wedge Transmitter';
+        break;
       case 0x8a:
-        return 'Calibration State - Linearity Fit Transmitter';
+        state = 'Calibration State - Linearity Fit Transmitter';
+        break;
       case 0x8b:
-        return 'Calibration State - Out of Cal Due to Outlier Transmitter';
+        state = 'Calibration State - Out of Cal Due to Outlier Transmitter';
+        break;
       case 0x8c:
-        return 'Calibration State - High Wedge Display';
+        state = 'Calibration State - High Wedge Display';
+        break;
       case 0x8d:
-        return 'Calibration State - Low Wedge Display';
+        state = 'Calibration State - Low Wedge Display';
+        break;
       case 0x8e:
-        return 'Calibration State - Linearity Fit Display';
+        state = 'Calibration State - Linearity Fit Display';
+        break;
       case 0x8f:
-        return 'Calibration State - Session Not in Progress';
+        state = 'Calibration State - Session Not in Progress';
+        break;
       default:
-        return state ? `Unknown: 0x${state.toString(16)}` : '--';
+        state = sgv.state ? `Unknown: 0x${sgv.state.toString(16)}` : '--';
     }
+
+    return state;
   };
 
-  const stateStringShort = (state) => {
-    switch (state) {
+  const stateStringShort = (sgv) => {
+    let state = null;
+
+    switch (sgv.state) {
       case 0x00:
-        return 'None';
+        state = 'None';
+        break;
       case 0x01:
-        return 'Stopped';
+        state = 'Stopped';
+        break;
       case 0x02:
-        return 'Warmup';
+        state = 'Warmup';
+        break;
       case 0x03:
-        return 'Unused';
+        state = 'Unused';
+        break;
       case 0x04:
-        return '1st Cal';
+        state = '1st Cal';
+        break;
       case 0x05:
-        return '2nd Cal';
+        state = '2nd Cal';
+        break;
       case 0x06:
-        return 'OK';
+        state = 'OK';
+        break;
       case 0x07:
-        return 'Need Cal';
+        state = 'Need Cal';
+        break;
       case 0x08:
-        return 'Cal Err 1';
+        state = 'Cal Err 1';
+        break;
       case 0x09:
-        return 'Cal Err 0';
+        state = 'Cal Err 0';
+        break;
       case 0x0a:
-        return 'Cal Lin Fit';
+        state = 'Cal Lin Fit';
+        break;
       case 0x0b:
-        return 'Fail Counts';
+        state = 'Fail Counts';
+        break;
       case 0x0c:
-        return 'Fail Resid';
+        state = 'Fail Resid';
+        break;
       case 0x0d:
-        return 'Outlier';
+        state = 'Outlier';
+        break;
       case 0x0e:
-        return 'Cal NOW';
+        state = 'Cal NOW';
+        break;
       case 0x0f:
-        return 'Expired';
+        state = 'Expired';
+        break;
       case 0x10:
-        return 'Unrecoverable';
+        state = 'Unrecoverable';
+        break;
       case 0x11:
-        return 'Failed Tx';
+        state = 'Failed Tx';
+        break;
       case 0x12:
-        return 'Temp Fail';
+        state = 'Temp Fail';
+        break;
       case 0x13:
-        return 'Reserved';
+        state = 'Reserved';
+        break;
       case 0x80:
-        return 'Cal - Start';
+        state = 'Cal - Start';
+        break;
       case 0x81:
-        return 'Cal - Start Up';
+        state = 'Cal - Start Up';
+        break;
       case 0x82:
-        return '1 of 2 Cal';
+        state = '1 of 2 Cal';
+        break;
       case 0x83:
-        return 'Hi Wedge Display';
+        state = 'Hi Wedge Display';
+        break;
       case 0x84:
-        return 'Unused Cal';
+        state = 'Unused Cal';
+        break;
       case 0x85:
-        return '2 of 2 Cal';
+        state = '2 of 2 Cal';
+        break;
       case 0x86:
-        return 'In Cal Tx';
+        state = 'In Cal Tx';
+        break;
       case 0x87:
-        return 'In Cal Display';
+        state = 'In Cal Display';
+        break;
       case 0x88:
-        return 'Hi Wedge Tx';
+        state = 'Hi Wedge Tx';
+        break;
       case 0x89:
-        return 'Lo Wedge Tx';
+        state = 'Lo Wedge Tx';
+        break;
       case 0x8a:
-        return 'Lin Fit Tx';
+        state = 'Lin Fit Tx';
+        break;
       case 0x8b:
-        return 'Outlier Cal Tx';
+        state = 'Outlier Cal Tx';
+        break;
       case 0x8c:
-        return 'Hi Wedge Display';
+        state = 'Hi Wedge Display';
+        break;
       case 0x8d:
-        return 'Lo Wedge Display';
+        state = 'Lo Wedge Display';
+        break;
       case 0x8e:
-        return 'Lin Fit Display';
+        state = 'Lin Fit Display';
+        break;
       case 0x8f:
-        return 'No Session';
+        state = 'No Session';
+        break;
       default:
-        return state ? `Unknown: 0x${state.toString(16)}` : '--';
+        state = sgv.state ? `Unknown: 0x${sgv.state.toString(16)}` : '--';
     }
+
+    if (options.include_mode && sgv.inExtendedSession) {
+      state += '-ext';
+    } else if (options.include_mode && sgv.inExpiredSession) {
+      state += '-exp';
+    }
+
+    return state;
   };
 
   const processNewGlucose = async (newSgv, startingSession) => {
@@ -658,8 +744,8 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       }
     }
 
-    sgv.stateString = stateString(sgv.state);
-    sgv.stateStringShort = stateStringShort(sgv.state);
+    sgv.stateString = stateString(sgv);
+    sgv.stateStringShort = stateStringShort(sgv);
 
     sgv.txStatusString = txStatusString(sgv.status);
     sgv.txStatusStringShort = txStatusStringShort(sgv.status);

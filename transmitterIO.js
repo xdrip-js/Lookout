@@ -258,6 +258,12 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
   const startSession = async (startTime, sensorSerialCode) => {
     const sgv = await getGlucose();
 
+    log(
+      '\n===================================='
+      + `\nAttempting to start sensor session at time: ${startTime.format()}`
+      + '\n====================================',
+    );
+
     if (!inSensorSession(sgv)) {
       // Only enter a sensorStart if we aren't
       // in either a transmitter session, extend session, or expired session
@@ -1290,7 +1296,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     },
 
     stopSensor: async () => {
-      await stopSensorSession();
+      await stopSensorSession(moment());
 
       const sgv = await getGlucose();
 

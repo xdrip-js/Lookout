@@ -79,6 +79,9 @@ const processGlucose = (glucose) => {
   const sessionStart = moment(glucose.sessionStartDate);
   const sessionAge = moment.duration(moment().diff(sessionStart));
 
+  const readDate = moment(glucose.readDate);
+  const readEventAge = moment.duration(moment().diff(readDate));
+
   const transmitterStart = moment(glucose.transmitterStartDate);
   const transmitterAge = moment.duration(moment().diff(transmitterStart));
 
@@ -95,7 +98,7 @@ const processGlucose = (glucose) => {
   console.log(`     session type: ${glucose.mode}`);
   console.log(`     sensor state: ${glucose.stateString}`);
   console.log(`transmitter state: ${glucose.txStatusString}`);
-  console.log(`         readDate: ${moment(glucose.readDate).format()}`);
+  console.log(`         readDate: ${readDate.format()}  -- ${readEventAge.hours()} hours ${readEventAge.minutes()} ago`);
   console.log(`    session start: ${sessionStart.format()}`);
   console.log(`      session age: ${sessionAge.days()} days ${sessionAge.hours()} hours ${sessionAge.minutes()} minutes`);
   console.log(`transmitter start: ${transmitterStart.format()}`);

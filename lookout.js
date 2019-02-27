@@ -98,7 +98,7 @@ const processGlucose = (glucose) => {
   console.log(`     session type: ${glucose.mode}`);
   console.log(`     sensor state: ${glucose.stateString}`);
   console.log(`transmitter state: ${glucose.txStatusString}`);
-  console.log(`         readDate: ${readDate.format()}  -- ${readEventAge.hours()} hours ${readEventAge.minutes()} ago`);
+  console.log(`         readDate: ${readDate.format()}  -- ${readEventAge.hours()} hours ${readEventAge.minutes()} minutes ago`);
   console.log(`    session start: ${sessionStart.format()}`);
   console.log(`      session age: ${sessionAge.days()} days ${sessionAge.hours()} hours ${sessionAge.minutes()} minutes`);
   console.log(`transmitter start: ${transmitterStart.format()}`);

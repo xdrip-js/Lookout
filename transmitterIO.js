@@ -13,6 +13,7 @@ const xDripAPS = require('./xDripAPS')();
 
 module.exports = async (options, storage, storageLock, client, fakeMeter) => {
   let txId;
+  let txAddress = null;
   let txFailedReads = 0;
   let txStatus = null;
   let pending = [];
@@ -89,9 +90,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     return null;
   };
 
-  const removeBTDevice = (id) => {
-    const btName = `Dexcom${id.slice(-2)}`;
-
+  const removeBTDevice = (btName) => {
     cp.exec(`bt-device -r ${btName}`, (err, stdout, stderr) => {
       if (err) {
         debug(`Unable to remove BT Device: ${btName} - ${err}`);
@@ -102,6 +101,18 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       debug(`stdout: ${stdout}`);
       debug(`stderr: ${stderr}`);
     });
+  };
+
+  const removeBTDevices = () => {
+    const btName = `Dexcom${txId.slice(-2)}`;
+
+    removeBTDevice(btName);
+
+    if (txAddress) {
+      const btAddressName = txAddress.split(':').join('-').toUpperCase();
+
+      removeBTDevice(btAddressName);
+    }
   };
 
   // Return true if there is no SGV or the most recent SGV was received from transmitter
@@ -1043,7 +1054,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     let startingSession = false;
 
     // Remove the BT device so it starts from scratch
-    removeBTDevice(id);
+    removeBTDevices();
 
     if (options.sim) {
       let prevGlucose = await getGlucose();
@@ -1157,6 +1168,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       } else if (m.msg === 'sawTransmitter') {
         // increment failed reads counter so we know how many
         // times we saw the transmitter
+        txAddress = m.data.address;
         txFailedReads += 1;
       } else if (m.msg === 'backfillData') {
         processBackfillData(m.data);
@@ -1174,7 +1186,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       }
 
       if (id && id !== txId) {
-        removeBTDevice(id);
+        removeBTDevices();
       }
 
       if (txFailedReads >= 2) {

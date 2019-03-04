@@ -271,7 +271,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     log(
       '\n===================================='
-      + `\nAttempting to start sensor session at time: ${startTime.format()}`
+      + `\nAttempting to start sensor session at time: ${moment(startTime).format()}`
       + '\n====================================',
     );
 

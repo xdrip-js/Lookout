@@ -182,9 +182,9 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
   };
 
   const stopTransmitterSession = (stopTime) => {
-    let twoAgo = moment().subtract(2, 'hours');
+    const twoAgo = moment().subtract(2, 'hours');
 
-    let stopWhen = stopTime || twoAgo;
+    const stopWhen = stopTime || twoAgo;
 
     // Stop sensor 2 hours prior to now to enable a rapid restart
     // if one is desired.
@@ -1312,7 +1312,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     },
 
     stopSensor: async () => {
-      let stopTime = moment().subtract(2, 'hours');
+      const stopTime = moment().subtract(2, 'hours');
       await stopSensorSession(stopTime);
 
       const sgv = await getGlucose();

@@ -1189,7 +1189,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         removeBTDevices();
       }
 
-      if (txFailedReads >= 2) {
+      if (txFailedReads >= 2 && (Date.now() - lastSuccessfulRead) > 11 * 60000) {
         // Automatically reboot on the 2nd failed read
         rebootRig();
       }

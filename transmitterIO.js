@@ -91,7 +91,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
   };
 
   const removeBTDevice = (btName) => {
-    cp.exec(`bt-device -r ${btName}`, (err, stdout, stderr) => {
+    cp.exec(`bt-device -a hci${options.hci} -r ${btName}`, (err, stdout, stderr) => {
       if (err) {
         debug(`Unable to remove BT Device: ${btName} - ${err}`);
         return;

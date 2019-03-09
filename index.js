@@ -139,6 +139,8 @@ const init = async () => {
       Debug.enable(`${lookoutDebug},-*:debug`);
     } else if (options.verbose === 1) {
       Debug.enable(lookoutDebug);
+    } else if (options.verbose === 2) {
+      Debug.enable(`${lookoutDebug},signaling,bindings,acl-att-stream,att,gap`);
     } else {
       Debug.enable('*,*:*');
     }

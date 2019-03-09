@@ -168,7 +168,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     let stopWhen = stopTime || now;
 
     // if the commanded stop time is older than 2 hours, use current time
-    if (stopTime.diff(now, 'minutes') > 120) {
+    if (stopTime.diff(now, 'minutes') > 132) {
       stopWhen = now;
     }
 
@@ -181,10 +181,14 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     await calibration.clearCalibration(storage);
   };
 
-  const stopTransmitterSession = () => {
+  const stopTransmitterSession = (stopTime) => {
+    const twoAgo = moment().subtract(2, 'hours');
+
+    const stopWhen = stopTime || twoAgo;
+
     // Stop sensor 2 hours prior to now to enable a rapid restart
     // if one is desired.
-    pending.push({ date: Date.now() - 2 * 60 * 60 * 1000, type: 'StopSensor' });
+    pending.push({ date: stopWhen.valueOf(), type: 'StopSensor' });
 
     pending = filterPending(pending);
 
@@ -229,7 +233,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         );
       }
       debug(`Session Start: ${sessionStart} sensorStart: ${sensorInsert} sensorStop: ${sensorStop}`);
-      stopTransmitterSession();
+      stopTransmitterSession(sensorStop);
       await stopSensorSession(sensorStop);
     } else if (isControlling(sgv)) {
       const haveCal = await calibration.haveCalibration(storage);
@@ -1308,12 +1312,13 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     },
 
     stopSensor: async () => {
-      await stopSensorSession(moment());
+      const stopTime = moment().subtract(2, 'hours');
+      await stopSensorSession(stopTime);
 
       const sgv = await getGlucose();
 
       if (transmitterInSession(sgv)) {
-        stopTransmitterSession();
+        stopTransmitterSession(stopTime);
       }
     },
 

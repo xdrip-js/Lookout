@@ -56,6 +56,12 @@ const argv = yargs
     alias: 'p',
     default: 3000,
   })
+  .option('hci', {
+    nargs: 1,
+    describe: 'Bluetooth adapter to use',
+    alias: 'h',
+    default: 0,
+  })
   .option('openaps', {
     nargs: 1,
     describe: 'OpenAPS directory',
@@ -114,6 +120,7 @@ const options = {
   max_lsr_pairs: params.max_lsr_pairs,
   max_lsr_pairs_age: params.max_lsr_pairs_age,
   include_mode: params.include_mode,
+  hci: params.hci,
 };
 
 const init = async () => {
@@ -136,6 +143,9 @@ const init = async () => {
       Debug.enable('*,*:*');
     }
   }
+
+  // Set which device for noble to use
+  process.env.NOBLE_HCI_DEVICE_ID = params.hci;
 
   // handle persistence here
   // make the storage direction relative to the install directory,

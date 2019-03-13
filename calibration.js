@@ -704,18 +704,27 @@ const validateTxmitterCalibration = (sensorInsert, sensorStop, latestBgCheckTime
   return true;
 };
 
-const validateExpiredCalibration = (sensorInsert, sensorStop, lastExpiredCal) => {
+const validateExpiredCalibration = async (
+  sensorInsert, sensorStop, lastExpiredCal, options, storage, bgChecks, glucoseHist,
+) => {
   let sensorInsertTime = null;
   let sensorInsertDelta = 0;
   let sensorStopTime = null;
   let sensorStopDelta = 0;
+  let expiredCal = lastExpiredCal;
 
   if (!lastExpiredCal) {
     log('No Expired Calibration');
+    // Try to generate an expired calibration
+    // This is needed on fresh startups when we haven't tried to generate one yet
+    expiredCal = await expiredCalibration(
+      options, storage, bgChecks, lastExpiredCal, sensorInsert, glucoseHist,
+    );
+
     return false;
   }
 
-  const lastExpiredCalTime = moment(lastExpiredCal.date).subtract(6, 'minutes');
+  const lastExpiredCalTime = moment(expiredCal.date).subtract(6, 'minutes');
 
   if (sensorInsert) {
     sensorInsertDelta = sensorInsert.diff(lastExpiredCalTime);
@@ -727,12 +736,12 @@ const validateExpiredCalibration = (sensorInsert, sensorStop, lastExpiredCal) =>
     sensorStopTime = sensorStop.format();
   }
 
-  if (!sensorInsert || !lastExpiredCal
+  if (!sensorInsert || !expiredCal
     || (sensorInsertDelta > 0)
     || (sensorStopDelta > 0)) {
     log('\n-----------------------------------------------\n'
       + 'No valid Expired Calibration -\n'
-      + `lastExpiredCal: ${moment(lastExpiredCal.date).format()}\n`
+      + `lastExpiredCal: ${moment(expiredCal.date).format()}\n`
       + `  sensorInsert: ${sensorInsertTime} sensorInsertDelta: ${sensorInsertDelta}`
       + `    sensorStop: ${sensorStopTime}   sensorStopDelta: ${sensorStopDelta}`
       + ' - if sensorInsertDelta > 0, latest sensor insert is after latest calibration calculation, invalidating calibration\n'
@@ -744,12 +753,18 @@ const validateExpiredCalibration = (sensorInsert, sensorStop, lastExpiredCal) =>
   return true;
 };
 
-const validateCalibration = async (storage, sensorInsert, sensorStop, latestBgCheckTime) => {
+const validateCalibration = async (
+  options, storage, sensorInsert, sensorStop, latestBgCheckTime,
+) => {
   const lastCal = await getTxmitterCal(storage);
   const lastExpiredCal = await getExpiredCal(storage);
+  const glucoseHist = await storage.getItem('glucoseHist');
+  const bgChecks = await storage.getItem('bgChecks');
 
   return (validateTxmitterCalibration(sensorInsert, sensorStop, latestBgCheckTime, lastCal)
-    || validateExpiredCalibration(sensorInsert, sensorStop, lastExpiredCal));
+    || validateExpiredCalibration(
+      sensorInsert, sensorStop, lastExpiredCal, options, storage, bgChecks, glucoseHist,
+    ));
 };
 
 calibrationExports.validateCalibration = validateCalibration;

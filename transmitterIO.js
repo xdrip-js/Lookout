@@ -245,7 +245,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       }
 
       const haveValidCal = await calibration.validateCalibration(
-        storage, sensorInsert, sensorStop, latestBgCheckTime,
+        options, storage, sensorInsert, sensorStop, latestBgCheckTime,
       );
 
       if (haveCal && !haveValidCal) {

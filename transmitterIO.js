@@ -167,9 +167,9 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     const now = moment();
     let stopWhen = stopTime || now;
 
-    // if the commanded stop time is older than 2 hours, use current time
+    // if the commanded stop time is older than 2 hours, use current time - 120 minutes
     if (stopTime.diff(now, 'minutes') > 132) {
-      stopWhen = now;
+      stopWhen = now - 120 * 60000;
     }
 
     await storage.setItem('sensorStop', stopWhen.valueOf())

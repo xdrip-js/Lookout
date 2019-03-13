@@ -73,7 +73,7 @@ sudo npm install -g npm
 sudo npm install -g npm
 ```
 
-**INFO** The command is show twice above because it takes two rounds of updates to get to the current version.
+**INFO** The command is show twice above because it takes two rounds of updates to get to the current version. Also, the old version stays resident in /usr/bin/npm location. To start using the new version, you must log out and log back in for the shell to see it.
 
 Lookout uses the bluez-tools software. Here are the instructions for installing bluez-tools:
 

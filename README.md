@@ -70,10 +70,9 @@ If you later need to revert your rig's NodeJS to the legacy version, follow the 
 The version of NPM that ships with raspbian is old (`1.4.21`).  You must update your rig's NPM to install Lookout dependencies.
 ```
 sudo npm install -g npm
-sudo npm install -g npm
 ```
 
-**INFO** The command is show twice above because it takes two rounds of updates to get to the current version. Also, the old version stays resident in /usr/bin/npm location. To start using the new version, you must log out and log back in for the shell to see it.
+**INFO** To start using the new version, you must log out and log back in for the shell to see it.
 
 Lookout uses the bluez-tools software. Here are the instructions for installing bluez-tools:
 

@@ -74,10 +74,11 @@ sudo npm install -g npm
 
 **INFO** To start using the new version, you must log out and log back in for the shell to see it.
 
-Lookout uses the bluez-tools software. Here are the instructions for installing bluez-tools:
+Lookout uses the bluez-tools and libudev-dev software. Here are the instructions for installing them:
 
 ```
 sudo apt-get install bluez-tools
+sudo apt-get install libudev-dev
 ```
 
 Lookout requires the openaps cgm type to be ```xdrip```. If you are not running xdrip as the openaps cgm type, then offline looping will not work. To change cgm type, re-run oref0-setup and choose xdrip as the cgm type.

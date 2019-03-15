@@ -721,7 +721,11 @@ const validateExpiredCalibration = async (
       options, storage, bgChecks, lastExpiredCal, sensorInsert, glucoseHist,
     );
 
-    return false;
+    if (!expiredCal) {
+      return false;
+    }
+
+    saveExpiredCal(storage, expiredCal);
   }
 
   const lastExpiredCalTime = moment(expiredCal.date).subtract(6, 'minutes');

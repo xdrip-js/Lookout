@@ -52,6 +52,7 @@ Expired calibration mode is enabled with the `--expired_cal` command line option
 **INFO** Expired calibration mode is in testing phase only and is NOT recommended. It is included in the code at this time so the user can monitor in the log file the delta between the official calibration values and the expired mode calculated calibration values.
 
 ## Pre-installation
+### Intel Explorer Rig
 You must update your rig's NodeJS based on https://github.com/xdrip-js/xdrip-js/wiki (only use the "Updating NodeJS" section of those instructions, you should not install xdrip-js manually, it will be installed in the next step as part of Lookout.)
 As of 13-Jun-2018, these steps are:
 ```
@@ -65,10 +66,19 @@ sudo apt-get install nodejs -y
 ```
 If you later need to revert your rig's NodeJS to the legacy version, follow the steps in the below section "Reverting NodeJS".
 
-Lookout uses the bluez-tools software. Here are the instructions for installing bluez-tools:
+### Raspberry Pi Rig
+The version of NPM that ships with raspbian is old (`1.4.21`).  You must update your rig's NPM to install Lookout dependencies.
+```
+sudo npm install -g npm
+```
+
+**INFO** To start using the new version, you must log out and log back in for the shell to see it.
+
+Lookout uses the bluez-tools and libudev-dev software. Here are the instructions for installing them:
 
 ```
 sudo apt-get install bluez-tools
+sudo apt-get install libudev-dev
 ```
 
 Lookout requires the openaps cgm type to be ```xdrip```. If you are not running xdrip as the openaps cgm type, then offline looping will not work. To change cgm type, re-run oref0-setup and choose xdrip as the cgm type.

@@ -84,9 +84,10 @@ module.exports = async (options, storage, client, fakeMeter) => {
   const getGlucose = async () => {
     const glucoseHist = await storage.getArray('glucoseHist');
 
-    if (glucoseHist.length === 0) {
+    if (glucoseHist.length > 0) {
       return glucoseHist[glucoseHist.length - 1];
     }
+
     return null;
   };
 

@@ -765,6 +765,14 @@ const validateCalibration = async (
   const glucoseHist = await storage.getItem('glucoseHist');
   const bgChecks = await storage.getItem('bgChecks');
 
+  if (!glucoseHist) {
+    glucoseHist = [];
+  }
+
+  if (!bgChecks) {
+    bgChecks = [];
+  }
+
   return (validateTxmitterCalibration(sensorInsert, sensorStop, latestBgCheckTime, lastCal)
     || validateExpiredCalibration(
       sensorInsert, sensorStop, lastExpiredCal, options, storage, bgChecks, glucoseHist,
@@ -835,7 +843,10 @@ calibrationExports.calibrateGlucose = async (
     sgv.g5calibrated = false;
   }
 
-  if (options.expired_cal && validateExpiredCalibration(sensorInsert, sensorStop, expiredCal)) {
+  if (options.expired_cal
+    && validateExpiredCalibration(
+      sensorInsert, sensorStop, expiredCal, options, storage, bgChecks, glucoseHist,
+    )) {
     const expiredCalGlucose = calcGlucose(sgv, expiredCal);
 
     if (!sgv.glucose) {

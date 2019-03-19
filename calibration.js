@@ -762,8 +762,8 @@ const validateCalibration = async (
 ) => {
   const lastCal = await getTxmitterCal(storage);
   const lastExpiredCal = await getExpiredCal(storage);
-  const glucoseHist = await storage.getItem('glucoseHist');
-  const bgChecks = await storage.getItem('bgChecks');
+  let glucoseHist = await storage.getItem('glucoseHist');
+  let bgChecks = await storage.getItem('bgChecks');
 
   if (!glucoseHist) {
     glucoseHist = [];

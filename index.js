@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 
-const storage = require('node-persist');
+const store = require('node-persist');
 
 const Debug = require('debug');
 
 const log = Debug('Lookout:log');
 
 const yargs = require('yargs');
+const storage = require('./storage');
 const syncNS = require('./syncNS');
 const FakeMeter = require('./fakemeter');
 const TransmitterIO = require('./transmitterIO');
@@ -102,8 +103,6 @@ const argv = yargs
   .strict(true)
   .help('help');
 
-const storageLock = require('./storageLock');
-
 const params = argv.argv;
 
 const options = {
@@ -152,7 +151,9 @@ const init = async () => {
   // handle persistence here
   // make the storage direction relative to the install directory,
   // not the calling directory
-  await storage.init({ dir: `${__dirname}/storage` });
+  await store.init({ dir: `${__dirname}/storage` });
+
+  storage.init(store);
 
   // Start the web GUI server
   const client = ClientIO(options);
@@ -160,11 +161,11 @@ const init = async () => {
   const fakeMeter = FakeMeter(options, storage, client);
 
   // Start the transmitter loop task
-  const transmitter = await TransmitterIO(options, storage, storageLock, client, fakeMeter);
+  const transmitter = await TransmitterIO(options, storage, client, fakeMeter);
 
   // Start the Nightscout synchronization loop task
   if (options.nightscout) {
-    syncNS(storage, storageLock, transmitter);
+    syncNS(storage, transmitter);
   }
 };
 

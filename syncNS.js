@@ -12,7 +12,6 @@ const TimeLimitedPromise = require('./timeLimitedPromise');
 const xDripAPS = require('./xDripAPS')();
 
 let storage = null;
-let storageLock = null;
 let transmitter = null;
 
 const syncCal = async (sensorInsert) => {
@@ -37,7 +36,7 @@ const syncCal = async (sensorInsert) => {
     debug(`SyncNS NS Cal - date: ${moment(NSCal.date).format()} slope: ${Math.round(NSCal.slope * 100) / 100} intercept: ${Math.round(NSCal.intercept * 10) / 10}`);
   }
 
-  await storageLock.lockStorage();
+  await storage.lock();
 
   // Always synchronize only the transmitter calibration
   // The expired cal is always able to be calculated
@@ -87,7 +86,7 @@ const syncCal = async (sensorInsert) => {
     debug('No rig or NS calibration');
   }
 
-  storageLock.unlockStorage();
+  storage.unlock();
 
   log('syncCal complete');
 };
@@ -113,7 +112,7 @@ const syncEvent = async (itemName, eventType) => {
     debug(`SyncNS NS ${eventType}- date: ${nsEvent.format()}`);
   }
 
-  await storageLock.lockStorage();
+  await storage.lock();
 
   rigItem = await storage.getItem(itemName)
     .catch((err) => {
@@ -168,7 +167,7 @@ const syncEvent = async (itemName, eventType) => {
     debug(`No rig ${itemName} or NS ${eventType}`);
   }
 
-  storageLock.unlockStorage();
+  storage.unlock();
 
   log(`Syncing rig ${itemName} and NS ${eventType} complete`);
 
@@ -181,16 +180,12 @@ const syncSGVs = async () => {
 
   log('syncSGVs started');
 
-  await storageLock.lockStorage();
+  await storage.lock();
 
-  rigSGVs = await storage.getItem('glucoseHist')
+  rigSGVs = await storage.getArray('glucoseHist')
     .catch((err) => {
       error(`Error getting rig SGVs: ${err}`);
     });
-
-  if (!rigSGVs) {
-    rigSGVs = [];
-  }
 
   // make sure they all have readDateMills for easy math
   for (let i = 0; i < rigSGVs; i += 1) {
@@ -338,7 +333,7 @@ const syncSGVs = async () => {
       error(`Unable to store glucoseHist: ${err}`);
     });
 
-  storageLock.unlockStorage();
+  storage.unlock();
 
   log('syncSGVs complete');
 
@@ -401,16 +396,12 @@ const syncBGChecks = async (sensorInsert, sensorStop) => {
     debug(`Most recent NS BG Check - date: ${bgCheck.created_at} type: ${bgCheck.glucoseType} glucose: ${bgCheck.glucose}`);
   }
 
-  await storageLock.lockStorage();
+  await storage.lock();
 
-  let rigBGChecks = await storage.getItem('bgChecks')
+  let rigBGChecks = await storage.getArray('bgChecks')
     .catch((err) => {
       error(`Error getting bgChecks: ${err}`);
     });
-
-  if (!rigBGChecks || !Array.isArray(rigBGChecks)) {
-    rigBGChecks = [];
-  }
 
   for (let i = 0; i < rigBGChecks.length; i += 1) {
     rigBGChecks[i].dateMills = moment(rigBGChecks[i].date).valueOf();
@@ -491,7 +482,7 @@ const syncBGChecks = async (sensorInsert, sensorStop) => {
       debug(`Unable to store bgChecks: ${err}`);
     });
 
-  storageLock.unlockStorage();
+  storage.unlock();
 
   let nsIndex = 0;
 
@@ -546,7 +537,7 @@ const calcNextSyncTimeDelay = (sgv) => {
   return (sgvTime - 30000 - now);
 };
 
-const syncNS = async (storage_, storageLock_, transmitter_) => {
+const syncNS = async (storage_, transmitter_) => {
   let sensorInsert = null;
   let sensorStart = null;
   let sensorStop = null;
@@ -561,7 +552,6 @@ const syncNS = async (storage_, storageLock_, transmitter_) => {
   );
 
   storage = storage_;
-  storageLock = storageLock_;
   transmitter = transmitter_;
 
   sensorInsert = await syncEvent('sensorInsert', 'Sensor Change')
@@ -592,7 +582,7 @@ const syncNS = async (storage_, storageLock_, transmitter_) => {
 
     setTimeout(() => {
       // Restart the syncNS after 5 minute
-      syncNS(storage, storageLock, transmitter);
+      syncNS(storage, transmitter);
     }, 5 * 60000);
 
     return;
@@ -643,7 +633,7 @@ const syncNS = async (storage_, storageLock_, transmitter_) => {
 
   setTimeout(() => {
     // Restart the syncNS after 5 minute
-    syncNS(storage, storageLock, transmitter);
+    syncNS(storage, transmitter);
   }, timeDelay);
 };
 

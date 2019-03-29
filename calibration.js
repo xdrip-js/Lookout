@@ -844,7 +844,7 @@ calibrationExports.calibrateGlucose = async (
   }
 
   if (options.expired_cal
-    && validateExpiredCalibration(
+    && await validateExpiredCalibration(
       sensorInsert, sensorStop, expiredCal, options, storage, bgChecks, glucoseHist,
     )) {
     const expiredCalGlucose = calcGlucose(sgv, expiredCal);

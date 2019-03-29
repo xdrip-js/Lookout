@@ -824,7 +824,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
         error(`Error getting rig SGVs: ${err}`);
       });
 
-    if (!rigSGVs) {
+    if (rigSGVs.length < 1) {
       // we really shouldn't have gotten to this
       // state, but bail since we don't have any
       // glucose history to work with

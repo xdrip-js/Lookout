@@ -46,7 +46,7 @@ call_fakemeter() {
 send_glucose() {
     if [ -d ~/myopenaps/plugins/once ]; then
         scriptf=~/myopenaps/plugins/once/run_fakemeter.sh
-        cat | sed -r 's/^ {4}//' > $scriptf << '        EOF'
+        cat > $scriptf <<- EOF
         #!/bin/bash
         fakemeter -m $meterId $calibratedBG
         EOF

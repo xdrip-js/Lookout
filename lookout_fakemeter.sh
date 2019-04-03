@@ -1,8 +1,8 @@
 #!/bin/bash
 
 die() {
-  echo "$@"
-  exit 1
+    echo "$@"
+    exit 1
 }
 
 # Usage: wait_for_silence <seconds of silence>
@@ -39,8 +39,22 @@ retry_fail() {
     || { echo "Couldn't $*"; die "$@"; }
 }
 
+call_fakemeter() {
+    fakemeter -m $meterId  $calibratedBG
+}
+
 send_glucose() {
-  fakemeter -m $meterId  $calibratedBG
+    if [ -d ~/myopenaps/plugins/once ]; then
+        scriptf=~/myopenaps/plugins/once/run_fakemeter.sh
+        cat | sed -r 's/^ {4}//' > $scriptf << '        EOF'
+        #!/bin/bash
+        fakemeter -m $meterId $calibratedBG
+        EOF
+
+        chmod +x $scriptf
+    else
+        retry_fail call_fakemeter
+    fi
 }
 
 meterId=$1
@@ -61,5 +75,5 @@ export MEDTRONIC_PUMP_ID=`grep serial ${myopenaps}/pump.ini | tr -cd 0-9`
 [[ -s ${myopenaps}/monitor/medtronic_frequency.ini ]] || die "Unable to find medtronic_frequency.ini file: ${myopenaps}/monitor/medtronic_frequency.ini"
 export MEDTRONIC_FREQUENCY=`cat ${myopenaps}/monitor/medtronic_frequency.ini`
 
-retry_fail send_glucose
+send_glucose
 

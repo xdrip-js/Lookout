@@ -183,17 +183,45 @@ Once the browser is open to your Lookout page (see above steps), you can:
 ## Using the command line to control your CGM
 The commands below can be entered on the rig command line to control the CGM. Regardless of which command is entered, after executing the command the command will enter a status loop indefinately printing the CGM status at each glucose read event. Enter `Ctrl-C` to exit the command.
 ```
-  lookout cal <sgv>                  # Calibrate the transmitter with provided glucose meter reading
-  lookout id <id>                    # Set transmitter ID
-  lookout meterid <meterid>          # Set transmitter ID
-  lookout start [sensor_serial]      # Start sensor session; sensor serial required for G6
-  lookout back-start [sensor_serial] # Start sensor session back dated by 2 hours; sensor serial required for G6
+  lookout cal <sgv>                  # Calibrate the transmitter with glucose meter reading. Example: `lookout cal 100`
+  lookout id <id>                    # Set transmitter ID. Example: `lookout id 9515`
+  lookout meterid <meterid>          # Set fakemeter ID. Example: `lookout meterid 123456`
+  lookout start [sensor_serial]      # Start sensor session; sensor serial required for G6. Example: `lookout start [9515]`
+  lookout back-start [sensor_serial] # Start sensor session back dated by 2 hours; sensor serial required for G6. 
+                                       Example: `lookout back-start [9515]`
   lookout stop                       # Stop sensor session
   lookout reset                      # Reset transmitter
   lookout status                     # Show status  [default]
 ```
 
 Use `-m` option for mmol instead of mg/dL. For example, `lookout -m cal 4.1` will calibrate with 4.1 mmol.
+
+## Replacing a Sensor, using the command line
+This assumes that a sensor session is active, and that you are using the same transmitter for both sessions. The goal is to minimize looping-downtime during the sensor change. This should work with a Dexcom G6 sensor.
+
+All commands as shown are entered from the Lookout directory level. To get into the Lookout directory, if you are watching a log etc., - start with Enter `Ctrl-C`, then enter `cd` to get to root level, then enter `cd Lookout`to get into the Lookout Directory. Note that "Lookout" is capitalized.
+
+### Pre-soak the sensor
+1. Insert new sensor some time before old sensor is ready to come out (2+ hours). 
+Note the sensor serial number, you'll want it later to start, to restart the sensor, and for troubleshooting. (take a photo ...)
+
+### Stop current sensor session once you are ready to change sensors
+2. To stop the current sensor session, enter `lookout stop`. 
+Note: Time the sensor change for a time where "not looping" for a while is OK - this might take some time to complete. Plan for 30 min, or more if something goes wrong.
+
+### Swap transmitter to new sensor 
+3. Transfer the current transmitter from the old sensor to the new, pre-soaked sensor. 
+Note: Don't reset the transmitter now, or you will have to wait the 2 hours designed into the system for a sensor change. Same, if you are starting with a new transmitter.
+
+### Start new sensor - "2 hours ago"
+4. Enter `lookout back-start [sensor_serial]` (yes, those are straight brackets around your serial number)
+
+### Wait a few minutes (~10 - 20 min)
+5. After a few minutes, the sensor should be reporting BG values. You might be asked to calibrate, or not. Keep that glucose meter handy, just in case.
+Yay. Go on looping with a new sensor!
+ 
+#### Note: `lookout back-start` will probably not work if you reset/have reset the transmitter after the "back-start" time, or start with a new transmitter. The transmitter must be "known to the rig" for 2 hours or more, to successfully back-start a sensor.
+ 
 
 ## Using Nightscout to control your CGM
 Entering records in Nightscout can also be used to control your CGM. Lookout synchronizes with Nightscout 30 seconds prior to every transmitter read event. Therefore, the entries described below must be inserted into Nightscout at least 30 seconds prior to the next read event or it will not be executed until the following event.

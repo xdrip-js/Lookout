@@ -653,7 +653,8 @@ module.exports = () => ({
 
     const eventRecord = await queryLatestEvent(type);
 
-    if (eventRecord && (eventRecord.length > 0)) {
+    if (eventRecord && (eventRecord.length > 0)
+      && eventRecord[0].created_at && (eventRecord[0].created_at.length > 10)) {
       eventTime = moment(eventRecord[0].created_at);
     }
 

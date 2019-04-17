@@ -629,9 +629,9 @@ const getLastCal = async (storage) => {
 calibrationExports.getLastCal = getLastCal;
 
 calibrationExports.clearCalibration = async (storage) => {
-  await storage.del('g5Calibration');
-  await storage.del('expiredCal');
-  await storage.del('bgChecks');
+  await storage.delItem('g5Calibration');
+  await storage.delItem('expiredCal');
+  await storage.delItem('bgChecks');
 
   const newCal = {
     date: Date.now(),

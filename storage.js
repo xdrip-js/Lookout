@@ -28,6 +28,14 @@ const setItem = async (name, value) => {
   return storage.setItem(name, value);
 };
 
+const setItemSync = (name, value) => {
+  if (!storage) {
+    throw Error('Storage not initialized');
+  }
+
+  return storage.setItemSync(name, value);
+};
+
 const delItem = async (name) => {
   if (storage) {
     return storage.del(name);
@@ -46,6 +54,8 @@ module.exports = {
   getArray: async name => getArray(name),
 
   setItem: async (name, value) => setItem(name, value),
+
+  setItemSync: (name, value) => setItemSync(name, value),
 
   delItem: async name => delItem(name),
 

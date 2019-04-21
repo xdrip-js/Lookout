@@ -1174,7 +1174,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
         clearTimeout(timerObj);
       }
 
-      if (id && id !== txId) {
+      if (id && id !== txId && txId) {
         removeBTDevices();
       }
 

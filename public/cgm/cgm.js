@@ -1,132 +1,188 @@
+/* global angular io moment */
 angular.module('AngularOpenAPS.cgm', [
   'ngRoute',
   'AngularOpenAPS.cgm.transmitter',
-  'AngularOpenAPS.cgm.sensor'
+  'AngularOpenAPS.cgm.sensor',
 ])
 
-.config(function($routeProvider) {
-  $routeProvider.when('/cgm', {
-    templateUrl: 'cgm/cgm.html'
-  });
-})
+  /* eslint-disable-next-line prefer-arrow-callback */
+  .config(function CGMConfig($routeProvider) {
+    $routeProvider.when('/cgm', {
+      templateUrl: 'cgm/cgm.html',
+    });
+  })
 
-.service('G5', ['socketFactory', function (socketFactory) {
-  const socket = socketFactory({
-    ioSocket: io.connect('/cgm')
-  });
+  .service('CGM', ['socketFactory', function CGMService(socketFactory) {
+    const socket = socketFactory({
+      ioSocket: io.connect('/cgm'),
+    });
 
-  let id;
-  let glucose;
-  // TODO: replace these with the real thing (faked for now)
-  let version = "1.2.3.4";
-  let lastCalibration;
-  let history = [];
+    let id;
+    let meterid;
+    let glucose;
+    // TODO: replace these with the real thing (faked for now)
+    const version = '1.2.3.4';
+    let lastCalibration;
+    let history = [];
 
-  let pendingActions;// = [
-  //   {date: Date.now(), glucose: 100},
-  //   {date: Date.now() - 1*60*1000, glucose: 100},
-  //   {date: Date.now() - 2*60*1000, glucose: 100},
-  //   {date: Date.now() - 3*60*1000, glucose: 100},
-  //   {date: Date.now() - 4*60*1000, glucose: 100},
-  //   {date: Date.now() - 5*60*1000, glucose: 100}
-  // ];
+    let pendingActions;// = [
+    //   {date: Date.now(), glucose: 100},
+    //   {date: Date.now() - 1*60*1000, glucose: 100},
+    //   {date: Date.now() - 2*60*1000, glucose: 100},
+    //   {date: Date.now() - 3*60*1000, glucose: 100},
+    //   {date: Date.now() - 4*60*1000, glucose: 100},
+    //   {date: Date.now() - 5*60*1000, glucose: 100}
+    // ];
 
-  this.transmitter = {
+    this.transmitter = {
     // properties
-    get id() {
-      return id;
-    },
-    set id(value) {
-      socket.emit('id', value)
-    },
-    get version() {
-      return version;
-    },
-    get activationDate() {
-      return glucose ? glucose.transmitterStartDate : null;
-    },
-    get status() {
-      return glucose ? glucose.status : null;
-    }
-  };
+      get id() {
+        return id;
+      },
+      set id(value) {
+        socket.emit('id', value);
+      },
+      get idValid() {
+        if (!id) {
+          return false;
+        }
 
-  this.sensor = {
+        const prefix = id.substr(0, 1);
+
+        if (id.length !== 6 || (prefix !== '8' && prefix !== '4')) {
+          return false;
+        }
+
+        return true;
+      },
+      get meterid() {
+        return meterid;
+      },
+      set meterid(value) {
+        socket.emit('meterid', value);
+      },
+      get version() {
+        return version;
+      },
+      get activationDate() {
+        return glucose ? moment(glucose.transmitterStartDate) : null;
+      },
+      get status() {
+        return glucose ? glucose.txStatusString : null;
+      },
+      get voltagea() {
+        return glucose ? glucose.voltagea : null;
+      },
+      get voltageb() {
+        return glucose ? glucose.voltageb : null;
+      },
+      get isG6() {
+        return (id.substr(0, 1) === '8');
+      },
+      reset() {
+        socket.emit('resetTx');
+      },
+    };
+
+    this.sensor = {
     // properties
-    get sessionStartDate() {
-      return glucose ? glucose.sessionStartDate : null;
-    },
-    get glucose() {
+      get sessionStartDate() {
+        return glucose ? moment(glucose.sessionStartDate) : null;
+      },
+      get glucose() {
       // only return the properties glucose, filtered, readDate and trend
       // - we don't need the rest
-      return glucose ?
-        (({ glucose, filtered, unfiltered, readDate, trend }) => ({ glucose, filtered, unfiltered, readDate, trend }))(glucose) :
-        null;
-    },
-    get state() {
-      return glucose ? glucose.state : null;
-    },
-    get stateString() {
-      return glucose ? glucose.stateString : null;
-    },
-    get lastCalibration() {
-      return lastCalibration;
-    },
-    get inSession() {
-      return glucose ? glucose.inSession : null;
-    },
-    get pendingActions() {
-      return pendingActions;
-    },
-    get history() {
-      return history;
-    },
+        return glucose
+          ? (({
+            /* eslint-disable-next-line no-shadow */
+            glucose, filtered, unfiltered, readDate, readDateMills, trend,
+          }) => ({
+            glucose, filtered, unfiltered, readDate, readDateMills, trend,
+          }))(glucose)
+          : null;
+      },
+      get state() {
+        return glucose ? glucose.state : null;
+      },
+      get stateString() {
+        return glucose ? glucose.stateString : null;
+      },
+      get lastCalibration() {
+        return lastCalibration;
+      },
+      get inSession() {
+        return glucose ? glucose.inSession : null;
+      },
+      get displayGlucose() {
+        return glucose
+          ? (glucose.inSession || glucose.inExpiredSession || glucose.inExtendedSession)
+          : null;
+      },
+      get pendingActions() {
+        return pendingActions;
+      },
+      get history() {
+        return history;
+      },
 
-    // methods
-    calibrate: function(value) {
-      console.log('emitting a cal value of ' + value);
-      socket.emit('calibrate', value);
-    },
-    start: function() {
-      console.log('starting sensor');
-      socket.emit('startSensor');
-    },
-    stop: function() {
-      console.log('stopping sensor');
-      socket.emit('stopSensor');
-    }
-  };
+      // methods
+      calibrate(value) {
+        socket.emit('calibrate', value);
+      },
+      start() {
+        socket.emit('startSensor');
+      },
+      backstart() {
+        socket.emit('backStartSensor');
+      },
+      stop() {
+        socket.emit('stopSensor');
+      },
+    };
 
-  socket.on('version', version => {
-    console.log('got version');
-    this.transmitter.version = version;
-  });
+    socket.on('version', (newVersion) => {
+      this.transmitter.version = newVersion;
+    });
 
-  socket.on('id', value => {
-    console.log('got id of ' + value);
-    id = value;
-  });
+    socket.on('id', (value) => {
+      id = value;
+    });
 
-  socket.on('glucose', value => {
-    glucose = value;
-  });
+    socket.on('meterid', (value) => {
+      meterid = value;
+    });
 
-  socket.on('calibration', calibration => {
-    console.log('got calibration');
-    this.sensor.calibration = calibration;
-  });
+    socket.on('glucose', (value) => {
+      glucose = value;
 
-  socket.on('pending', pending => {
-    console.log('got pending');
-    pendingActions = pending;
-  });
+      if (history.length > 0) {
+        const latestSGV = history[history.length - 1];
 
-  socket.on('calibrationData', data => {
-    console.log('got calibration data');
-    lastCalibration = data;
-  });
+        if (glucose.readDateMills > latestSGV.readDate) {
+          history.push({
+            readDate: glucose.readDateMills,
+            glucose: glucose.glucose,
+          });
 
-  socket.on('glucoseHistory', data => {
-    console.log('got glucose history');
-    history = data;
-  })
-}]);
+          // only hold enough for the last 24 hours.
+          history = history.slice(-12 * 24);
+        }
+      }
+    });
+
+    socket.on('calibration', (calibration) => {
+      this.sensor.calibration = calibration;
+    });
+
+    socket.on('pending', (pending) => {
+      pendingActions = pending;
+    });
+
+    socket.on('calibrationData', (data) => {
+      lastCalibration = data;
+    });
+
+    socket.on('glucoseHistory', (data) => {
+      history = data;
+    });
+  }]);

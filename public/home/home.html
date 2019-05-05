@@ -1,7 +1,7 @@
 <div class="scrollable">
   <div class="scrollable-content section">
     <div class="list-group text-center">
-      <div class="list-group-item list-group-item-home text-primary" ng-if="sensor.inSession">
+      <div class="list-group-item list-group-item-home text-primary" ng-if="sensor.displayGlucose">
         <div >
           {{ glucoseAge | time }} ago
           <br>
@@ -12,13 +12,18 @@
               {{ sensor.glucose.glucose | glucose: true }}
               <span ng-bind-html="arrow()"></span>
             </h1>
-            (filtered: {{ sensor.glucose.filtered | glucose: true }}, unfiltered: {{ sensor.glucose.unfiltered | glucose }})
+            (filtered: {{ sensor.glucose.filtered }}, unfiltered: {{ sensor.glucose.unfiltered }})
             <!-- +4 mg/dl -->
         </div>
       </div>
 
+      <div class="list-group-item list-group-item-home list-group-item-warning" ng-if="!transmitter.idValid">
+        Current Transmitter ID is invalid: "{{ transmitter.id }}"
+      </div>
+
       <div class="list-group-item list-group-item-home" ng-if="!sensor.inSession">
-        <button class="btn btn-warning" ng-click="sensor.start()">Start sensor</button>
+        <button class="btn btn-warning" ng-click="start()">Start sensor</button>
+        <button class="btn btn-warning" ng-click="backstart()">Start sensor 2 hours ago</button>
       </div>
 
 

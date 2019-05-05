@@ -1,5 +1,5 @@
 <div ui-content-for="title">
-  <span>Pair New</span>
+  <span>Reset Transmitter</span>
 </div>
 
 <div ui-content-for="navbar-left">
@@ -8,22 +8,15 @@
 
 <div class="scrollable">
   <div class="scrollable-content section">
-    <form name="pairform" role="form" ng-submit="pairform.$valid && setID(newID)">
+    <form role="form" ng-submit="resetTxmitter()">
       <fieldset>
-        <legend>Enter transmitter ID</legend>
+        <legend>Reset Transmitter?</legend>
         <div class="form-group has-success has-feedback">
-          <!-- <label>ID</label> -->
-          <input type="text"
-                 ng-model="newID"
-                 required ng-minlength="6"
-                 required ng-maxlength="6"
-                 class="form-control"
-                 placeholder="{{ transmitter.id }}">
         </div>
       </fieldset>
       <hr>
       <button class="btn btn-primary btn-block">
-        Save
+        Reset
       </button>
     </form>
   </div>

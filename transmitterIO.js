@@ -1,645 +1,1395 @@
-const xDripAPS = require("./xDripAPS")();
-const calibration = require('./calibration');
-const storage = require('node-persist');
 const cp = require('child_process');
-const request = require('request-promise-native');
 const moment = require('moment');
-var _ = require('lodash');
 
-module.exports = (io, extend_sensor_opt) => {
-  let id;
+const Debug = require('debug');
+
+const log = Debug('transmitterIO:log');
+const error = Debug('transmitterIO:error');
+const debug = Debug('transmitterIO:debug');
+
+const _ = require('lodash');
+const calibration = require('./calibration');
+const xDripAPS = require('./xDripAPS')();
+
+module.exports = async (options, storage, client, fakeMeter) => {
+  let txId;
+  let txAddress = null;
+  let txFailedReads = 0;
+  let txStatus = null;
   let pending = [];
-  let extend_sensor = extend_sensor_opt;
+  let worker = null;
+  let timerObj = null;
+  let lastSuccessfulTxmitterCalTime = null;
+  let lastSuccessfulRead = null;
 
-  const removeBTDevice = (id) => {
-    var btName = "Dexcom"+id.slice(-2);
+  const transmitterInSession = (sgv) => {
+    if (sgv && ('inSession' in sgv) && sgv.inSession) {
+      return true;
+    }
+    return false;
+  };
 
-    cp.exec('bt-device -r '+btName, (err, stdout, stderr) => {
+  const filterPending = (oldPending) => {
+    const newPending = oldPending.filter((msg) => {
+      // Don't send stop or start sensors older than 2 hours and 12 minutes
+      if (((msg.type === 'StopSensor') || (msg.type === 'StartSensor')) && ((Date.now() - msg.date) > 132 * 60000)) {
+        return false;
+      }
+
+      // Don't send other messages older than 12 minutes
+      if (((msg.type !== 'StopSensor') && (msg.type !== 'StartSensor')) && (Date.now() - msg.date) > 12 * 60000) {
+        return false;
+      }
+
+      return true;
+    });
+
+    return newPending;
+  };
+
+  const sgvGaps = (rigSGVs) => {
+    const now = moment().valueOf();
+    const minDate = moment().subtract(24, 'hours').valueOf();
+
+    const rigGaps = [];
+
+    if (rigSGVs && (rigSGVs.length > 0)) {
+      let prevTime = rigSGVs[0].readDateMills;
+
+      for (let i = 1; i < rigSGVs.length; i += 1) {
+        // Add 1 minute to gapStart and subtract 1 minute from gapEnd to prevent duplicats
+        const gap = {
+          gapStart: moment(prevTime + 60000),
+          gapEnd: moment(rigSGVs[i].readDateMills - 60000),
+        };
+        if ((rigSGVs[i].readDateMills - prevTime) > 6 * 60000) {
+          rigGaps.push(gap);
+        }
+
+        prevTime = rigSGVs[i].readDateMills;
+      }
+
+      if ((now - prevTime) > 6 * 60000) {
+        // Add 1 minute to gapStart to prevent duplicats
+        rigGaps.push({ gapStart: moment(prevTime + 60000), gapEnd: moment(now) });
+      }
+    } else {
+      // Add 1 minute to gapStart to prevent duplicats
+      rigGaps.push({ gapStart: moment(minDate + 60000), gapEnd: moment(now) });
+    }
+
+    return rigGaps;
+  };
+
+  const getGlucose = async () => {
+    const glucoseHist = await storage.getArray('glucoseHist');
+
+    if (glucoseHist.length > 0) {
+      return glucoseHist[glucoseHist.length - 1];
+    }
+
+    return null;
+  };
+
+  const removeBTDevice = (btName) => {
+    cp.exec(`bt-device -a hci${options.hci} -r ${btName}`, (err, stdout, stderr) => {
       if (err) {
-        console.log('Unable to remove BT Device: ' + btName+' - ' + err);
+        debug(`Unable to remove BT Device: ${btName} - ${err}`);
         return;
       }
 
-      console.log('Removed BT Device: '+btName);
-      console.log(`stdout: ${stdout}`);
-      console.log(`stderr: ${stderr}`);
+      log(`Removed BT Device: ${btName}`);
+      debug(`stdout: ${stdout}`);
+      debug(`stderr: ${stderr}`);
     });
-  }
+  };
 
-  const calculateNewNSCalibration = (lastCal, lastG5CalTime, glucoseHist, currSGV) => {
-    // set it to a high number so we upload a new cal
-    // if we don't have a previous calibration
+  const removeBTDevices = () => {
+    const btName = `Dexcom${txId.slice(-2)}`;
 
-    // Do not calculate a new calibration value
-    // if we don't have a valid calibrated glucose reading
-    if (currSGV.glucose > 300 || currSGV.glucose < 80) {
-      console.log('Current glucose out of range to calibrate: ' + currSGV.glucose);
-      return null;
+    removeBTDevice(btName);
+
+    if (txAddress) {
+      const btAddressName = txAddress.split(':').join('-').toUpperCase();
+
+      removeBTDevice(btAddressName);
+    }
+  };
+
+  // Return true if there is no SGV or the most recent SGV was received from transmitter
+  // Also return true if the latest SGV we have is more than 15 minutes old
+  // Return false if most recent SGV was received from NS
+  const isControlling = async (sgv) => {
+    let latestSgv = sgv;
+
+    if (!latestSgv) {
+      latestSgv = await getGlucose();
     }
 
-    var calErr = 100;
-    var calValue;
-    var i;
-
-    if (lastCal) {
-      calValue = (currSGV.unfiltered-lastCal.intercept)/lastCal.slope;
-      calErr = calValue - currSGV.glucose;
-
-      console.log('Current calibration error: ' + Math.round(calErr*10)/10 + ' calibrated value: ' + Math.round(calValue*10)/10 + ' slope: ' + Math.round(lastCal.slope*10)/10 + ' intercept: ' + Math.round(lastCal.intercept*10)/10);
+    // inSession is only in the SGV record if it came from transmitter
+    if (!latestSgv || (typeof latestSgv.inSession !== 'undefined')) {
+      return true;
     }
 
-    // Check if we need a calibration
-    if (!lastCal || (Math.abs(calErr) > 5)) {
-      var calPairs = [];
-      // Suitable values need to be:
-      //   less than 300 mg/dl
-      //   greater than 80 mg/dl
-      //   calibrated via G5, not Lookout
-      //   12 minutes after the last G5 calibration time (it takes up to 2 readings to reflect calibration updates)
-      for (i=0; i < glucoseHist.length; ++i) {
-        let sgv = glucoseHist[i];
-  
-        if ((sgv.readDate > (lastG5CalTime + 12*60*1000)) && (sgv.glucose < 300) && (sgv.glucose > 80) && sgv.g5calibrated) {
-          calPairs.push(sgv);
-        }
-      }
+    if ((moment().valueOf() - latestSgv.readDateMills) > 15 * 60000) {
+      return true;
+    }
 
-      // If we have at least 3 good pairs, use LSR
-      if (calPairs.length > 3) {
-        calResult = calibration.lsrCalibration(calPairs);
+    return false;
+  };
 
-        if ((calResult.slope > 12.5) || (calResult.slope < 0.45)) {
-            // wait until the next opportunity
-            console.log('Slope out of range to calibrate: ' + calResult.slope);
-            return null;
+  const rebootRig = async () => {
+    if (await isControlling()) {
+      error(
+        '\n====================================\n'
+        + `Too many read failures: ${txFailedReads} failures, rebooting rig`
+        + '\n====================================',
+      );
+
+      cp.exec('bash -c "wall Rebooting Due to Transmitter Read Errors; sleep 5; shutdown -r now"', (err, stdout, stderr) => {
+        if (err) {
+          error(`Unable to reboot rig: - ${err}`);
+          return;
         }
 
-        console.log('Calibrated with LSR');
+        debug(`stdout: ${stdout}`);
+        debug(`stderr: ${stderr}`);
+      });
+    } else {
+      error(
+        '\n====================================\n'
+        + `Too many read failures: ${txFailedReads} failures, but not rebooting because not controlling rig\n`
+        + '\n====================================',
+      );
+    }
+  };
 
-        return {
-          date: Date.now(),
-          scale: 1,
-          intercept: calResult.yIntercept,
-          slope: calResult.slope,
-          type: calResult.calibrationType
-        };
-      } else if (calPairs.length > 0) {
-        calResult = calibration.singlePointCalibration(calPairs);
+  const stopSensorSession = async (stopTime) => {
+    const now = moment();
+    let stopWhen = stopTime || now;
 
-        console.log('Calibrated with Single Point');
+    // if the commanded stop time is older than 2 hours, use current time - 120 minutes
+    if (stopTime.diff(now, 'minutes') > 132) {
+      stopWhen = now - 120 * 60000;
+    }
 
-        return {
-          date: Date.now(),
-          scale: 1,
-          intercept: calResult.yIntercept,
-          slope: calResult.slope,
-          type: calResult.calibrationType
-        };
+    await storage.setItem('sensorStop', stopWhen.valueOf())
+      .catch((err) => {
+        error(`Unable to store sensorStop: ${err}`);
+      });
+
+    await storage.delItem('glucoseHist');
+    await calibration.clearCalibration(storage);
+  };
+
+  const stopTransmitterSession = (stopTime) => {
+    const twoAgo = moment().subtract(2, 'hours');
+
+    const stopWhen = stopTime || twoAgo;
+
+    // Stop sensor 2 hours prior to now to enable a rapid restart
+    // if one is desired.
+    pending.push({ date: stopWhen.valueOf(), type: 'StopSensor' });
+
+    pending = filterPending(pending);
+
+    client.newPending(pending);
+  };
+
+  // Checks whether the current sensor session should end based on
+  // the latest sensor stop and sensor insert records.
+  const checkSensorSession = async (sensorInsert, sensorStop, bgChecks, sgv) => {
+    let sessionStart = 0;
+    let sensorStartDelta = 0;
+    let sensorStopDelta = 0;
+    const txmitterInSession = transmitterInSession(sgv);
+
+    if (txmitterInSession) {
+      // this is only true if we are the controlling rig AND the transmitter has an active session
+      sessionStart = moment(sgv.sessionStartDate);
+
+      // Give 6 minutes extra time
+      sensorStartDelta = sensorInsert
+        ? (sensorInsert.valueOf() - sessionStart.valueOf() - 6 * 60000) : 0;
+
+      sensorStopDelta = sensorStop ? (sensorStop.valueOf() - sessionStart.valueOf()) : 0;
+    }
+
+    if (txmitterInSession && (sensorStartDelta > 0 || sensorStopDelta > 0)) {
+      // give a 2 hour play between the sensor insert record
+      // and the session start date from the transmitter
+      if (sensorStartDelta > 0) {
+        log(
+          '\n===================================='
+          + `\nSensor Insert, ${sensorInsert.format()}, is after Sensor Start, ${sessionStart.format()}`
+          + '\nStopping Sensor Session'
+          + '\n====================================',
+        );
       } else {
-        console.log('Calibration needed, but no suitable glucose pairs found.');
-        return null;
+        log(
+          '\n===================================='
+          + `\nSensor Stop, ${sensorStop.format()}, is after Sensor Start, ${sessionStart.format()}`
+          + '\nStopping Sensor Session'
+          + '\n====================================',
+        );
       }
-    } else {
-      console.log('No calibration update needed.');
-      return null;
-    }
-  }
+      debug(`Session Start: ${sessionStart} sensorStart: ${sensorInsert} sensorStop: ${sensorStop}`);
+      stopTransmitterSession(sensorStop);
+      await stopSensorSession(sensorStop);
+    } else if (isControlling(sgv)) {
+      const haveCal = await calibration.haveCalibration(storage);
 
-  const sensorInsertedCheck = (lastCal) => {
-      const secret = process.env.API_SECRET;
-      let ns_url = process.env.NIGHTSCOUT_HOST + '/api/v1/treatments.json?';
+      let latestBgCheckTime = null;
 
-      // time format needs to match the output of 'date -d "3 hours ago" -Iminutes -u'
-      let ns_query = 'find\[created_at\]\[\$gte\]=' + moment().subtract(3, 'hours').toISOString() + '&find\[eventType\]\[\$regex\]=Sensor';
-
-      let ns_headers = {
-          'Content-Type': 'application/json'
-      };
-
-      if (secret.startsWith("token=")) {
-        ns_url = ns_url + secret + '&';
-      } else {
-        ns_headers = {
-          'Content-Type': 'application/json',
-          'API-SECRET': secret
-        };
-
+      if (bgChecks && (bgChecks.length > 0)) {
+        latestBgCheckTime = moment(bgChecks[bgChecks.length - 1].dateMills);
       }
 
-      ns_url = ns_url + ns_query;
+      const haveValidCal = await calibration.validateCalibration(
+        options, storage, sensorInsert, sensorStop, latestBgCheckTime,
+      );
 
-      let optionsNS = {
-          url: ns_url,
-          method: 'GET',
-          headers: ns_headers,
-          json: true
-      };
-
-      return request(optionsNS);
-  }
-
-  // Calculate the sum of the distance of all points (overallDistance)
-  // Calculate the overall distance between the first and the last point (overallDistance)
-  // Calculate the noise as the following formula: 1 - sod / overallDistance
-  // Noise will get closer to zero as the sum of the individual lines are mostly in a straight or straight moving curve
-  // Noise will get closer to one as the sum of the distance of the individual lines get large
-  // Also add multiplier to get more weight to the latest BG values
-  // Also added weight for points where the delta shifts from pos to neg or neg to pos (peaks/valleys)
-  // the more peaks and valleys, the more noise is amplified
-  const calcSensorNoise = (glucoseHist) => {
-    const MAXRECORDS=8;
-    const MINRECORDS=4;
-    var noise = 0;
-
-    var sgvArr = glucoseHist.slice(-MAXRECORDS);
-
-    n=sgvArr.length;
-
-    let firstSGV = sgvArr[0].glucose * 1000.0;
-    let firstTime = sgvArr[0].readDate / 1000.0 * 30.0;
-
-    let lastSGV = sgvArr[n-1].glucose * 1000.0;
-    let lastTime = sgvArr[n-1].readDate / 1000.0 * 30.0;
-
-    let xarr = [];
-
-    for (var i=0; i < n; i++) {
-      xarr.push(sgvArr[i].readDate / 1000.0 * 30.0 - firstTime);
-    }
-
-    // sod = sum of distances
-    var sod=0;
-    var lastDelta=0
-
-    for (var i=1; i < n; i++) {
-      // y2y1Delta adds a multiplier that gives 
-      // higher priority to the latest BG's
-      let y2y1Delta=(sgvArr[i].glucose - sgvArr[i-1].glucose) * 1000.0 * (1 + i / (n*3));
-
-      let x2x1Delta=xarr[i] - xarr[i-1];
-
-      if ((lastDelta > 0) && (y2y1Delta < 0)) {
-        // switched from positive delta to negative, increase noise impact  
-        y2y1Delta=y2y1Delta * 1.1;
+      if (haveCal && !haveValidCal) {
+        log(
+          '\n===================================='
+          + '\nTransmitter not in session and found sensor change, start, or stop after latest calibration and transmitter not in session. Stopping Sensor Session.'
+          + '\nSee calibration log messages above for details'
+          + '\n====================================',
+        );
+        await stopSensorSession(sensorStop);
       }
-      else if ((lastDelta < 0) && (y2y1Delta > 0)) {
-        // switched from negative delta to positive, increase noise impact 
-        y2y1Delta=y2y1Delta * 1.2;
-      }
+    }
+  };
 
-      sod=sod + Math.sqrt(Math.pow(x2x1Delta, 2) + Math.pow(y2y1Delta, 2));
+  const inSensorSession = (sgv) => {
+    if (transmitterInSession(sgv)) {
+      return true;
     }
 
-    var overallsod=Math.sqrt(Math.pow(lastSGV - firstSGV, 2) + Math.pow(lastTime - firstTime, 2));
+    // If the transmitter is not in a session, return whether
+    // we have a valid set of calibration values
+    return calibration.haveCalibration(storage);
+  };
 
-    if ((n < MINRECORDS) || (sod == 0)) {
-      // assume no noise if no records
-      noise = 0;
-    } else {
-      noise=1 - (overallsod/sod);
+  const startSession = async (startTime, sensorSerialCode) => {
+    const sgv = await getGlucose();
+
+    log(
+      '\n===================================='
+      + `\nAttempting to start sensor session at time: ${moment(startTime).format()}`
+      + '\n====================================',
+    );
+
+    if (!inSensorSession(sgv)) {
+      // Only enter a sensorStart if we aren't
+      // in either a transmitter session, extend session, or expired session
+      await storage.setItem('sensorStart', Date.now())
+        .catch((err) => {
+          error(`Error setting rig sensorStart: ${err}`);
+        });
     }
 
-    return noise;
-  }
+    if (!transmitterInSession(sgv)) {
+      let startPending = false;
 
-  // Return 10 minute trend total
-  const calcTrend = (glucoseHist) => {
-    let direction = "NONE";
-    let sgvHist = null;
-    let totalDelta = 0;
-
-    let trend = 0;
-
-
-    if (glucoseHist.length > 1) {
-      let minDate = moment().subtract(16, 'minutes');
-      let maxDate = null;
-      let sliceStart = 0;
-      let timeSpan = 0;
-      let totalDelta = 0;
-
-      // delete any deltas > 16 minutes
-      for (var i=0; i < glucoseHist.length; ++i) {
-        if (moment(glucoseHist[i].readDate).diff(minDate) < 0) {
-          sliceStart = i+1;
+      _.each(pending, (cmd) => {
+        if (cmd.type === 'StartSensor') {
+          startPending = true;
         }
+      });
+
+      if (!startPending) {
+        pending.push({ date: startTime, type: 'StartSensor', sensorSerialCode });
+
+        pending = filterPending(pending);
+
+        client.newPending(pending);
       }
+    }
+  };
 
-      sgvHist = glucoseHist.slice(sliceStart);
+  const sendNewGlucose = async (sgv, sendSGV) => {
+    client.newSGV(sgv);
 
-      if (sgvHist.length > 1) {
-        minDate = sgvHist[0].readDate;
-        maxDate = sgvHist[sgvHist.length-1].readDate;
+    if (sgv.glucose) {
+      // wait for fakeMeter to finish so it doesn't interfere with
+      // pump-loop
+      await fakeMeter.glucose(sgv.glucose);
+    }
 
-        totalDelta = sgvHist[sgvHist.length-1].glucose - sgvHist[0].glucose;
+    if (options.nightscout) {
+      xDripAPS.post(sgv, sendSGV);
+    }
+  };
 
-        timeSpan = (maxDate - minDate)/1000.0/60.0;
+  const sendCGMStatus = async (sgv, bgChecks) => {
+    let latestBGCheckTime = null;
 
-        trend=10 * totalDelta / timeSpan;
+    if (bgChecks.length > 0) {
+      latestBGCheckTime = bgChecks[bgChecks.length - 1].dateMills;
+    }
+
+    const activeCal = await calibration.getActiveCal(options, storage);
+
+    if (options.nightscout) {
+      xDripAPS.postStatus(txId, sgv, txStatus, activeCal, latestBGCheckTime);
+    }
+  };
+
+  // Store the last 24 hours of glucose readings
+  const storeNewGlucose = async (glucoseHist, sgv) => {
+    glucoseHist.push(sgv);
+
+    let newGlucoseHist = _.sortBy(glucoseHist, ['readDateMills']);
+
+    const minDate = moment().subtract(24, 'hours').valueOf();
+    let sliceStart = 0;
+
+    // store the last 24 hours of glucose
+    // history is used to determine trend and noise values
+    // and back fill nightscout.
+    for (let i = 0; i < newGlucoseHist.length; i += 1) {
+      if (newGlucoseHist[i].readDateMills < minDate) {
+        sliceStart = i + 1;
       }
-    } else {
-      console.log('Not enough history for trend calculation: ' + glucoseHist.length);
     }
 
-    return trend;
-  }
+    newGlucoseHist = newGlucoseHist.slice(sliceStart);
 
-  // Return sensor noise
-  const calcNSNoise = (noise, glucoseHist) => {
-    let nsNoise = 0; // Unknown
-    let currSGV = glucoseHist[glucoseHist.length-1];
-    let deltaSGV = 0;
+    await storage.setItem('glucoseHist', newGlucoseHist)
+      .catch((err) => {
+        error(`Unable to store glucoseHist: ${err}`);
+      });
+  };
 
-    if (glucoseHist.length > 1) {
-      deltaSGV = currSGV.glucose - glucoseHist[glucoseHist.length-2].glucose;
+  const txStatusString = (state) => {
+    switch (state) {
+      case null:
+        return 'None';
+      case 0x00:
+        return 'OK';
+      case 0x81:
+        return 'Low battery';
+      case 0x83:
+        return 'Expired';
+      default:
+        return state ? `Unknown: 0x${state.toString(16)}` : '--';
+    }
+  };
+
+  const txStatusStringShort = (state) => {
+    switch (state) {
+      case null:
+        return '--';
+      case 0x00:
+        return 'OK';
+      case 0x81:
+        return 'Low bat';
+      case 0x83:
+        return 'Expired';
+      default:
+        return state ? `Unknown: 0x${state.toString(16)}` : '--';
+    }
+  };
+
+  const stateString = (sgv) => {
+    let state = null;
+
+    switch (sgv.state) {
+      case 0x00:
+        state = 'None';
+        break;
+      case 0x01:
+        state = 'Stopped';
+        break;
+      case 0x02:
+        state = 'Warmup';
+        break;
+      case 0x03:
+        state = 'Unused';
+        break;
+      case 0x04:
+        state = 'First calibration';
+        break;
+      case 0x05:
+        state = 'Second calibration';
+        break;
+      case 0x06:
+        state = 'OK';
+        break;
+      case 0x07:
+        state = 'Need calibration';
+        break;
+      case 0x08:
+        state = 'Calibration Error 1';
+        break;
+      case 0x09:
+        state = 'Calibration Error 0';
+        break;
+      case 0x0a:
+        state = 'Calibration Linearity Fit Failure';
+        break;
+      case 0x0b:
+        state = 'Sensor Failed Due to Counts Aberration';
+        break;
+      case 0x0c:
+        state = 'Sensor Failed Due to Residual Aberration';
+        break;
+      case 0x0d:
+        state = 'Out of Calibration Due To Outlier';
+        break;
+      case 0x0e:
+        state = 'Outlier Calibration Request - Need a Calibration';
+        break;
+      case 0x0f:
+        state = 'Session Expired';
+        break;
+      case 0x10:
+        state = 'Session Failed Due To Unrecoverable Error';
+        break;
+      case 0x11:
+        state = 'Session Failed Due To Transmitter Error';
+        break;
+      case 0x12:
+        state = 'Temporary Session Failure - ???';
+        break;
+      case 0x13:
+        state = 'Reserved';
+        break;
+      case 0x80:
+        state = 'Calibration State - Start';
+        break;
+      case 0x81:
+        state = 'Calibration State - Start Up';
+        break;
+      case 0x82:
+        state = 'Calibration State - First of Two Calibrations Needed';
+        break;
+      case 0x83:
+        state = 'Calibration State - High Wedge Display With First BG';
+        break;
+      case 0x84:
+        state = 'Unused Calibration State - Low Wedge Display With First BG';
+        break;
+      case 0x85:
+        state = 'Calibration State - Second of Two Calibrations Needed';
+        break;
+      case 0x86:
+        state = 'Calibration State - In Calibration Transmitter';
+        break;
+      case 0x87:
+        state = 'Calibration State - In Calibration Display';
+        break;
+      case 0x88:
+        state = 'Calibration State - High Wedge Transmitter';
+        break;
+      case 0x89:
+        state = 'Calibration State - Low Wedge Transmitter';
+        break;
+      case 0x8a:
+        state = 'Calibration State - Linearity Fit Transmitter';
+        break;
+      case 0x8b:
+        state = 'Calibration State - Out of Cal Due to Outlier Transmitter';
+        break;
+      case 0x8c:
+        state = 'Calibration State - High Wedge Display';
+        break;
+      case 0x8d:
+        state = 'Calibration State - Low Wedge Display';
+        break;
+      case 0x8e:
+        state = 'Calibration State - Linearity Fit Display';
+        break;
+      case 0x8f:
+        state = 'Calibration State - Session Not in Progress';
+        break;
+      default:
+        state = sgv.state ? `Unknown: 0x${sgv.state.toString(16)}` : '--';
     }
 
-    if (currSGV.glucose > 400) {
-      console.log('Glucose ' + currSGV.glucose + ' > 400 - setting noise level Heavy');
-      nsNoise = 4;
-    } else if (currSGV.glucose < 40) {
-      console.log('Glucose ' + currSGV.glucose + ' < 40 - setting noise level Light');
-      nsNoise = 2;
-    } else if (Math.abs(deltaSGV) > 30) {
-      console.log('Glucose change ' + deltaSGV + ' out of range [-30, 30] - setting noise level Heavy');
-      nsNoise = 4;
-    } else if (noise < 0.35) {
-      nsNoise = 1; // Clean
-    } else if (noise < 0.5) {
-      nsNoise = 2; // Light
-    } else if (noise < 0.7) {
-      nsNoise = 3; // Medium
-    } else if (noise >= 0.7) {
-      nsNoise = 4; // Heavy
+    return state;
+  };
+
+  const stateStringShort = (sgv) => {
+    let state = null;
+
+    switch (sgv.state) {
+      case 0x00:
+        state = 'None';
+        break;
+      case 0x01:
+        state = 'Stopped';
+        break;
+      case 0x02:
+        state = 'Warmup';
+        break;
+      case 0x03:
+        state = 'Unused';
+        break;
+      case 0x04:
+        state = '1st Cal';
+        break;
+      case 0x05:
+        state = '2nd Cal';
+        break;
+      case 0x06:
+        state = 'OK';
+        break;
+      case 0x07:
+        state = 'Need Cal';
+        break;
+      case 0x08:
+        state = 'Cal Err 1';
+        break;
+      case 0x09:
+        state = 'Cal Err 0';
+        break;
+      case 0x0a:
+        state = 'Cal Lin Fit';
+        break;
+      case 0x0b:
+        state = 'Fail Counts';
+        break;
+      case 0x0c:
+        state = 'Fail Resid';
+        break;
+      case 0x0d:
+        state = 'Outlier';
+        break;
+      case 0x0e:
+        state = 'Cal NOW';
+        break;
+      case 0x0f:
+        state = 'Expired';
+        break;
+      case 0x10:
+        state = 'Unrecoverable';
+        break;
+      case 0x11:
+        state = 'Failed Tx';
+        break;
+      case 0x12:
+        state = 'Temp Fail';
+        break;
+      case 0x13:
+        state = 'Reserved';
+        break;
+      case 0x80:
+        state = 'Cal - Start';
+        break;
+      case 0x81:
+        state = 'Cal - Start Up';
+        break;
+      case 0x82:
+        state = '1 of 2 Cal';
+        break;
+      case 0x83:
+        state = 'Hi Wedge Display';
+        break;
+      case 0x84:
+        state = 'Unused Cal';
+        break;
+      case 0x85:
+        state = '2 of 2 Cal';
+        break;
+      case 0x86:
+        state = 'In Cal Tx';
+        break;
+      case 0x87:
+        state = 'In Cal Display';
+        break;
+      case 0x88:
+        state = 'Hi Wedge Tx';
+        break;
+      case 0x89:
+        state = 'Lo Wedge Tx';
+        break;
+      case 0x8a:
+        state = 'Lin Fit Tx';
+        break;
+      case 0x8b:
+        state = 'Outlier Cal Tx';
+        break;
+      case 0x8c:
+        state = 'Hi Wedge Display';
+        break;
+      case 0x8d:
+        state = 'Lo Wedge Display';
+        break;
+      case 0x8e:
+        state = 'Lin Fit Display';
+        break;
+      case 0x8f:
+        state = 'No Session';
+        break;
+      default:
+        state = sgv.state ? `Unknown: 0x${sgv.state.toString(16)}` : '--';
     }
 
-    return nsNoise;
-  }
+    if (options.include_mode && sgv.inExtendedSession) {
+      state += '-ext';
+    } else if (options.include_mode && sgv.inExpiredSession) {
+      state += '-exp';
+    }
 
-  const processNewGlucose = (sgv) => {
-    let lastCal = null;
-    let glucoseHist = [];
-    let checkingSensorInsert = false;
+    return state;
+  };
+
+  const processNewGlucose = async (newSgv, startingSession) => {
+    let glucoseHist = null;
     let sendSGV = true;
 
-    sgv.g5calibrated = true;
-    sgv.stateString = stateString(sgv.state);
+    let sgv = _.cloneDeep(newSgv);
 
-    if (sgv.unfiltered > 10000) {
-      sgv.unfiltered = sgv.unfiltered / 1000.0;
-      sgv.filtered = sgv.filtered / 1000.0;
-    }
-
-    storage.getItem('nsCalibration')
-    .then(calibration => {
-      lastCal = calibration;
-    })
-    .catch(() => {
-      lastCal = null;
-      console.log('Unable to obtain current NS Calibration');
-    })
-    .then(() => {
-      return storage.getItem('glucoseHist');
-    })
-    .then(storedGlucoseHist => {
-      glucoseHist = storedGlucoseHist;
-    })
-    .catch((err) => {
-      glucoseHist = [];
-      console.log('Error getting glucoseHist: ' + err);
-    })
-    .then(() => {
-        return storage.getItem('calibration');
-    })
-    .catch((err) => {
-      console.log('Error getting lastG5CalData: ' + err);
-    })
-    .then((storedLastG5CalData) => {
-      var lastG5CalTime = 0;
-      let newCal = null;
-
-      if (storedLastG5CalData) {
-        lastG5CalTime = storedLastG5CalData.date;
-      }
-
-      if (!glucoseHist) {
-        glucoseHist = [];
-      }
-
-      if (glucoseHist.length > 0) {
-        newCal = calculateNewNSCalibration(lastCal, lastG5CalTime, glucoseHist, sgv);
-      }
-
-      if (newCal) {
-        lastCal = newCal;
-
-        console.log('New calibration: slope = ' + newCal.slope + ', intercept = ' + newCal.intercept + ', scale = ' + newCal.scale);
-
-        storage.setItem('nsCalibration', newCal)
-        .then(() => {
-          xDripAPS.postCalibration(newCal);
-        })
-        .catch(() => {
-          console.log('Unable to post new NS Calibration to Nightscout');
-        });
-      }
-
-      if (!sgv.glucose && extend_sensor && lastCal) {
-        sgv.glucose = Math.round((sgv.unfiltered-lastCal.intercept)/lastCal.slope);
-
-        console.log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value');
-        console.log('Calibrated SGV: ' + sgv.glucose + ' unfiltered: ' + sgv.unfiltered + ' slope: ' + lastCal.slope + ' intercept: ' + lastCal.intercept);
-
-        sgv.g5calibrated = false;
-
-        // Check if a new sensor has been inserted.
-        // If it has been, it will clear the calibration value
-        // and abort sending the SGV
-        checkingSensorInsert = true;
-        return sensorInsertedCheck(lastCal);
-      } else {
-        return null;
-      }
-    })
-    .then((body) => {
-
-      if (checkingSensorInsert) {
-          if ((body.length > 0) && (moment(body[0]['created_at']).diff(moment(lastCal.date)) > 0)) {
-            console.log('Found sensor insert after latest calibration. Deleting calibration data.');
-            storage.del('nsCalibration');
-            storage.del('glucoseHist');
-
-            // set the glucose value to null
-            // so it doesn't show up in the Lookout GUI
-            sgv.glucose = null;
-            sendSGV = false;
-          }
-      }
-
-      if (!sgv.glucose) {
-        console.log('No valid glucose to send.');
-        sendSGV = false;
-      }
-
-      if (sendSGV) {
-        // a valid SGV value is ready to store and send
-        glucoseHist.push(sgv);
-
-        sgv.trend = calcTrend(glucoseHist);
-
-        sgv.noise = calcSensorNoise(glucoseHist);
-
-        sgv.nsNoise = calcNSNoise(sgv.noise, glucoseHist);
-
-        console.log('Current sensor trend: ' + Math.round(sgv.trend*10)/10 + ' Sensor Noise: ' + Math.round(sgv.noise*1000)/1000 + ' NS Noise: ' + sgv.nsNoise);
-
-        storeNewGlucose(glucoseHist);
-      }
-
-      sendNewGlucose(sgv, sendSGV);
-    })
-    .catch((err) => {
-      console.log('Process SGV Error: ' + err);
-    })
-  }
-
-  // Store the last hour of glucose readings
-  const storeNewGlucose = (glucoseHist) => {
-
-      glucoseHist = _.sortBy(glucoseHist, ['readDate']);
-
-      var minDate = moment().subtract(1, 'hours');
-      var sliceStart = 0;
-
-      // only the store the last hour of glucose
-      // the primary use is to determine the
-      // trend and the noise values
-      for (var i=0; i < glucoseHist.length; ++i) {
-        if (moment(glucoseHist[i].readDate).diff(minDate) < 0) {
-          sliceStart = i+1;
-        }
-      }
-
-      glucoseHist = glucoseHist.slice(sliceStart);
-
-      storage.setItem('glucoseHist', glucoseHist)
+    let sensorInsert = await storage.getItem('sensorInsert')
       .catch((err) => {
-        console.log('Unable to store glucoseHist: ' + err);
+        error(`Error getting rig sensorInsert: ${err}`);
       });
-  }
-
-  const sendNewGlucose = (sgv, sendSGV) => {
-    io.emit('glucose', sgv);
-
-    if (sendSGV) {
-      xDripAPS.post(sgv);
+    if (sensorInsert) {
+      sensorInsert = moment(sensorInsert);
+      debug(`SyncNS Rig sensor insert - date: ${sensorInsert.format()}`);
     }
-  }
 
-  const stateString = (state) => {
-    switch (state) {
-      case 0x00:
-        return 'None';
-      case 0x01:
-        return 'Stopped';
-      case 0x02:
-        return 'Warmup';
-      case 0x03:
-        return 'Unused';
-      case 0x04:
-        return 'First calibration';
-      case 0x05:
-        return 'Second calibration';
-      case 0x06:
-        return 'OK';
-      case 0x07:
-        return 'Need calibration';
-      case 0x08:
-        return 'Calibration Error 1';
-      case 0x09:
-        return 'Calibration Error 0';
-      case 0x0a:
-        return 'Calibration Linearity Fit Failure';
-      case 0x0b:
-        return 'Sensor Failed Due to Counts Aberration';
-      case 0x0c:
-        return 'Sensor Failed Due to Residual Aberration';
-      case 0x0d:
-        return 'Out of Calibration Due To Outlier';
-      case 0x0e:
-        return 'Outlier Calibration Request - Need a Calibration';
-      case 0x0f:
-        return 'Session Expired';
-      case 0x10:
-        return 'Session Failed Due To Unrecoverable Error';
-      case 0x11:
-        return 'Session Failed Due To Transmitter Error';
-      case 0x12:
-        return 'Temporary Session Failure - ???';
-      case 0x13:
-        return 'Reserved';
-      case 0x80:
-        return 'Calibration State - Start';
-      case 0x81:
-        return 'Calibration State - Start Up';
-      case 0x82:
-        return 'Calibration State - First of Two Calibrations Needed';
-      case 0x83:
-        return 'Calibration State - High Wedge Display With First BG';
-      case 0x84:
-        return 'Unused Calibration State - Low Wedge Display With First BG';
-      case 0x85:
-        return 'Calibration State - Second of Two Calibrations Needed';
-      case 0x86:
-        return 'Calibration State - In Calibration Transmitter';
-      case 0x87:
-        return 'Calibration State - In Calibration Display';
-      case 0x88:
-        return 'Calibration State - High Wedge Transmitter';
-      case 0x89:
-        return 'Calibration State - Low Wedge Transmitter';
-      case 0x8a:
-        return 'Calibration State - Linearity Fit Transmitter';
-      case 0x8b:
-        return 'Calibration State - Out of Cal Due to Outlier Transmitter';
-      case 0x8c:
-        return 'Calibration State - High Wedge Display';
-      case 0x8d:
-        return 'Calibration State - Low Wedge Display';
-      case 0x8e:
-        return 'Calibration State - Linearity Fit Display';
-      case 0x8f:
-        return 'Calibration State - Session Not in Progress';
-      default:
-        return state ? 'Unknown: 0x' + state.toString(16) : '--';
+    let sensorStart = await storage.getItem('sensorStart')
+      .catch((err) => {
+        error(`Error getting rig sensorStart: ${err}`);
+      });
+
+    if (sensorStart) {
+      sensorStart = moment(sensorStart);
     }
-  }
 
-  // TODO: this should timeout, and cancel when we get a new id.
-  const listenToTransmitter = (id) => {
-    const worker = cp.fork(__dirname + '/transmitter-worker', [id], {
-      env: {
-        DEBUG: 'transmitter,bluetooth-manager'
+    if (transmitterInSession(sgv)) {
+      const txmitterSessionStart = moment(sgv.sessionStartDate);
+      let updatedStart = false;
+
+      // If we don't have a sensor start, use the transmitter's session start
+      // Else, check if the sensor session start time reported by the transmitter is
+      // after the stored sensor start.
+      if (!sensorStart) {
+        sensorStart = txmitterSessionStart;
+        updatedStart = true;
+      } else if (txmitterSessionStart.diff(sensorStart, 'hours') > 2) {
+        log(
+          '\n===================================='
+          + '\nTransmitter session start date more than 2 hours after stored sensorStart'
+          + `\nSetting stored sensorStart to ${txmitterSessionStart.format()}`
+          + '\n====================================',
+        );
+        sensorStart = txmitterSessionStart;
+        updatedStart = true;
+      }
+
+      if (updatedStart) {
+        storage.setItem('sensorStart', sensorStart.valueOf())
+          .catch((err) => {
+            error(`Error saving rig sensorStart: ${err}`);
+          });
+      }
+    }
+
+    if (sensorStart) {
+      debug(`SyncNS Rig sensor start - date: ${sensorStart.format()}`);
+
+      if (!sensorInsert || (sensorStart.valueOf() > sensorInsert.valueOf())) {
+        // allow the user to enter either to reset the session.
+        sensorInsert = sensorStart;
+      }
+    }
+
+    let sensorStop = await storage.getItem('sensorStop')
+      .catch((err) => {
+        error(`Error getting rig sensorStop: ${err}`);
+      });
+
+    if (sensorStop) {
+      sensorStop = moment(sensorStop);
+      debug(`SyncNS Rig sensor stop - date: ${sensorStop.format()}`);
+    }
+
+    await storage.lock();
+
+    sgv.readDateMills = moment(sgv.readDate).valueOf();
+
+    const bgChecks = await storage.getArray('bgChecks')
+      .catch((err) => {
+        error(`Error getting bgChecks: ${err}`);
+      });
+
+    await checkSensorSession(sensorInsert, sensorStop, bgChecks, sgv);
+
+    glucoseHist = await storage.getArray('glucoseHist')
+      .catch((err) => {
+        error(`Error getting glucoseHist: ${err}`);
+      });
+
+    sgv = await calibration.calibrateGlucose(
+      storage, options, sensorInsert, sensorStop, glucoseHist, sgv,
+    );
+
+    if (sgv.inExtendedSession) {
+      sgv.mode = 'extended cal';
+      // set the sessionStartDate from the known start since transmitter
+      // no longer reports it
+      sgv.sessionStartDate = sensorStart.format();
+    } else if (sgv.inExpiredSession) {
+      sgv.mode = 'expired cal';
+      // set the sessionStartDate from the known start since transmitter
+      // no longer reports it
+      sgv.sessionStartDate = sensorStart.format();
+    } else {
+      sgv.mode = 'txmitter cal';
+    }
+
+    // Only override the state if expired calibration enabled
+    // Otherwise, the session would be immediately stopped if a BG Check is entered
+    if (sgv.state === 0x1 && options.expired_cal
+      && (sgv.inExtendedSession || sgv.inExpiredSession)) {
+      if (moment().diff(sensorStart, 'days') <= 4 && bgChecks.length > 0 && moment().diff(moment(bgChecks[bgChecks.length - 1].dateMills), 'hours') > 12) {
+        // set session state to Need Calibration - cal every 12 hours for first 4 days
+        sgv.state = 0x7;
+      } else if (moment().diff(sensorStart, 'days') > 4 && bgChecks.length > 0 && moment().diff(moment(bgChecks[bgChecks.length - 1].dateMills), 'hours') > 24) {
+        // set session state to Need Calibration - cal every 24 hours after first 4 days
+        sgv.state = 0x7;
+      } else {
+        // set session state to OK
+        sgv.state = 0x6;
+      }
+    }
+
+    sgv.stateString = stateString(sgv);
+    sgv.stateStringShort = stateStringShort(sgv);
+
+    sgv.txStatusString = txStatusString(sgv.status);
+    sgv.txStatusStringShort = txStatusStringShort(sgv.status);
+
+    log(`sensor state: ${sgv.stateString}`);
+
+    if (glucoseHist.length > 0) {
+      const prevSgv = await getGlucose();
+
+      if ((!prevSgv || (sgv.state !== prevSgv.state)) && options.nightscout) {
+        xDripAPS.postAnnouncement(`Sensor: ${sgv.stateString}`);
+      } else if (startingSession && sgv.state !== 0x02) {
+        xDripAPS.postAnnouncement(`Unable to Start Session: ${sgv.stateString} should have been 'Warmup'`);
+        log('============================================='
+          + '\nLookout sent start session command to transmitter; however,'
+          + '\ntransmitter did not start the session. Possible causes:'
+          + '\n  * Attempting to back start session at a time prior to the transmitter start time'
+          + '\n  * Attempting to back start session at a time prior to the prior session stop time'
+          + '\n  * Attempting to back start session (sometimes it just does not work)'
+          + '\n  * Previous session not stopped'
+          + '\n=============================================');
+      }
+    }
+
+    if (!sgv.glucose || sgv.glucose < 20) {
+      sgv.glucose = null;
+      log('No valid glucose to send.');
+      sendSGV = false;
+    }
+
+    await storeNewGlucose(glucoseHist, sgv)
+      .catch(() => {
+        error('Unable to store new glucose');
+      });
+
+    storage.unlock();
+
+    sendCGMStatus(sgv, bgChecks);
+
+    sendNewGlucose(sgv, sendSGV);
+  };
+
+  const processTxmitterCalData = async (calData) => {
+    let bgChecks = null;
+    let bgCheckIdx = -1;
+
+    const newCal = {
+      date: calData.date,
+      dateMills: moment(calData.date).valueOf(),
+      glucose: calData.glucose,
+    };
+
+    log(`Last calibration: ${Math.round((Date.now() - newCal.dateMills) / 1000 / 60 / 60 * 10) / 10} hours ago`);
+
+    if (newCal.glucose > 400 || newCal.glucose < 20) {
+      log('Txmitter Last Calibration Data glucose out of range - ignoring');
+      return;
+    }
+
+    const rigSGVs = await storage.getArray('glucoseHist')
+      .catch((err) => {
+        error(`Error getting rig SGVs: ${err}`);
+      });
+
+    if (rigSGVs.length < 1) {
+      // we really shouldn't have gotten to this
+      // state, but bail since we don't have any
+      // glucose history to work with
+      return;
+    }
+
+    const latestSGV = rigSGVs[rigSGVs.length - 1];
+
+    // check the sensor state
+    // don't use this cal message data
+    // if sensor state isn't OK or Need Calibration
+    // In stopped state and maybe other states,
+    // the last calibration data is not valid
+    if ((latestSGV.state !== 0x06) && (latestSGV.state !== 0x07)) {
+      return;
+    }
+
+    newCal.type = 'Txmitter';
+
+    await storage.lock();
+
+    bgChecks = await storage.getArray('bgChecks')
+      .catch((err) => {
+        error(`Error getting bgChecks: ${err}`);
+      });
+
+    // Look through the BG Checks we have to see if we already
+    // have this BG Check
+    for (let i = (bgChecks.length - 1); i >= 0; i -= 1) {
+      if (Math.abs(bgChecks[i].dateMills - newCal.dateMills) < 2 * 60 * 1000) {
+        // The CGM transmitter report varies the time around
+        // the real time a little between read events.
+        // If they are within two minutes, assume it's the same
+        // check and bail out.
+
+        if (bgChecks[i].unfiltered) {
+          // If it already has a unfiltered value
+          // we have already completed processing
+          // it.
+          storage.unlock();
+
+          return;
+        }
+        // break out of the loop, but try to find
+        // the unfiltered value
+        bgCheckIdx = i;
+      }
+    }
+
+    let sensorInsert = await storage.getItem('sensorInsert')
+      .catch((err) => {
+        error(`Error getting rig sensorInsert: ${err}`);
+      });
+
+    if (sensorInsert) {
+      sensorInsert = moment(sensorInsert);
+    }
+
+    const valueTime = moment(newCal.date);
+
+    if (sensorInsert && (sensorInsert.diff(valueTime) > 0)) {
+      // The calibration value pre-dates the NS sensorInsert record
+      // Bail out.
+
+      storage.unlock();
+
+      return;
+    }
+
+    newCal.unfiltered = await calibration.getUnfiltered(valueTime, rigSGVs);
+
+    if (bgCheckIdx >= 0) {
+      // We already had this bgCheck but didn't have the unfiltered value
+      bgChecks[bgCheckIdx].unfiltered = newCal.unfiltered;
+      bgChecks[bgCheckIdx].type = newCal.type;
+    } else {
+      // This is a new bgCheck we didn't already have
+      bgChecks.push(newCal);
+
+      bgChecks = _.sortBy(bgChecks, ['dateMills']);
+
+      client.newCal(newCal);
+    }
+
+    storage.setItem('bgChecks', bgChecks)
+      .catch((err) => {
+        error(`Error saving bgChecks: ${err}`);
+      });
+
+    storage.unlock();
+  };
+
+  const processBatteryStatus = (batteryStatus) => {
+    txStatus = batteryStatus;
+
+    txStatus.timestamp = moment();
+
+    log('Got battery status message:\n%O', txStatus);
+  };
+
+  const processBackfillData = async (backfillData) => {
+    await storage.lock();
+
+    let glucoseHist = await storage.getArray('glucoseHist');
+    const gaps = sgvGaps(glucoseHist);
+
+    _.each(backfillData, (glucose) => {
+      const sgvDate = moment(glucose.time);
+
+      log(`Received backfill glucose: ${glucose.glucose} time: ${sgvDate.format()}`);
+
+      if (glucose.type === 7 || glucose.type === 6) {
+        _.each(gaps, (gap) => {
+          const readDateMills = sgvDate.valueOf();
+
+          if ((gap.gapStart.diff(sgvDate) < 0) && (gap.gapEnd.diff(sgvDate) > 0)) {
+            debug(`Storing backfill glucose: ${glucose.glucose} time: ${sgvDate.format()}`);
+
+            const newSGV = {
+              readDateMills,
+              glucose: glucose.glucose,
+              readDate: sgvDate.format(),
+              trend: 0,
+              state: glucose.type,
+              inSession: true,
+            };
+
+            glucoseHist.push(newSGV);
+
+            if (options.nightscout) {
+              xDripAPS.post(newSGV, true);
+            }
+          }
+        });
       }
     });
 
-    worker.on('message', m => {
-      if (m.msg == "getMessages") {
+    glucoseHist = _.sortBy(glucoseHist, ['readDateMills']);
+
+    await storage.setItem('glucoseHist', glucoseHist)
+      .catch((err) => {
+        error(`Unable to store glucoseHist: ${err}`);
+      });
+
+    storage.unlock();
+  };
+
+  // test to see if we have a BG Check that needs
+  // to be entered into the pending messages
+  // as a calibration.
+  // Add it to pending if required.
+  const calibrateFromNS = async () => {
+    let latestBGCheckTime = null;
+    let pendingCalTime = 0;
+
+    const bgChecks = await storage.getArray('bgChecks')
+      .catch((err) => {
+        error(`Error getting bgChecks: ${err}`);
+      });
+
+    if (bgChecks.length > 0) {
+      latestBGCheckTime = bgChecks[bgChecks.length - 1].dateMills;
+    }
+
+    const latestTxmitterCal = await calibration.getLastCal(storage);
+    let latestTxmitterCalTime = 0;
+
+    if (latestTxmitterCal) {
+      latestTxmitterCalTime = latestTxmitterCal.dateMills;
+    }
+
+    const deltaTime = latestBGCheckTime - latestTxmitterCalTime;
+    const bgCheckAge = Date.now() - latestBGCheckTime;
+    const timeSinceTxmitterControl = Date.now() - lastSuccessfulRead;
+
+    let deltaFromLastCalSent = 5 * 60000; // initialize to a large value
+
+    _.each(pending, (msg) => {
+      if (msg.type === 'CalibrateSensor') {
+        pendingCalTime = msg.date;
+      }
+    });
+
+    if (lastSuccessfulTxmitterCalTime) {
+      deltaFromLastCalSent = Math.abs(lastSuccessfulTxmitterCalTime - pendingCalTime);
+    }
+
+    // If the following things are true, then add a calibration record to pending
+    // 1. There is not already a pending calibration
+    // 2. We have a transmitter calibration time from the transmitter
+    // 3. The time between the last BG Check and the last transmitter calibration
+    //    time is more than 5 minutes
+    // 4. The time since this rig last successfully connected and read the transmitter
+    //    is less than 15 minutes
+    // 5. The last successful calibration send to the transmitter is not the same
+    //    as the last BG Check (prevents resending it on the next read)
+    // 6. The BG Check occurred in the last 30 minutes
+    if (!pendingCalTime && (deltaTime > 5 * 60000) && (bgCheckAge < 30 * 60000)
+      && (timeSinceTxmitterControl < 15 * 60000) && latestTxmitterCalTime
+      && (deltaFromLastCalSent > 2 * 60000)) {
+      const { glucose } = bgChecks[bgChecks.length - 1];
+      log(`Sending calibration value to transmitter: ${glucose} at time: ${moment(latestBGCheckTime).format()}`);
+      pending.push({ date: latestBGCheckTime, type: 'CalibrateSensor', glucose });
+      pendingCalTime = latestBGCheckTime;
+    }
+
+    return pendingCalTime;
+  };
+
+  const listenToTransmitter = async (id) => {
+    if (!id) {
+      error('Unable to listen to invalid Transmitter ID');
+      return;
+    }
+
+    let startingSession = false;
+
+    // Remove the BT device so it starts from scratch
+    removeBTDevices();
+
+    if (options.sim) {
+      let prevGlucose = await getGlucose();
+
+      prevGlucose = prevGlucose ? prevGlucose.glucose : 120;
+
+      worker = cp.fork(`${__dirname}/transmitterSimulator`, [prevGlucose], { });
+    } else {
+      const workerOptions = { };
+
+      worker = cp.fork(`${__dirname}/transmitterWorker`, [id], workerOptions);
+    }
+
+    worker.on('message', async (m) => {
+      let pendingCalTime;
+
+      if (m.msg === 'getMessages') {
+        if (!txStatus || (moment().diff(txStatus.timestamp, 'minutes') > 25)) {
+          pending.push({ type: 'BatteryStatus' });
+        }
+
+        pendingCalTime = await calibrateFromNS();
+
+        pending = filterPending(pending);
+
+        const glucoseHist = await storage.getArray('glucoseHist');
+        const gaps = sgvGaps(glucoseHist);
+
+        let minGapDate = null;
+        let maxGapDate = null;
+        const now = moment();
+
+        _.each(gaps, (gap) => {
+          if ((now.diff(gap.gapStart, 'minutes') < 120) && (!minGapDate || (minGapDate.diff(gap.gapStart) < 0))) {
+            minGapDate = gap.gapStart;
+          }
+
+          if (!maxGapDate || (maxGapDate.diff(gap.gapEnd) < 0)) {
+            maxGapDate = gap.gapEnd;
+          }
+        });
+
+        // don't ask for a backfill of the reading glucose reading about to receive
+        if (Math.abs(now.diff(maxGapDate, 'minutes')) < 1) {
+          maxGapDate.subtract(2, 'minutes');
+        }
+
+        if ((minGapDate !== null) && glucoseHist
+          && transmitterInSession(glucoseHist[glucoseHist.length - 1])) {
+          log(`Requesting backfill - start: ${minGapDate.format()} end: ${maxGapDate.format()}`);
+          pending.push({ type: 'Backfill', date: minGapDate.valueOf(), endDate: maxGapDate.valueOf() });
+        } else if ((minGapDate !== null) && glucoseHist) {
+          log('Not requesting backfill - transmitter not in session');
+        } else if (minGapDate !== null) {
+          log('Not requesting backfill - no glucose history');
+        }
+
+        _.each(pending, (msg) => {
+          if (msg.type === 'StartSensor') {
+            startingSession = true;
+          }
+        });
+
         worker.send(pending);
         // NOTE: this will lead to missed messages if the rig
         // shuts down before acting on them, or in the
         // event of lost comms
         // better to return something from the worker
-        io.emit('pending', pending);
-      } else if (m.msg == "glucose") {
+
+        pending = filterPending(pending);
+
+        client.newPending(pending);
+      } else if (m.msg === 'glucose') {
         const glucose = m.data;
-        console.log('got glucose: ' + glucose.glucose + ' unfiltered: ' + glucose.unfiltered);
+        glucose.readDateMills = moment(glucose.readDate).valueOf();
 
-        processNewGlucose(glucose);
+        if (txStatus) {
+          glucose.voltagea = txStatus.voltagea;
+          glucose.voltageb = txStatus.voltageb;
+          glucose.voltageTime = txStatus.timestamp.valueOf();
+          glucose.temperature = txStatus.temperature;
+          glucose.resistance = txStatus.resist;
+        }
 
-        console.log('sensor state: ' + glucose.stateString);
-      } else if (m.msg == 'messageProcessed') {
+        log(`got glucose: ${glucose.glucose} unfiltered: ${glucose.unfiltered / 1000}`);
+
+        lastSuccessfulRead = glucose.readDateMills;
+        // restart txFailedReads counter since we were successfull
+        txFailedReads = 0;
+
+        log(
+          '\n====================================\n'
+          + 'Received Glucose Message'
+          + '\n====================================',
+        );
+
+        processNewGlucose(glucose, startingSession);
+      } else if (m.msg === 'messageProcessed') {
         // TODO: check that dates match
+
+        if (pendingCalTime === m.date) {
+          lastSuccessfulTxmitterCalTime = pendingCalTime;
+        }
+
         pending.shift();
-        io.emit('pending', pending);
-      } else if (m.msg == "calibrationData") {
-        // TODO: save to node-persist?
-        console.log('Last calibration: ' + Math.round((Date.now() - m.data.date)/1000/60/60*10)/10 + ' hours ago');
-        storage.setItem('calibration', m.data)
-        .then(() => {
-          io.emit('calibrationData', m.data);
-        })
+        client.newPending(pending);
+      } else if (m.msg === 'calibrationData') {
+        processTxmitterCalData(m.data);
+      } else if (m.msg === 'batteryStatus') {
+        processBatteryStatus(m.data);
+      } else if (m.msg === 'sawTransmitter') {
+        // increment failed reads counter so we know how many
+        // times we saw the transmitter
+        txAddress = m.data.address;
+        txFailedReads += 1;
+      } else if (m.msg === 'backfillData') {
+        processBackfillData(m.data);
       }
     });
 
-    worker.on('exit', function(m) {
+    worker.on('exit', () => {
+      worker = null;
+
       // Receive results from child process
-      console.log('exited');
-      setTimeout(() => {
-        // Remove the BT device so it starts from scratch
-        removeBTDevice(id);
+      log('exited');
 
-        listenToTransmitter(id);
-      }, 60000);
+      if (timerObj !== null) {
+        clearTimeout(timerObj);
+      }
+
+      if (id && id !== txId && txId) {
+        removeBTDevices();
+      }
+
+      if (txFailedReads >= 2 && (Date.now() - lastSuccessfulRead) > 11 * 60000) {
+        // Automatically reboot on the 2nd failed read
+        rebootRig();
+      }
+
+      timerObj = setTimeout(() => {
+        // Restart the worker after 1 minute
+        listenToTransmitter(txId);
+      }, 1 * 60000);
     });
-  }
 
-  // handle persistence here
-  // make the storage direction relative to the install directory,
-  // not the calling directory
-  storage.init({dir: __dirname + '/storage'}).then(() => {
-    return storage.getItem('id');
-  })
-  .then(value => {
-    id = value || '500000';
-
-    // Remove the BT device so it starts from scratch
-    removeBTDevice(id);
-
-    listenToTransmitter(id);
-
-    io.on('connection', socket => {
-      // TODO: should this just be a 'data' message?
-      // how do we initialise the connection with
-      // all the data it needs?
-
-      console.log("about to emit id " + id);
-      socket.emit('id', id);
-      socket.emit('pending', pending);
-      storage.getItem('glucoseHist')
-      .then(glucoseHist => {
-        if (glucoseHist) {
-          socket.emit('glucose', glucoseHist[glucoseHist.length - 1]);
+    timerObj = setTimeout(() => {
+      // After 6 minutes, kill the worker if it hasn't already exited
+      // When it exits after receiving kill signal, the on exit
+      // callback will fire to restart it
+      if (worker !== null) {
+        try {
+          log('Starting new worker, but one already exists. Attempting to kill it');
+          worker.kill('SIGTERM');
+        } catch (err) {
+          error(`Unable to kill existing worker: ${err}`);
         }
-      });
-      storage.getItem('calibration')
-      .then(calibration => {
-        if (calibration) {
-          socket.emit('calibrationData', calibration);
+      }
+    }, 6 * 60000);
+  };
+
+  const changeTxId = (value) => {
+    if (value.length !== 6) {
+      error(`received invalid transmitter id of ${value}`);
+    } else {
+      if (worker !== null) {
+        // When worker exits, listenToTransmitter will
+        // be scheduled
+        try {
+          debug('Attempting to kill worker for old id');
+          worker.kill('SIGTERM');
+        } catch (err) {
+          error(`Error killing old worker: ${err}`);
         }
-      });
-      socket.on('startSensor', () => {
-        console.log('received startSensor command');
-        pending.push({date: Date.now(), type: "StartSensor"});
-        io.emit('pending', pending)
-      });
-      socket.on('stopSensor', () => {
-        console.log('received stopSensor command');
-        pending.push({date: Date.now(), type: "StopSensor"});
-        io.emit('pending', pending)
-      });
-      socket.on('calibrate', glucose => {
-        console.log('received calibration of ' + glucose);
-        pending.push({date: Date.now(), type: "CalibrateSensor", glucose});
-        io.emit('pending', pending)
-      });
-      socket.on('id', value => {
-        // Remove the old BT device so it starts from scratch
-        removeBTDevice(id);
+      } else if (!txId) {
+        // If the current txId was null,
+        // then we need to start the listener
+        listenToTransmitter(value);
+      }
 
-        console.log('received id of ' + value);
-        id = value;
-        storage.setItemSync('id', id);
-        // TODO: clear glucose on new id
-        // use io.emit rather than socket.emit
-        // since we want to nofify all connections
-        io.emit('id', id);
-        // const status = {id};
-        // console.log(JSON.stringify(status));
-        // fs.writeFile(__dirname + '/status.json', JSON.stringify(status), (err) => {
-        //   if (err) {
-        //     console.error(err);
-        //     return;
-        //   }
-        //   console.log("File has been created");
-        // });
-      });
-    });
-  });
-  // let status = {};
-  // try {
-  //   status = require('./status');
-  // } catch (err) {}
-  // const id = status.id || '500000';
+      log(`received id of ${value}`);
+      txId = value;
 
+      calibration.clearCalibration(storage);
+      storage.delItem('glucoseHist');
+
+      storage.setItemSync('id', txId);
+    }
+  };
+
+  const g6Txmitter = () => (txId.substr(0, 1) === '8');
+
+  // Create an object that can be used
+  // to interact with the transmitter.
+  const transmitterIO = {
+    // provide the current transmitter ID
+    getTxId: () => txId,
+
+    // provide the pending list
+    getPending: () => {
+      pending = filterPending(pending);
+
+      return pending;
+    },
+
+    // provide the most recent glucose reading
+    getGlucose: async () => getGlucose(),
+
+    // provide the glucose history
+    getHistory: async () => {
+      const glucoseHist = await storage.getArray('glucoseHist')
+        .catch((err) => {
+          error(`Unable to get glucoseHist storage item: ${err}`);
+        });
+
+      return glucoseHist.map(sgv => ({ readDate: sgv.readDateMills, glucose: sgv.glucose }));
+    },
+
+    // provide the most recent Txmitter calibration
+    getLastCal: async () => calibration.getLastCal(storage),
+
+    // Reset the transmitter
+    resetTx: () => {
+      pending.push({ date: Date.now(), type: 'ResetTx' });
+
+      pending = filterPending(pending);
+
+      client.newPending(pending);
+    },
+
+    // Start a sensor session
+    startSensor: (sensorSerialCode) => {
+      startSession(Date.now(), sensorSerialCode);
+    },
+
+    // Start a sensor session at time
+    startSensorTime: (startTime) => {
+      if (g6Txmitter()) {
+        xDripAPS.postAnnouncement('G6 Start Unsupported by NS');
+      } else {
+        startSession(startTime.valueOf());
+      }
+    },
+
+    // Start a sensor session back started 2 hours
+    backStartSensor: (sensorSerialCode) => {
+      startSession(Date.now() - 2 * 60 * 60 * 1000, sensorSerialCode);
+    },
+
+    stopSensor: async () => {
+      const stopTime = moment().subtract(2, 'hours');
+      await stopSensorSession(stopTime);
+
+      const sgv = await getGlucose();
+
+      if (transmitterInSession(sgv)) {
+        stopTransmitterSession(stopTime);
+      }
+    },
+
+    sendBgChecksToTxmitter: (bgChecks) => {
+      _.each(bgChecks, (bgCheck) => {
+        pending.push({ date: bgCheck.dateMills, type: 'CalibrateSensor', glucose: bgCheck.glucose });
+      });
+
+      pending = filterPending(pending);
+
+      client.newPending(pending);
+    },
+
+    // calibrate the sensor
+    calibrate: async (glucose) => {
+      const timeValue = moment();
+
+      await storage.lock();
+
+      let bgChecks = await storage.getArray('bgChecks')
+        .catch((err) => {
+          error(`Error getting bgChecks: ${err}`);
+        });
+
+      const calData = {
+        date: timeValue.format(),
+        dateMills: timeValue.valueOf(),
+        glucose,
+        type: 'GUI',
+      };
+
+      bgChecks.push(calData);
+
+      bgChecks = _.sortBy(bgChecks, ['dateMills']);
+
+      storage.setItem('bgChecks', bgChecks)
+        .catch((err) => {
+          error(`Error saving bgChecks: ${err}`);
+        });
+
+      storage.unlock();
+
+      pending.push({ date: Date.now(), type: 'CalibrateSensor', glucose });
+
+      if (options.nightscout) {
+        xDripAPS.postBGCheck(calData);
+      }
+
+      pending = filterPending(pending);
+
+      client.newPending(pending);
+    },
+
+    // Set the transmitter Id to the value provided
+    setTxId: (value) => {
+      changeTxId(value);
+
+      client.txId(value);
+    },
+
+    checkSensorSession: async (sensorInsert, sensorStop, bgChecks, sgv) => {
+      checkSensorSession(sensorInsert, sensorStop, bgChecks, sgv);
+    },
+
+    inSensorSession: async () => {
+      const sgv = await getGlucose();
+
+      return inSensorSession(sgv);
+    },
+
+    sgvGaps: rigSGVs => sgvGaps(rigSGVs),
+
+    getUnfiltered: async (valueTime) => {
+      const rigSGVs = await storage.getArray('glucoseHist')
+        .catch((err) => {
+          error(`Error getting rig SGVs: ${err}`);
+        });
+
+      return calibration.getUnfiltered(valueTime, rigSGVs);
+    },
+  };
+
+  // Provide the object to the client
+  client.setTransmitter(transmitterIO);
+
+  // Read the current stored transmitter value
+  txId = await storage.getItem('id');
+
+  // Start the transmitter loop task
+  listenToTransmitter(txId);
+
+  return transmitterIO;
 };

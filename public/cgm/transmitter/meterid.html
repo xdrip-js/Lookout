@@ -8,17 +8,15 @@
 
 <div class="scrollable">
   <div class="scrollable-content section">
-    <form name="pairform" role="form" ng-submit="pairform.$valid && setID(newID)">
+    <form role="form" ng-submit="setMeterID(newID)">
       <fieldset>
         <legend>Enter transmitter ID</legend>
         <div class="form-group has-success has-feedback">
           <!-- <label>ID</label> -->
           <input type="text"
                  ng-model="newID"
-                 required ng-minlength="6"
-                 required ng-maxlength="6"
                  class="form-control"
-                 placeholder="{{ transmitter.id }}">
+                 placeholder="{{ transmitter.meterid }}">
         </div>
       </fieldset>
       <hr>

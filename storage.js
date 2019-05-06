@@ -15,7 +15,7 @@ const getItem = async (name) => {
   try {
     return storage.getItem(name);
   } catch (e) {
-    error(`Unable to read item ${name}:', e);
+    error(`Unable to read item ${name}:`, e);
     return null;
   }
 };

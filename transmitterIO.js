@@ -1053,8 +1053,9 @@ module.exports = async (options, storage, client, fakeMeter) => {
       worker = cp.fork(`${__dirname}/transmitterSimulator`, [prevGlucose], { });
     } else {
       const workerOptions = { };
+      const btChannel = options.alternate_bt_channel ? '1' : '0';
 
-      worker = cp.fork(`${__dirname}/transmitterWorker`, [id], workerOptions);
+      worker = cp.fork(`${__dirname}/transmitterWorker`, [id, btChannel], workerOptions);
     }
 
     worker.on('message', async (m) => {

@@ -14,11 +14,17 @@ const TransmitterIO = require('./transmitterIO');
 const ClientIO = require('./clientIO');
 
 const argv = yargs
-  .usage('$0 [--extend_sensor] [--expired_cal] [--port <port>] [--openaps <directory>] [--sim] [--fakemeter] [--offline_fakemeter] [--no_nightscout] [--include_mode')
+  .usage('$0 [--extend_sensor] [--expired_cal] [--port <port>] [--openaps <directory>] [--sim] [--fakemeter] [--offline_fakemeter] [--no_nightscout] [--include_mode] [--alternate]')
   .option('extend_sensor', {
     boolean: true,
     describe: 'Enables extended sensor session mode',
     alias: 'e',
+    default: false,
+  })
+  .option('alternate', {
+    boolean: true,
+    describe: 'Enable Alternate Bluetooth Channel',
+    alias: 'c',
     default: false,
   })
   .option('expired_cal', {
@@ -120,6 +126,7 @@ const options = {
   max_lsr_pairs_age: params.max_lsr_pairs_age,
   include_mode: params.include_mode,
   hci: params.hci,
+  alternate_bt_channel: params.alternate,
 };
 
 const init = async () => {

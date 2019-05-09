@@ -46,12 +46,12 @@ angular.module('AngularOpenAPS', [
     /* eslint-enable no-param-reassign */
   }])
 
-  // app.controller('controller1', function($scope, SharedState){
-  //   SharedState.initialize($scope, 'myId');
-  // });
+// app.controller('controller1', function($scope, SharedState){
+//   SharedState.initialize($scope, 'myId');
+// });
 
 
-  // $cookies.put('myFavorite', 'oatmeal');
+// $cookies.put('myFavorite', 'oatmeal');
 
 
   /* eslint-disable-next-line prefer-arrow-callback */

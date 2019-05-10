@@ -308,7 +308,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
     }
   };
 
-  const sendNewGlucose = async (sgv, sendSGV) => {
+  const sendNewGlucose = async (sgv, sendToXdrip) => {
     client.newSGV(sgv);
 
     if (sgv.glucose) {
@@ -317,9 +317,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
       await fakeMeter.glucose(sgv.glucose);
     }
 
-    if (options.nightscout) {
-      xDripAPS.post(sgv, sendSGV);
-    }
+    xDripAPS.post(sgv, sendToXdrip, options.nightscout && !options.delayed_ns);
   };
 
   const sendCGMStatus = async (sgv, bgChecks) => {
@@ -954,9 +952,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
             glucoseHist.push(newSGV);
 
-            if (options.nightscout) {
-              xDripAPS.post(newSGV, true);
-            }
+            xDripAPS.post(newSGV, true, options.nightscout && !options.delayed_ns);
           }
         });
       }

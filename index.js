@@ -27,6 +27,12 @@ const argv = yargs
     alias: 'c',
     default: false,
   })
+  .option('delayed_ns_upload', {
+    boolean: true,
+    describe: 'Delayed NS Upload (for backup rig)',
+    alias: 'u',
+    default: false,
+  })
   .option('expired_cal', {
     boolean: true,
     describe: 'Enables expired calibration mode',
@@ -127,6 +133,7 @@ const options = {
   include_mode: params.include_mode,
   hci: params.hci,
   alternate_bt_channel: params.alternate,
+  delayed_ns: params.delayed_ns_upload,
 };
 
 const init = async () => {

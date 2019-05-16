@@ -165,7 +165,7 @@ const init = async () => {
   // handle persistence here
   // make the storage direction relative to the install directory,
   // not the calling directory
-  await store.init({ dir: `${__dirname}/storage` });
+  await store.init({ dir: `${__dirname}/storage`, forgiveParseErrors: false });
 
   storage.init(store);
 

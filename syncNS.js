@@ -11,6 +11,7 @@ const _ = require('lodash');
 const TimeLimitedPromise = require('./timeLimitedPromise');
 const xDripAPS = require('./xDripAPS')();
 
+let options = null;
 let storage = null;
 let transmitter = null;
 
@@ -525,19 +526,24 @@ const calcNextSyncTimeDelay = (sgv) => {
   let sgvTime = sgv.readDateMills;
   const now = moment().valueOf();
 
+  // If lazy upload is enabled, sync 30 seconds earlier
+  // so the prumary rig and the delayed upload rig
+  // don't try to upload the same missing data
+  const preDelta = options.lazy_upload ? 60000 : 30000;
+
   // Find the next point in time where
   // 30 seconds less than the next possible
   // transmitter wake up time is later than now
-  while ((sgvTime - 30000) < now) {
+  while ((sgvTime - preDelta) < now) {
     sgvTime += 5 * 60000;
   }
 
   // Return the amount of time in milliseconds between
   // now and 30 seconds before the next wake up time
-  return (sgvTime - 30000 - now);
+  return (sgvTime - preDelta - now);
 };
 
-const syncNS = async (storage_, transmitter_) => {
+const syncNS = async (options_, storage_, transmitter_) => {
   let sensorInsert = null;
   let sensorStart = null;
   let sensorStop = null;
@@ -553,6 +559,7 @@ const syncNS = async (storage_, transmitter_) => {
 
   storage = storage_;
   transmitter = transmitter_;
+  options = options_;
 
   sensorInsert = await syncEvent('sensorInsert', 'Sensor Change')
     .catch(() => {

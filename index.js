@@ -27,7 +27,7 @@ const argv = yargs
     alias: 'c',
     default: false,
   })
-  .option('delayed_ns_upload', {
+  .option('lazy_upload', {
     boolean: true,
     describe: 'Delayed NS Upload (for backup rig)',
     alias: 'u',
@@ -133,7 +133,7 @@ const options = {
   include_mode: params.include_mode,
   hci: params.hci,
   alternate_bt_channel: params.alternate,
-  delayed_ns: params.delayed_ns_upload,
+  lazy_upload: params.lazy_upload,
 };
 
 const init = async () => {

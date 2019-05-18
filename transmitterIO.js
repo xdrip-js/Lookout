@@ -317,7 +317,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
       await fakeMeter.glucose(sgv.glucose);
     }
 
-    xDripAPS.post(sgv, sendToXdrip, options.nightscout && !options.delayed_ns);
+    xDripAPS.post(sgv, sendToXdrip, options.nightscout && !options.lazy_upload);
   };
 
   const sendCGMStatus = async (sgv, bgChecks) => {
@@ -952,7 +952,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
             glucoseHist.push(newSGV);
 
-            xDripAPS.post(newSGV, true, options.nightscout && !options.delayed_ns);
+            xDripAPS.post(newSGV, true, options.nightscout && !options.lazy_upload);
           }
         });
       }

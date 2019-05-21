@@ -278,7 +278,7 @@ const syncSGVs = async () => {
     // upload any gapSGVs to NS that we haven't found a NS match
     _.each(nsGap.gapSGVs, (gapSGV) => {
       if (gapSGV.glucose && !gapSGV.inNS) {
-        xDripAPS.post(gapSGV, false);
+        xDripAPS.post(gapSGV, false, true);
       }
     });
   }));

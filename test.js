@@ -126,8 +126,14 @@ describe('Test Calibration', () => {
       stateString: 'Need calibration',
     };
 
+    const options = {
+      min_lsr_pairs: 2,
+      max_lsr_pairs: 10,
+      max_lsr_pairs_age: 6,
+    };
+
     const lastCal = calibration.calculateTxmitterCalibration(
-      null, 0, null, null, glucoseHist, currSGV,
+      options, null, 0, null, null, glucoseHist, currSGV,
     );
 
     lastCal.slope.should.be.greaterThan(800);
@@ -170,8 +176,14 @@ describe('Test Calibration', () => {
       stateString: 'Need calibration',
     };
 
+    const options = {
+      min_lsr_pairs: 2,
+      max_lsr_pairs: 10,
+      max_lsr_pairs_age: 6,
+    };
+
     const lastCal = calibration.calculateTxmitterCalibration(
-      null, 0, null, null, glucoseHist, currSGV,
+      options, null, 0, null, null, glucoseHist, currSGV,
     );
 
     lastCal.slope.should.be.greaterThan(1050);
@@ -234,8 +246,14 @@ describe('Test Calibration', () => {
       stateString: 'Need calibration',
     }];
 
+    const options = {
+      min_lsr_pairs: 2,
+      max_lsr_pairs: 10,
+      max_lsr_pairs_age: 6,
+    };
+
     const lastCal = await calibration.expiredCalibration(
-      { }, null, bgChecks, null, null, glucoseHist, null,
+      options, null, bgChecks, null, null, glucoseHist, null,
     );
 
     lastCal.type.should.equal('LeastSquaresRegression');
@@ -297,8 +315,14 @@ describe('Test Calibration', () => {
       stateString: 'Need calibration',
     }];
 
+    const options = {
+      min_lsr_pairs: 2,
+      max_lsr_pairs: 3,
+      max_lsr_pairs_age: 6,
+    };
+
     const lastCal = await calibration.expiredCalibration(
-      { max_lsr_pairs: 3 }, null, bgChecks, null, null, glucoseHist, null,
+      options, null, bgChecks, null, null, glucoseHist, null,
     );
 
     lastCal.type.should.equal('LeastSquaresRegression');
@@ -360,8 +384,14 @@ describe('Test Calibration', () => {
       stateString: 'Need calibration',
     }];
 
+    const options = {
+      min_lsr_pairs: 5,
+      max_lsr_pairs: 10,
+      max_lsr_pairs_age: 6,
+    };
+
     const lastCal = await calibration.expiredCalibration(
-      { min_lsr_pairs: 5 }, null, bgChecks, null, null, glucoseHist, null,
+      options, null, bgChecks, null, null, glucoseHist, null,
     );
 
     lastCal.type.should.equal('SinglePoint');
@@ -423,8 +453,14 @@ describe('Test Calibration', () => {
       stateString: 'Need calibration',
     }];
 
+    const options = {
+      min_lsr_pairs: 2,
+      max_lsr_pairs: 10,
+      max_lsr_pairs_age: 2,
+    };
+
     const lastCal = await calibration.expiredCalibration(
-      { max_lsr_pairs_age: 2 }, null, bgChecks, null, null, glucoseHist, null,
+      options, null, bgChecks, null, null, glucoseHist, null,
     );
 
     lastCal.type.should.equal('LeastSquaresRegression');

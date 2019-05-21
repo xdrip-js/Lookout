@@ -13,6 +13,10 @@ const FakeMeter = require('./fakemeter');
 const TransmitterIO = require('./transmitterIO');
 const ClientIO = require('./clientIO');
 
+const MIN_LSR_PAIRS = 2;
+const MAX_LSR_PAIRS = 10;
+const MAX_LSR_PAIRS_AGE = 6; // days
+
 const argv = yargs
   .usage('$0 [--extend_sensor] [--expired_cal] [--port <port>] [--openaps <directory>] [--sim] [--fakemeter] [--offline_fakemeter] [--no_nightscout] [--include_mode] [--alternate]')
   .option('extend_sensor', {
@@ -91,19 +95,19 @@ const argv = yargs
     nargs: 1,
     describe: 'Minimum number of pairs required for LSR calibration',
     alias: 'l',
-    default: 0,
+    default: MIN_LSR_PAIRS,
   })
   .option('max_lsr_pairs', {
     nargs: 1,
     describe: 'Maximum number of pairs allowed for LSR calibration',
     alias: 'm',
-    default: 0,
+    default: MAX_LSR_PAIRS,
   })
   .option('max_lsr_pairs_age', {
     nargs: 1,
     describe: 'Maximum age of pairs relative to latest pair allowed for LSR calibration',
     alias: 'a',
-    default: 0,
+    default: MAX_LSR_PAIRS_AGE,
   })
   .option('include_mode', {
     boolean: true,

@@ -228,9 +228,9 @@ const calculateTxmitterCalibration = (
     }
 
     // If we have at least MIN_LSR_PAIRS good pairs and we are off by more than 5
-    // OR we have at least 8 and our current cal type is SinglePoint
-    // THEN use LSR
-    if (((calErr > 5) && calPairs.length > options.min_lsr_pairs) || (calPairs.length > 8)) {
+    // OR we have at least 8 and our current cal error is > 1
+    if (((calErr > 5) && calPairs.length > options.min_lsr_pairs)
+      || ((calErr > 1) && (calPairs.length > 8))) {
       const calResult = lsrCalibration(calPairs);
 
       log(`CGM lsrCalibration: numPoints=${calPairs.length}, slope=${calResult.slope}, intercept=${calResult.intercept}`);
@@ -253,24 +253,8 @@ const calculateTxmitterCalibration = (
         slope: calResult.slope,
         type: calResult.calibrationType,
       };
-    // Otherwise, only update if we have a calErr > 5
-    } else if ((calErr > 5) && (calPairs.length > 0)) {
-      const calResult = singlePointCalibration(calPairs);
-
-      log(
-        `CGM singlePointCalibration: glucose=${calPairs[calPairs.length - 1].glucose}, `
-        + `unfiltered=${calPairs[calPairs.length - 1].unfiltered}, slope=${calResult.slope}, intercept=0`,
-      );
-
-      calReturn = {
-        date: currSGV.readDateMills,
-        scale: 1,
-        intercept: calResult.intercept,
-        slope: calResult.slope,
-        type: calResult.calibrationType,
-      };
     } else if (calErr > 5) {
-      log('CGM calculated calibration update needed, but no suitable glucose pairs found.');
+      log(`CGM calculated calibration update needed, but only ${calPairs.length} suitable glucose pairs found.`);
       return null;
     }
   }

@@ -247,6 +247,8 @@ To look at the Lookout log, for debug purposes, type `cat /var/log/openaps/xdrip
 
 * `--verbose`, `-v`: Enables verbose logging.
 
+* `--alternate`, `-c`: Enables using the alternate Bluetooth channel to communicate with transmitter. This allows the rig to operate in parallel with the Dexcom phone app or xDrip+.
+
 * `--sim`, `-s`: Runs Lookout in simulation mode for offline testing.
 
 * `--fakemeter`, `-f`: Enables sending blood glucose readings to the pump configured in the OpenAPS directory as meter readings. Configure the pump to enable the meterid configured in Lookout. This option requires oref0 version 0.7.0 or later.
@@ -254,6 +256,8 @@ To look at the Lookout log, for debug purposes, type `cat /var/log/openaps/xdrip
 * `--offline_fakemeter`, `-o`: Enables sending blood glucose readings to the pump as described in `--fakemeter`, but only when the rig is offline.
 
 * `--port`, `-p`: Sets the port number for the web server providing the Lookout GUI.
+
+* `--hci`, `-h`: Sets the Bluetooth adapter to use to communicate with transmitter.
 
 * `--openaps`, `-d`: Sets the OpenAPS directory. The default directory is `/root/myopenaps`
 

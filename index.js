@@ -183,7 +183,7 @@ const init = async () => {
 
   // Start the Nightscout synchronization loop task
   if (options.nightscout) {
-    syncNS(storage, transmitter);
+    syncNS(options, storage, transmitter);
   }
 };
 

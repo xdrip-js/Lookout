@@ -128,8 +128,10 @@ const queryLatestCal = () => {
   const secret = process.env.API_SECRET;
   let nsUrl = `${process.env.NIGHTSCOUT_HOST}/api/v1/entries.json?`;
 
+  const thirtyDaysAgo = moment().subtract(30, 'days');
+
   // time format needs to match the output of 'date -d "3 hours ago" -Iminutes -u'
-  const nsQuery = 'find[type]=cal&count=1';
+  const nsQuery = `find[type]=cal&find[date][$gte]=${thirtyDaysAgo.valueOf()}&count=1`;
 
   const nsHeaders = {
     'Content-Type': 'application/json',

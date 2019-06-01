@@ -2,7 +2,8 @@
 
 [![Join the chat at https://gitter.im/thebookins/xdrip-js](https://badges.gitter.im/thebookins/xdrip-js.svg)](https://gitter.im/thebookins/xdrip-js?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-*Please note this project is neither created nor backed by Dexcom, Inc. This software is not intended for use in therapy.*
+*Please note this project is neither created nor backed by Dexcom, Inc.*
+*Lookout is not a product. Lookout comes with no warranty or official support. Anyone using Lookout is doing so at their own risk and must take responsibility for their own safety. The use of Lookout for therapy is not FDA approved and comes with inherent risks.*
 
 ## Overview
 Lookout provides a rig-based interface to a Dexcom G5 CGM using Bluetooth Low Energy (BLE).  Lookout connects to the CGM transmitter and provides the following capabilities:

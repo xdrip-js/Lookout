@@ -524,7 +524,7 @@ const calcNextSyncTimeDelay = (sgv) => {
   // If lazy upload is enabled, sync 30 seconds earlier
   // so the prumary rig and the delayed upload rig
   // don't try to upload the same missing data
-  const preDelta = options.lazy_upload ? 60000 : 30000;
+  const preDelta = options.read_only ? 60000 : 30000;
 
   // Find the next point in time where
   // 30 seconds less than the next possible

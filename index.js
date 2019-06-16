@@ -31,10 +31,10 @@ const argv = yargs
     alias: 'c',
     default: false,
   })
-  .option('lazy_upload', {
+  .option('read_only', {
     boolean: true,
-    describe: 'Delayed NS Upload (for backup rig)',
-    alias: 'u',
+    describe: 'Read Only Mode (for backup rig)',
+    alias: 'r',
     default: false,
   })
   .option('expired_cal', {
@@ -137,7 +137,7 @@ const options = {
   include_mode: params.include_mode,
   hci: params.hci,
   alternate_bt_channel: params.alternate,
-  lazy_upload: params.lazy_upload,
+  read_only: params.read_only,
 };
 
 const init = async () => {

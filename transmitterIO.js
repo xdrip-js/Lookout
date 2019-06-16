@@ -41,6 +41,11 @@ module.exports = async (options, storage, client, fakeMeter) => {
         return false;
       }
 
+      // Don't send any commands if in read only mode
+      if (options.read_only && (msg.type !== 'BatteryStatus')) {
+        return false;
+      }
+
       return true;
     });
 
@@ -317,7 +322,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
       await fakeMeter.glucose(sgv.glucose);
     }
 
-    xDripAPS.post(sgv, sendToXdrip, options.nightscout && !options.lazy_upload);
+    xDripAPS.post(sgv, sendToXdrip, options.nightscout && !options.read_only);
   };
 
   const sendCGMStatus = async (sgv, bgChecks) => {
@@ -952,7 +957,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
             glucoseHist.push(newSGV);
 
-            xDripAPS.post(newSGV, true, options.nightscout && !options.lazy_upload);
+            xDripAPS.post(newSGV, true, options.nightscout && !options.read_only);
           }
         });
       }

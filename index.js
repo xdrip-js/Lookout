@@ -18,7 +18,7 @@ const MAX_LSR_PAIRS = 10;
 const MAX_LSR_PAIRS_AGE = 6; // days
 
 const argv = yargs
-  .usage('$0 [--extend_sensor] [--expired_cal] [--port <port>] [--openaps <directory>] [--sim] [--fakemeter] [--offline_fakemeter] [--no_nightscout] [--include_mode] [--alternate]')
+  .usage('$0 [--extend_sensor] [--expired_cal] [--port <port>] [--openaps <directory>] [--sim] [--fakemeter] [--offline_fakemeter] [--no_nightscout] [--include_mode] [--alternate] [--read_only] [--hci <interface>] [--openaps <directory>] [--no_nightscout]')
   .option('extend_sensor', {
     boolean: true,
     describe: 'Enables extended sensor session mode',

@@ -265,8 +265,6 @@ To look at the Lookout log, for debug purposes, type `cat /var/log/openaps/xdrip
 
 * `--include_mode`, `-i`: Append algorithm mode to the short state string displayed in Nightscout pill.
 
-* `--alternate`, `-c`: Communicate with the transmitter on the alternate Bluetooth channel.
-
 * `--read_only`, `-r`: Read only mode for a backup reader. Also lazy uploads to Nightscout to prevent double uploading glucose values.
 
 ## Reverting NodeJS

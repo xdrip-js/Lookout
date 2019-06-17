@@ -265,7 +265,7 @@ To look at the Lookout log, for debug purposes, type `cat /var/log/openaps/xdrip
 
 * `--include_mode`, `-i`: Append algorithm mode to the short state string displayed in Nightscout pill.
 
-* `--read_only`, `-r`: Read only mode for a backup reader. Also lazy uploads to Nightscout to prevent double uploading glucose values.
+* `--read_only`, `-r`: Read only mode for a backup reader. Also lazy uploads to Nightscout to prevent double uploading glucose values. Use case is for a second rig that provides BG read redudancy while primary rig is responsible for sending commands to transmitter.
 
 ## Reverting NodeJS
 

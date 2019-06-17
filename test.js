@@ -143,7 +143,7 @@ describe('Test Calibration', () => {
     lastCal.type.should.equal('LeastSquaresRegression');
   });
 
-  it('should calculate not calculate calibration if not enough records', () => {
+  it('should not calculate calibration if not enough records', () => {
     const glucoseHist = [{
       inSession: true,
       status: 0,

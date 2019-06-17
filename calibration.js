@@ -32,9 +32,6 @@ const MAXSLOPE = 12500;
 const MINSLOPE = 450;
 const SENSOR_STABLE = 12; // hours
 const SENSOR_WARM = 2; // hours
-const MIN_LSR_PAIRS = 2;
-const MAX_LSR_PAIRS = 10;
-const MAX_LSR_PAIRS_AGE = 6; // days
 
 const leftPadString = (str, len) => ' '.repeat(Math.max(0, len - str.toString().length)) + str;
 
@@ -178,7 +175,7 @@ const singlePointCalibration = (calibrationPairs) => {
 };
 
 const calculateTxmitterCalibration = (
-  lastCal, lastTxmitterCalTime, latestBgCheckTime, sensorInsert, glucoseHist, currSGV,
+  options, lastCal, lastTxmitterCalTime, latestBgCheckTime, sensorInsert, glucoseHist, currSGV,
 ) => {
   // set it to a high number so we upload a new cal
   // if we don't have a previous calibration
@@ -233,7 +230,7 @@ const calculateTxmitterCalibration = (
     // If we have at least MIN_LSR_PAIRS good pairs and we are off by more than 5
     // OR we have at least 8 and our current cal type is SinglePoint
     // THEN use LSR
-    if (((calErr > 5) && calPairs.length > MIN_LSR_PAIRS) || (calPairs.length > 8)) {
+    if (((calErr > 5) && calPairs.length > options.min_lsr_pairs) || (calPairs.length > 8)) {
       const calResult = lsrCalibration(calPairs);
 
       log(`CGM lsrCalibration: numPoints=${calPairs.length}, slope=${calResult.slope}, intercept=${calResult.intercept}`);
@@ -430,9 +427,9 @@ const expiredCalibration = async (
   let calPairs = [];
   let calReturn = null;
   let calPairsStart = 0;
-  const maxLsrPairs = options.max_lsr_pairs || MAX_LSR_PAIRS;
-  const minLsrPairs = options.min_lsr_pairs || MIN_LSR_PAIRS;
-  let maxLsrPairsAge = options.max_lsr_pairs_age || MAX_LSR_PAIRS_AGE;
+  const maxLsrPairs = options.max_lsr_pairs;
+  const minLsrPairs = options.min_lsr_pairs;
+  let maxLsrPairsAge = options.max_lsr_pairs_age;
 
   debug(`options: %O\nmaxLsrPairs: ${maxLsrPairs}\nminLsrPairs: ${minLsrPairs}\nmaxLsrPairsAge: ${maxLsrPairsAge}`, options);
 
@@ -820,7 +817,7 @@ calibrationExports.calibrateGlucose = async (
 
   if (glucoseHist.length > 0) {
     newCal = calculateTxmitterCalibration(
-      lastCal, lastTxmitterCalTime, latestBgCheckTime, sensorInsert, glucoseHist, sgv,
+      options, lastCal, lastTxmitterCalTime, latestBgCheckTime, sensorInsert, glucoseHist, sgv,
     );
 
     expiredCal = await expiredCalibration(

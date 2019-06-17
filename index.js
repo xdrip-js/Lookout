@@ -13,12 +13,28 @@ const FakeMeter = require('./fakemeter');
 const TransmitterIO = require('./transmitterIO');
 const ClientIO = require('./clientIO');
 
+const MIN_LSR_PAIRS = 2;
+const MAX_LSR_PAIRS = 10;
+const MAX_LSR_PAIRS_AGE = 6; // days
+
 const argv = yargs
-  .usage('$0 [--extend_sensor] [--expired_cal] [--port <port>] [--openaps <directory>] [--sim] [--fakemeter] [--offline_fakemeter] [--no_nightscout] [--include_mode')
+  .usage('$0 [--extend_sensor] [--expired_cal] [--port <port>] [--openaps <directory>] [--sim] [--fakemeter] [--offline_fakemeter] [--no_nightscout] [--include_mode] [--alternate] [--read_only] [--hci <interface>] [--openaps <directory>] [--no_nightscout]')
   .option('extend_sensor', {
     boolean: true,
     describe: 'Enables extended sensor session mode',
     alias: 'e',
+    default: false,
+  })
+  .option('alternate', {
+    boolean: true,
+    describe: 'Enable Alternate Bluetooth Channel',
+    alias: 'c',
+    default: false,
+  })
+  .option('read_only', {
+    boolean: true,
+    describe: 'Read Only Mode (for backup rig)',
+    alias: 'r',
     default: false,
   })
   .option('expired_cal', {
@@ -79,19 +95,19 @@ const argv = yargs
     nargs: 1,
     describe: 'Minimum number of pairs required for LSR calibration',
     alias: 'l',
-    default: 0,
+    default: MIN_LSR_PAIRS,
   })
   .option('max_lsr_pairs', {
     nargs: 1,
     describe: 'Maximum number of pairs allowed for LSR calibration',
     alias: 'm',
-    default: 0,
+    default: MAX_LSR_PAIRS,
   })
   .option('max_lsr_pairs_age', {
     nargs: 1,
     describe: 'Maximum age of pairs relative to latest pair allowed for LSR calibration',
     alias: 'a',
-    default: 0,
+    default: MAX_LSR_PAIRS_AGE,
   })
   .option('include_mode', {
     boolean: true,
@@ -120,6 +136,8 @@ const options = {
   max_lsr_pairs_age: params.max_lsr_pairs_age,
   include_mode: params.include_mode,
   hci: params.hci,
+  alternate_bt_channel: params.alternate,
+  read_only: params.read_only,
 };
 
 const init = async () => {
@@ -165,7 +183,7 @@ const init = async () => {
 
   // Start the Nightscout synchronization loop task
   if (options.nightscout) {
-    syncNS(storage, transmitter);
+    syncNS(options, storage, transmitter);
   }
 };
 

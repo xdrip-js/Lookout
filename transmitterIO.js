@@ -41,6 +41,11 @@ module.exports = async (options, storage, client, fakeMeter) => {
         return false;
       }
 
+      // Don't send any commands if in read only mode
+      if (options.read_only && (msg.type !== 'BatteryStatus')) {
+        return false;
+      }
+
       return true;
     });
 
@@ -308,7 +313,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
     }
   };
 
-  const sendNewGlucose = async (sgv, sendSGV) => {
+  const sendNewGlucose = async (sgv, sendToXdrip) => {
     client.newSGV(sgv);
 
     if (sgv.glucose) {
@@ -317,9 +322,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
       await fakeMeter.glucose(sgv.glucose);
     }
 
-    if (options.nightscout) {
-      xDripAPS.post(sgv, sendSGV);
-    }
+    xDripAPS.post(sgv, sendToXdrip, options.nightscout && !options.read_only);
   };
 
   const sendCGMStatus = async (sgv, bgChecks) => {
@@ -954,9 +957,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
             glucoseHist.push(newSGV);
 
-            if (options.nightscout) {
-              xDripAPS.post(newSGV, true);
-            }
+            xDripAPS.post(newSGV, true, options.nightscout && !options.read_only);
           }
         });
       }
@@ -1053,8 +1054,9 @@ module.exports = async (options, storage, client, fakeMeter) => {
       worker = cp.fork(`${__dirname}/transmitterSimulator`, [prevGlucose], { });
     } else {
       const workerOptions = { };
+      const btChannel = options.alternate_bt_channel ? '1' : '0';
 
-      worker = cp.fork(`${__dirname}/transmitterWorker`, [id], workerOptions);
+      worker = cp.fork(`${__dirname}/transmitterWorker`, [id, btChannel], workerOptions);
     }
 
     worker.on('message', async (m) => {

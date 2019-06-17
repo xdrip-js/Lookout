@@ -2,7 +2,8 @@
 
 [![Join the chat at https://gitter.im/thebookins/xdrip-js](https://badges.gitter.im/thebookins/xdrip-js.svg)](https://gitter.im/thebookins/xdrip-js?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-*Please note this project is neither created nor backed by Dexcom, Inc. This software is not intended for use in therapy.*
+*Please note this project is neither created nor backed by Dexcom, Inc.*
+*Lookout is not a product. Lookout comes with no warranty or official support. Anyone using Lookout is doing so at their own risk and must take responsibility for their own safety. The use of Lookout for therapy is not FDA approved and comes with inherent risks.*
 
 ## Overview
 Lookout provides a rig-based interface to a Dexcom G5 CGM using Bluetooth Low Energy (BLE).  Lookout connects to the CGM transmitter and provides the following capabilities:
@@ -265,9 +266,7 @@ To look at the Lookout log, for debug purposes, type `cat /var/log/openaps/xdrip
 
 * `--include_mode`, `-i`: Append algorithm mode to the short state string displayed in Nightscout pill.
 
-* `--alternate`, `-c`: Communicate with the transmitter on the alternate Bluetooth channel.
-
-* `--read_only`, `-r`: Read only mode for a backup reader. Also lazy uploads to Nightscout to prevent double uploading glucose values.
+* `--read_only`, `-r`: Read only mode for a backup reader. Also lazy uploads to Nightscout to prevent double uploading glucose values. Use case is for a second rig that provides BG read redudancy while primary rig is responsible for sending commands to transmitter.
 
 ## Reverting NodeJS
 

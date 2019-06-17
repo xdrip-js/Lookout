@@ -1,6 +1,6 @@
 {
     "name": "Lookout",
-    "version": "1.1.0",
+    "version": "2.0.1",
     "description": "A web app for controlling and monitoring an Dexcom CGM via Lookout.",
     "main": "index.js",
     "scripts": {

@@ -1,6 +1,6 @@
 /* global describe it */
 
-require('should');
+const should = require('should');
 
 const _ = require('lodash');
 const store = require('node-persist');
@@ -143,7 +143,7 @@ describe('Test Calibration', () => {
     lastCal.type.should.equal('LeastSquaresRegression');
   });
 
-  it('should calculate Single Point calibration if not enough records', () => {
+  it('should not calculate calibration if not enough records', () => {
     const glucoseHist = [{
       inSession: true,
       status: 0,
@@ -186,10 +186,7 @@ describe('Test Calibration', () => {
       options, null, 0, null, null, glucoseHist, currSGV,
     );
 
-    lastCal.slope.should.be.greaterThan(1050);
-    lastCal.slope.should.be.lessThan(1060);
-    lastCal.intercept.should.equal(0);
-    lastCal.type.should.equal('SinglePoint');
+    should.not.exist(lastCal);
   });
 
   it('should calculate expired calibration values with Least Squares Regression', async () => {

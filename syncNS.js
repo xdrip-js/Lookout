@@ -125,11 +125,6 @@ const syncEvent = async (itemName, eventType) => {
     debug(`SyncNS Rig ${itemName}- date: ${rigItem.format()}`);
   }
 
-  if (nsQueryError) {
-    // ns query failed, so just return the rig sensor insert
-    return rigItem;
-  }
-
   let latestEvent = rigItem;
 
   if (nsEvent) {

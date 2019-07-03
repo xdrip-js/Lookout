@@ -11,7 +11,7 @@ const _ = require('lodash');
 const calibration = require('./calibration');
 const xDripAPS = require('./xDripAPS')();
 
-module.exports = async (options, storage, storageLock, client, fakeMeter) => {
+module.exports = async (options, storage, client, fakeMeter) => {
   let txId;
   let txAddress = null;
   let txFailedReads = 0;
@@ -38,6 +38,11 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
       // Don't send other messages older than 12 minutes
       if (((msg.type !== 'StopSensor') && (msg.type !== 'StartSensor')) && (Date.now() - msg.date) > 12 * 60000) {
+        return false;
+      }
+
+      // Don't send any commands if in read only mode
+      if (options.read_only && (msg.type !== 'BatteryStatus')) {
         return false;
       }
 
@@ -82,16 +87,17 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
   };
 
   const getGlucose = async () => {
-    const glucoseHist = await storage.getItem('glucoseHist');
+    const glucoseHist = await storage.getArray('glucoseHist');
 
-    if (glucoseHist) {
+    if (glucoseHist.length > 0) {
       return glucoseHist[glucoseHist.length - 1];
     }
+
     return null;
   };
 
   const removeBTDevice = (btName) => {
-    cp.exec(`bt-device -r ${btName}`, (err, stdout, stderr) => {
+    cp.exec(`bt-device -a hci${options.hci} -r ${btName}`, (err, stdout, stderr) => {
       if (err) {
         debug(`Unable to remove BT Device: ${btName} - ${err}`);
         return;
@@ -167,9 +173,9 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     const now = moment();
     let stopWhen = stopTime || now;
 
-    // if the commanded stop time is older than 2 hours, use current time
-    if (stopTime.diff(now, 'minutes') > 120) {
-      stopWhen = now;
+    // if the commanded stop time is older than 2 hours, use current time - 120 minutes
+    if (stopTime.diff(now, 'minutes') > 132) {
+      stopWhen = now - 120 * 60000;
     }
 
     await storage.setItem('sensorStop', stopWhen.valueOf())
@@ -177,14 +183,18 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         error(`Unable to store sensorStop: ${err}`);
       });
 
-    await storage.del('glucoseHist');
+    await storage.delItem('glucoseHist');
     await calibration.clearCalibration(storage);
   };
 
-  const stopTransmitterSession = () => {
+  const stopTransmitterSession = (stopTime) => {
+    const twoAgo = moment().subtract(2, 'hours');
+
+    const stopWhen = stopTime || twoAgo;
+
     // Stop sensor 2 hours prior to now to enable a rapid restart
     // if one is desired.
-    pending.push({ date: Date.now() - 2 * 60 * 60 * 1000, type: 'StopSensor' });
+    pending.push({ date: stopWhen.valueOf(), type: 'StopSensor' });
 
     pending = filterPending(pending);
 
@@ -229,7 +239,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         );
       }
       debug(`Session Start: ${sessionStart} sensorStart: ${sensorInsert} sensorStop: ${sensorStop}`);
-      stopTransmitterSession();
+      stopTransmitterSession(sensorStop);
       await stopSensorSession(sensorStop);
     } else if (isControlling(sgv)) {
       const haveCal = await calibration.haveCalibration(storage);
@@ -241,7 +251,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       }
 
       const haveValidCal = await calibration.validateCalibration(
-        storage, sensorInsert, sensorStop, latestBgCheckTime,
+        options, storage, sensorInsert, sensorStop, latestBgCheckTime,
       );
 
       if (haveCal && !haveValidCal) {
@@ -303,7 +313,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     }
   };
 
-  const sendNewGlucose = async (sgv, sendSGV) => {
+  const sendNewGlucose = async (sgv, sendToXdrip) => {
     client.newSGV(sgv);
 
     if (sgv.glucose) {
@@ -312,9 +322,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       await fakeMeter.glucose(sgv.glucose);
     }
 
-    if (options.nightscout) {
-      xDripAPS.post(sgv, sendSGV);
-    }
+    xDripAPS.post(sgv, sendToXdrip, options.nightscout && !options.read_only);
   };
 
   const sendCGMStatus = async (sgv, bgChecks) => {
@@ -703,29 +711,21 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       debug(`SyncNS Rig sensor stop - date: ${sensorStop.format()}`);
     }
 
-    await storageLock.lockStorage();
+    await storage.lock();
 
     sgv.readDateMills = moment(sgv.readDate).valueOf();
 
-    let bgChecks = await storage.getItem('bgChecks')
+    const bgChecks = await storage.getArray('bgChecks')
       .catch((err) => {
         error(`Error getting bgChecks: ${err}`);
       });
 
-    if (!bgChecks) {
-      bgChecks = [];
-    }
-
     await checkSensorSession(sensorInsert, sensorStop, bgChecks, sgv);
 
-    glucoseHist = await storage.getItem('glucoseHist')
+    glucoseHist = await storage.getArray('glucoseHist')
       .catch((err) => {
         error(`Error getting glucoseHist: ${err}`);
       });
-
-    if (!glucoseHist) {
-      glucoseHist = [];
-    }
 
     sgv = await calibration.calibrateGlucose(
       storage, options, sensorInsert, sensorStop, glucoseHist, sgv,
@@ -798,7 +798,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         error('Unable to store new glucose');
       });
 
-    storageLock.unlockStorage();
+    storage.unlock();
 
     sendCGMStatus(sgv, bgChecks);
 
@@ -822,12 +822,12 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       return;
     }
 
-    const rigSGVs = await storage.getItem('glucoseHist')
+    const rigSGVs = await storage.getArray('glucoseHist')
       .catch((err) => {
         error(`Error getting rig SGVs: ${err}`);
       });
 
-    if (!rigSGVs) {
+    if (rigSGVs.length < 1) {
       // we really shouldn't have gotten to this
       // state, but bail since we don't have any
       // glucose history to work with
@@ -847,16 +847,12 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     newCal.type = 'Txmitter';
 
-    await storageLock.lockStorage();
+    await storage.lock();
 
-    bgChecks = await storage.getItem('bgChecks')
+    bgChecks = await storage.getArray('bgChecks')
       .catch((err) => {
         error(`Error getting bgChecks: ${err}`);
       });
-
-    if (!bgChecks) {
-      bgChecks = [];
-    }
 
     // Look through the BG Checks we have to see if we already
     // have this BG Check
@@ -871,7 +867,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
           // If it already has a unfiltered value
           // we have already completed processing
           // it.
-          storageLock.unlockStorage();
+          storage.unlock();
 
           return;
         }
@@ -896,7 +892,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       // The calibration value pre-dates the NS sensorInsert record
       // Bail out.
 
-      storageLock.unlockStorage();
+      storage.unlock();
 
       return;
     }
@@ -921,7 +917,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         error(`Error saving bgChecks: ${err}`);
       });
 
-    storageLock.unlockStorage();
+    storage.unlock();
   };
 
   const processBatteryStatus = (batteryStatus) => {
@@ -933,9 +929,9 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
   };
 
   const processBackfillData = async (backfillData) => {
-    await storageLock.lockStorage();
+    await storage.lock();
 
-    let glucoseHist = await storage.getItem('glucoseHist');
+    let glucoseHist = await storage.getArray('glucoseHist');
     const gaps = sgvGaps(glucoseHist);
 
     _.each(backfillData, (glucose) => {
@@ -961,9 +957,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
             glucoseHist.push(newSGV);
 
-            if (options.nightscout) {
-              xDripAPS.post(newSGV, true);
-            }
+            xDripAPS.post(newSGV, true, options.nightscout && !options.read_only);
           }
         });
       }
@@ -976,7 +970,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         error(`Unable to store glucoseHist: ${err}`);
       });
 
-    storageLock.unlockStorage();
+    storage.unlock();
   };
 
   // test to see if we have a BG Check that needs
@@ -987,14 +981,10 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     let latestBGCheckTime = null;
     let pendingCalTime = 0;
 
-    let bgChecks = await storage.getItem('bgChecks')
+    const bgChecks = await storage.getArray('bgChecks')
       .catch((err) => {
         error(`Error getting bgChecks: ${err}`);
       });
-
-    if (!bgChecks) {
-      bgChecks = [];
-    }
 
     if (bgChecks.length > 0) {
       latestBGCheckTime = bgChecks[bgChecks.length - 1].dateMills;
@@ -1064,8 +1054,9 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       worker = cp.fork(`${__dirname}/transmitterSimulator`, [prevGlucose], { });
     } else {
       const workerOptions = { };
+      const btChannel = options.alternate_bt_channel ? '1' : '0';
 
-      worker = cp.fork(`${__dirname}/transmitterWorker`, [id], workerOptions);
+      worker = cp.fork(`${__dirname}/transmitterWorker`, [id, btChannel], workerOptions);
     }
 
     worker.on('message', async (m) => {
@@ -1080,7 +1071,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
         pending = filterPending(pending);
 
-        const glucoseHist = await storage.getItem('glucoseHist');
+        const glucoseHist = await storage.getArray('glucoseHist');
         const gaps = sgvGaps(glucoseHist);
 
         let minGapDate = null;
@@ -1185,11 +1176,11 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
         clearTimeout(timerObj);
       }
 
-      if (id && id !== txId) {
+      if (id && id !== txId && txId) {
         removeBTDevices();
       }
 
-      if (txFailedReads >= 2) {
+      if (txFailedReads >= 2 && (Date.now() - lastSuccessfulRead) > 11 * 60000) {
         // Automatically reboot on the 2nd failed read
         rebootRig();
       }
@@ -1238,7 +1229,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
       txId = value;
 
       calibration.clearCalibration(storage);
-      storage.del('glucoseHist');
+      storage.delItem('glucoseHist');
 
       storage.setItemSync('id', txId);
     }
@@ -1264,14 +1255,10 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
 
     // provide the glucose history
     getHistory: async () => {
-      let glucoseHist = await storage.getItem('glucoseHist')
+      const glucoseHist = await storage.getArray('glucoseHist')
         .catch((err) => {
           error(`Unable to get glucoseHist storage item: ${err}`);
         });
-
-      if (!glucoseHist) {
-        glucoseHist = [];
-      }
 
       return glucoseHist.map(sgv => ({ readDate: sgv.readDateMills, glucose: sgv.glucose }));
     },
@@ -1308,12 +1295,13 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     },
 
     stopSensor: async () => {
-      await stopSensorSession(moment());
+      const stopTime = moment().subtract(2, 'hours');
+      await stopSensorSession(stopTime);
 
       const sgv = await getGlucose();
 
       if (transmitterInSession(sgv)) {
-        stopTransmitterSession();
+        stopTransmitterSession(stopTime);
       }
     },
 
@@ -1331,16 +1319,12 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     calibrate: async (glucose) => {
       const timeValue = moment();
 
-      await storageLock.lockStorage();
+      await storage.lock();
 
-      let bgChecks = await storage.getItem('bgChecks')
+      let bgChecks = await storage.getArray('bgChecks')
         .catch((err) => {
           error(`Error getting bgChecks: ${err}`);
         });
-
-      if (!bgChecks) {
-        bgChecks = [];
-      }
 
       const calData = {
         date: timeValue.format(),
@@ -1358,7 +1342,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
           error(`Error saving bgChecks: ${err}`);
         });
 
-      storageLock.unlockStorage();
+      storage.unlock();
 
       pending.push({ date: Date.now(), type: 'CalibrateSensor', glucose });
 
@@ -1391,7 +1375,7 @@ module.exports = async (options, storage, storageLock, client, fakeMeter) => {
     sgvGaps: rigSGVs => sgvGaps(rigSGVs),
 
     getUnfiltered: async (valueTime) => {
-      const rigSGVs = await storage.getItem('glucoseHist')
+      const rigSGVs = await storage.getArray('glucoseHist')
         .catch((err) => {
           error(`Error getting rig SGVs: ${err}`);
         });

@@ -128,8 +128,10 @@ const queryLatestCal = () => {
   const secret = process.env.API_SECRET;
   let nsUrl = `${process.env.NIGHTSCOUT_HOST}/api/v1/entries.json?`;
 
+  const thirtyDaysAgo = moment().subtract(30, 'days');
+
   // time format needs to match the output of 'date -d "3 hours ago" -Iminutes -u'
-  const nsQuery = 'find[type]=cal&count=1';
+  const nsQuery = `find[type]=cal&find[date][$gte]=${thirtyDaysAgo.valueOf()}&count=1`;
 
   const nsHeaders = {
     'Content-Type': 'application/json',
@@ -347,14 +349,16 @@ const convertBGCheck = BGCheck => [{
 
 module.exports = () => ({
   // API (public) functions
-  post: (glucose, sendToXdrip) => {
+  post: (glucose, sendToXdrip, sendToNS) => {
     const entry = [convertEntryToNS(glucose)];
 
     if (sendToXdrip) {
       postToXdrip(entry);
     }
 
-    postToNS(entry);
+    if (sendToNS) {
+      postToNS(entry);
+    }
   },
 
   updateBGCheck: (id, BGCheck) => {
@@ -653,7 +657,8 @@ module.exports = () => ({
 
     const eventRecord = await queryLatestEvent(type);
 
-    if (eventRecord && (eventRecord.length > 0)) {
+    if (eventRecord && (eventRecord.length > 0)
+      && eventRecord[0].created_at && (eventRecord[0].created_at.length > 10)) {
       eventTime = moment(eventRecord[0].created_at);
     }
 

@@ -2,7 +2,8 @@
 
 [![Join the chat at https://gitter.im/thebookins/xdrip-js](https://badges.gitter.im/thebookins/xdrip-js.svg)](https://gitter.im/thebookins/xdrip-js?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-*Please note this project is neither created nor backed by Dexcom, Inc. This software is not intended for use in therapy.*
+*Please note this project is neither created nor backed by Dexcom, Inc.*
+*Lookout is not a product. Lookout comes with no warranty or official support. Anyone using Lookout is doing so at their own risk and must take responsibility for their own safety. The use of Lookout for therapy is not FDA approved and comes with inherent risks.*
 
 ## Overview
 Lookout provides a rig-based interface to a Dexcom G5 CGM using Bluetooth Low Energy (BLE).  Lookout connects to the CGM transmitter and provides the following capabilities:
@@ -24,7 +25,7 @@ Lookout can be used with unexpired G5 transmitters relying on the official calib
 
 Lookout can be monitored and controlled via a web-based graphical interface, the `lookout` command line interface, or Nightscout.
 
-Typically, Lookout can be run in parallel with a Dexcom receiver.  There are reported cases where Lookout did not interact well with a Dexcom receiver so YMMV.  It cannot run in parallel with a Dexcom or xDrip app on a phone as only one of the devices will connect to a transmitter at a time. Swapping devices requires approximately 15 minutes of the transmitter being unable to communicate with the device it was talking with before it will begin to talk to a new device.
+Typically, Lookout can be run in parallel with a Dexcom receiver.  There are reported cases where Lookout did not interact well with a Dexcom receiver so YMMV.  It can also be run in parallel with a Dexcom or xDrip app on a phone if started with the `alternate` flag. 
 
 A failure mode on the rig can prevent Lookout from completing the interaction with the transmitter to successfully read glucose values.  Lookout will automatically reboot the rig if it connects to the transmitter, but is unable to successfully retrieve a glucose value 2 times in a row.
 
@@ -49,9 +50,10 @@ Expired calibration mode is enabled with the `--expired_cal` command line option
 * Enter a Sensor Start in Nightscout --non-preferred method--
 * Enter a Sensor Insert in Nightscout --non-preferred method--
 
-**INFO** Expired calibration mode is in testing phase only and is NOT recommended. It is included in the code at this time so the user can monitor in the log file the delta between the official calibration values and the expired mode calculated calibration values.
+**WARNING** Expired calibration mode uses a custom algorthm that is unable to guarantee the various sensor failure modes are appropriately handled. Therefore, it is NOT recommended. 
 
 ## Pre-installation
+### Intel Explorer Rig
 You must update your rig's NodeJS based on https://github.com/xdrip-js/xdrip-js/wiki (only use the "Updating NodeJS" section of those instructions, you should not install xdrip-js manually, it will be installed in the next step as part of Lookout.)
 As of 13-Jun-2018, these steps are:
 ```
@@ -65,10 +67,19 @@ sudo apt-get install nodejs -y
 ```
 If you later need to revert your rig's NodeJS to the legacy version, follow the steps in the below section "Reverting NodeJS".
 
-Lookout uses the bluez-tools software. Here are the instructions for installing bluez-tools:
+### Raspberry Pi Rig
+The version of NPM that ships with raspbian is old (`1.4.21`).  You must update your rig's NPM to install Lookout dependencies.
+```
+sudo npm install -g npm
+```
+
+**INFO** To start using the new version, you must log out and log back in for the shell to see it.
+
+Lookout uses the bluez-tools and libudev-dev software. Here are the instructions for installing them:
 
 ```
 sudo apt-get install bluez-tools
+sudo apt-get install libudev-dev
 ```
 
 Lookout requires the openaps cgm type to be ```xdrip```. If you are not running xdrip as the openaps cgm type, then offline looping will not work. To change cgm type, re-run oref0-setup and choose xdrip as the cgm type.
@@ -261,9 +272,11 @@ To look at the Lookout log, for debug purposes, type `cat /var/log/openaps/looko
 
 * `--expired_cal`, `-x`: Enables using user entered BG Check and Sensor Start records to calibrate raw unfiltered values reported by the CGM transmitter. Lookout does not perform calibration for 15 minutes after a Sensor Start. During the first 12 hours after a Sensor Start, Lookout only uses a Single Point calibration algorithm that assumes a y axis intercept of 0.  After the first 12 hours, Lookout will switch to using a Least Squares Regression algorithm to calculate the y axis intercept and slope to convert the raw unfiltered values to calibrated glucose values.  Transmitter provided calibrated glucose readings take presedence over the Lookout calibration algorithm.  If the transmitter doesn't provide a calibrated value, Lookout will calibrate the unfiltered value.  Extend sensor mode takes presedence over expired calibration mode.
 
-**INFO** Currently, expired calibration mode only calculates the values and prints them to the log file for monitoring the algorithm effectiveness.  Expired calibration mode is in testing phase only. It is included in the code at this time so the user can monitor in the log file the delta between the official calibration values and the expired mode calculated calibration values.  The calculation of glucose values from the calculated expired calibration values is disabled.
+**WARNING** Expired calibration mode uses a custom algorthm that is unable to guarantee the various sensor failure modes are appropriately handled. Therefore, it is NOT recommended. 
 
 * `--verbose`, `-v`: Enables verbose logging.
+
+* `--alternate`, `-c`: Enables using the alternate Bluetooth channel to communicate with transmitter. This allows the rig to operate in parallel with the Dexcom phone app or xDrip+.
 
 * `--sim`, `-s`: Runs Lookout in simulation mode for offline testing.
 
@@ -273,11 +286,15 @@ To look at the Lookout log, for debug purposes, type `cat /var/log/openaps/looko
 
 * `--port`, `-p`: Sets the port number for the web server providing the Lookout GUI.
 
+* `--hci`, `-h`: Sets the Bluetooth adapter to use to communicate with transmitter.
+
 * `--openaps`, `-d`: Sets the OpenAPS directory. The default directory is `/root/myopenaps`
 
 * `--no_nightscout`, `-n`: Disable Nightscout interaction.
 
 * `--include_mode`, `-i`: Append algorithm mode to the short state string displayed in Nightscout pill.
+
+* `--read_only`, `-r`: Read only mode for a backup reader. Also lazy uploads to Nightscout to prevent double uploading glucose values. Use case is for a second rig that provides BG read redudancy while primary rig is responsible for sending commands to transmitter.
 
 ## Reverting NodeJS
 

@@ -70,7 +70,7 @@ If you later need to revert your rig's NodeJS to the legacy version, follow the 
 ### Raspberry Pi Rig
 The version of NPM that ships with raspbian is old (`1.4.21`).  You must update your rig's NPM to install Lookout dependencies.
 ```
-sudo npm install -g npm
+npm install -g npm
 ```
 
 **INFO** To start using the new version, you must log out and log back in for the shell to see it.
@@ -89,8 +89,8 @@ Lookout requires the openaps cgm type to be ```xdrip```. If you are not running 
 cd ~
 git clone https://github.com/xdrip-js/Lookout.git
 cd Lookout
-sudo npm install
-sudo npm link
+npm install
+npm link
 ```
 ## Testing
 ```
@@ -98,6 +98,8 @@ npm test
 ```
 
 ## Updating Your Rig
+# Update Rig to Latest version of **Lookout master branch**
+Use this code to update to the current `master` branch:
 ```
 cd ~/Lookout
 git remote remove upstream # Just in case one already exists - this command may error, but that is OK
@@ -105,12 +107,26 @@ git remote add upstream https://github.com/xdrip-js/Lookout.git
 git fetch upstream
 git checkout --force upstream/master # Force a checkout of the current master even if we have made local changes
 git checkout -B master # Force an overwrite of the local master with the upstream master
-sudo npm install
-sudo npm link
+npm install
+npm link
 ```
 If your upstream is already set to the xdrip-js repository, you can skip the `git remote` commands.  The current git remote repositories can be displayed with the `git remote -v` command.
 
-If you want to run the dev branch, replace `master` in the commands above with `dev`.
+After updating the rig, reboot to restart Lookout with the updated version.
+
+# Update Rig to Latest version of **Lookout dev branch**
+Running the `dev` branch? Use this code instead to update to the current `dev` branch:
+```
+cd ~/Lookout
+git remote remove upstream # Just in case one already exists - this command may error, but that is OK
+git remote add upstream https://github.com/xdrip-js/Lookout.git
+git fetch upstream
+git checkout --force upstream/dev # Force a checkout of the current dev even if we have made local changes
+git checkout -B dev # Force an overwrite of the local dev with the upstream master
+npm install
+npm link
+```
+If your upstream is already set to the xdrip-js repository, you can skip the `git remote` commands.  The current git remote repositories can be displayed with the `git remote -v` command.
 
 After updating the rig, reboot to restart Lookout with the updated version.
 
@@ -206,6 +222,15 @@ The commands below can be entered on the rig command line to control the CGM. Re
 
 Use `-m` option for mmol instead of mg/dL. For example, `lookout -m cal 4.1` will calibrate with 4.1 mmol.
 
+### More Command Line Examples
+```
+ lookout cal 121             # Calibration with glucose meter reading of `121`
+ lookout id G123T1           # Set transmitter ID to `G123T1`
+ lookout meterid 062470      # Set fakemeter ID to `062460` - Must mach meter ID setting on pump
+ lookout start 9117          # Start a G6 sensor session for sensor serial number 9117
+ lookout back-start 9117     # Start a G6 sensor session 2 hours prior to the current time for sensor serial number 9117
+```
+
 ## Replacing a Sensor, using the command line
 This assumes that a sensor session is active, and that you are using the same transmitter for both sessions. The goal is to minimize looping-downtime during the sensor change. This method works with G5 or G6 sensors.
 
@@ -235,7 +260,7 @@ Yay. Go on looping with a new sensor!
 Entering records in Nightscout can also be used to control your CGM. Lookout synchronizes with Nightscout 30 seconds prior to every transmitter read event. Therefore, the entries described below must be inserted into Nightscout at least 30 seconds prior to the next read event or it will not be executed until the following event.
 
 ### CGM Sensor Start
-Enter a CGM Sensor Start into Nightscout to start a sensor session if one is not running. A sensor start will also cause Lookout to delete the extended and expired calibration values if they exist which will effectively end any extended or expired sensor sessions. If the transmitter does not have an active sensor session, Lookout will cease reporting calibrated glucose values.
+Enter a CGM Sensor Start into Nightscout to start a sensor session if one is not running. A sensor start will also cause Lookout to delete the extended and expired calibration values if they exist which will effectively end any extended or expired sensor sessions. If the transmitter does not have an active sensor session, Lookout will cease reporting calibrated glucose values.  Sensor start on a G6 does not yet support adding the sensor serial number, so the session will require calibration and not benefit from the G6's feature for 10 days without calibrations.
 
 ### CGM Sensor Insert
 Entering a CGM Sensor Insert will also cause Lookout to delete the extend and expired calibration values if they exist which will effectively end any extended or expired sensor sessions. If the transmitter does not have an active sensor session, Lookout will cease reporting calibrated glucose values.
@@ -305,4 +330,4 @@ sudo aptitude install nodejs-legacy
 ```
 
 ## Interaction with Dexcom Receiver
-YDMV, so test it until you are comfortable. A few people have run Lookout concurrently with their Dexcom receiver without perceiving negative impacts to either. Others have been succesfull.
+YDMV, so test it until you are comfortable. A few people have run Lookout concurrently with their Dexcom receiver (or Dexcom phone app with `--alternate` options without perceiving negative impacts to either. Others have been less successfull.

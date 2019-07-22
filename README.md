@@ -98,7 +98,7 @@ npm test
 ```
 
 ## Updating Your Rig
-# Update Rig to Latest version of **Lookout master branch**
+### Update Rig to Latest version of **Lookout master branch**
 Use this code to update to the current `master` branch:
 ```
 cd ~/Lookout
@@ -114,7 +114,7 @@ If your upstream is already set to the xdrip-js repository, you can skip the `gi
 
 After updating the rig, reboot to restart Lookout with the updated version.
 
-# Update Rig to Latest version of **Lookout dev branch**
+### Update Rig to Latest version of **Lookout dev branch**
 Running the `dev` branch? Use this code instead to update to the current `dev` branch:
 ```
 cd ~/Lookout

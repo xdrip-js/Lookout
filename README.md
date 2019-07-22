@@ -330,4 +330,4 @@ sudo aptitude install nodejs-legacy
 ```
 
 ## Interaction with Dexcom Receiver
-YDMV, so test it until you are comfortable. A few people have run Lookout concurrently with their Dexcom receiver (or Dexcom phone app with `--alternate` options without perceiving negative impacts to either. Others have been less successfull.
+YDMV, so test it until you are comfortable. A few people have run Lookout concurrently with their Dexcom receiver (or Dexcom phone app with `--alternate` option) without perceiving negative impacts to either. Others have been less successfull.

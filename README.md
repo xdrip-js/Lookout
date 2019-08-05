@@ -89,8 +89,8 @@ Lookout requires the openaps cgm type to be ```xdrip```. If you are not running 
 cd ~
 git clone https://github.com/xdrip-js/Lookout.git
 cd Lookout
-sudo npm install
-sudo npm link
+npm install
+npm link
 ```
 ## Testing
 ```
@@ -98,6 +98,8 @@ npm test
 ```
 
 ## Updating Your Rig
+### Update Rig to Latest version of **Lookout master branch**
+Use this code to update to the current `master` branch:
 ```
 cd ~/Lookout
 git remote remove upstream # Just in case one already exists - this command may error, but that is OK
@@ -105,12 +107,26 @@ git remote add upstream https://github.com/xdrip-js/Lookout.git
 git fetch upstream
 git checkout --force upstream/master # Force a checkout of the current master even if we have made local changes
 git checkout -B master # Force an overwrite of the local master with the upstream master
-sudo npm install
-sudo npm link
+npm install
+npm link
 ```
 If your upstream is already set to the xdrip-js repository, you can skip the `git remote` commands.  The current git remote repositories can be displayed with the `git remote -v` command.
 
-If you want to run the dev branch, replace `master` in the commands above with `dev`.
+After updating the rig, reboot to restart Lookout with the updated version.
+
+### Update Rig to Latest version of **Lookout dev branch**
+Running the `dev` branch? Use this code instead to update to the current `dev` branch:
+```
+cd ~/Lookout
+git remote remove upstream # Just in case one already exists - this command may error, but that is OK
+git remote add upstream https://github.com/xdrip-js/Lookout.git
+git fetch upstream
+git checkout --force upstream/dev # Force a checkout of the current dev even if we have made local changes
+git checkout -B dev # Force an overwrite of the local dev with the upstream master
+npm install
+npm link
+```
+If your upstream is already set to the xdrip-js repository, you can skip the `git remote` commands.  The current git remote repositories can be displayed with the `git remote -v` command.
 
 After updating the rig, reboot to restart Lookout with the updated version.
 
@@ -192,13 +208,13 @@ Once the browser is open to your Lookout page (see above steps), you can:
 4. Set a meter ID on the pump to match
 
 ## Using the command line to control your CGM
-The commands below can be entered on the rig command line to control the CGM. Regardless of which command is entered, after executing the command the command will enter a status loop indefinately printing the CGM status at each glucose read event. Enter `Ctrl-C` to exit the command.
+The commands below can be entered on the rig command line to control the CGM. Regardless of which command is entered, after executing the command the command will enter a status loop indefinately printing the CGM status at each glucose read event. Enter `Ctrl-C` to exit the command. Arguments identified with angle brackets (`<>`) are required. The command will issue an error if the argument is not provided. Arguments identified with square brackets (`[]`) are optional depending on the specific context. For example, the start command requries a sensor serial number argument if using a G6 transmitter, but does not if using a G5.
 ```
-  lookout cal <sgv>                  # Calibrate the transmitter with provided glucose meter reading
-  lookout id <id>                    # Set transmitter ID
-  lookout meterid <meterid>          # Set transmitter ID
-  lookout start [sensor_serial]      # Start sensor session; sensor serial required for G6
-  lookout back-start [sensor_serial] # Start sensor session back dated by 2 hours; sensor serial required for G6
+  lookout cal <sgv>                  # Calibrate the transmitter with glucose meter reading. Example: `lookout cal 100`
+  lookout id <id>                    # Set transmitter ID. Example: `lookout id 9515`
+  lookout meterid <meterid>          # Set fakemeter ID. Example: `lookout meterid 123456`
+  lookout start [sensor_serial]      # Start sensor session; sensor serial required for G6. Example: `lookout start 9515`
+  lookout back-start [sensor_serial] # Start sensor session back dated by 2 hours; sensor serial required for G6. Example: `lookout back-start 9515`
   lookout stop                       # Stop sensor session
   lookout reset                      # Reset transmitter
   lookout status                     # Show status  [default]
@@ -206,11 +222,45 @@ The commands below can be entered on the rig command line to control the CGM. Re
 
 Use `-m` option for mmol instead of mg/dL. For example, `lookout -m cal 4.1` will calibrate with 4.1 mmol.
 
+### More Command Line Examples
+```
+ lookout cal 121             # Calibration with glucose meter reading of `121`
+ lookout id G123T1           # Set transmitter ID to `G123T1`
+ lookout meterid 062470      # Set fakemeter ID to `062460` - Must mach meter ID setting on pump
+ lookout start 9117          # Start a G6 sensor session for sensor serial number 9117
+ lookout back-start 9117     # Start a G6 sensor session 2 hours prior to the current time for sensor serial number 9117
+```
+
+## Replacing a Sensor, using the command line
+This assumes that a sensor session is active, and that you are using the same transmitter for both sessions. The goal is to minimize looping-downtime during the sensor change. This method works with G5 or G6 sensors.
+
+### Pre-soak the sensor
+1. Insert new sensor some time before old sensor is ready to come out (2+ hours).
+If using a G6, note the sensor serial number. You will want need it later to start, to restart the sensor, and for troubleshooting. (take a photo ...)
+
+### Stop current sensor session once you are ready to change sensors
+2. To stop the current sensor session, enter `lookout stop`.
+Note: Time the sensor change for a time where "not looping" for a while is OK - this might take some time to complete. Plan for 30 min, or more if something goes wrong.
+
+### Swap transmitter to new sensor
+3. Transfer the current transmitter from the old sensor to the new, pre-soaked sensor.
+Note: Don't reset the transmitter now, or you will have to wait the 2 hours designed into the system for a sensor change. Same, if you are starting with a new transmitter.
+
+### Start new sensor - "2 hours ago"
+4. Enter `lookout back-start sensor_serial`
+
+### Wait a few minutes (~10 - 20 min)
+5. After a few minutes, the sensor should be reporting BG values. You might be asked to calibrate, or not. Keep that glucose meter handy, just in case.
+Yay. Go on looping with a new sensor!
+
+#### Note: `lookout back-start` will probably not work if you reset/have reset the transmitter after the "back-start" time, or start with a new transmitter. The transmitter must be "known to the rig" for 2 hours or more, to successfully back-start a sensor.
+
+
 ## Using Nightscout to control your CGM
 Entering records in Nightscout can also be used to control your CGM. Lookout synchronizes with Nightscout 30 seconds prior to every transmitter read event. Therefore, the entries described below must be inserted into Nightscout at least 30 seconds prior to the next read event or it will not be executed until the following event.
 
 ### CGM Sensor Start
-Enter a CGM Sensor Start into Nightscout to start a sensor session if one is not running. A sensor start will also cause Lookout to delete the extended and expired calibration values if they exist which will effectively end any extended or expired sensor sessions. If the transmitter does not have an active sensor session, Lookout will cease reporting calibrated glucose values.
+Enter a CGM Sensor Start into Nightscout to start a sensor session if one is not running. A sensor start will also cause Lookout to delete the extended and expired calibration values if they exist which will effectively end any extended or expired sensor sessions. If the transmitter does not have an active sensor session, Lookout will cease reporting calibrated glucose values.  Sensor start on a G6 does not yet support adding the sensor serial number, so the session will require calibration and not benefit from the G6's feature for 10 days without calibrations.
 
 ### CGM Sensor Insert
 Entering a CGM Sensor Insert will also cause Lookout to delete the extend and expired calibration values if they exist which will effectively end any extended or expired sensor sessions. If the transmitter does not have an active sensor session, Lookout will cease reporting calibrated glucose values.
@@ -234,8 +284,8 @@ So far in the above you've only run Lookout from the command line - the next tim
 ```
 
 ## Debugging
-To look at the Lookout log, for debug purposes, type `cat /var/log/openaps/xdrip-js.log` or `tail -n 100 -F /var/log/openaps/xdrip-js.log`.
-* If your xdrip-js.log file contains messages similar to `Error: /root/Lookout/node_modules/bluetooth-hci-socket/build/Release/binding.node: undefined symbol: _ZN2v816FunctionTemplate3NewEPNS_7IsolateEPFvRKNS_20FunctionCallbackInfoINS_5ValueEEEENS_5LocalIS4_EENSA_INS_9SignatureEEEi` run the following command: `cd ~/Lookout; npm rebuild`
+To look at the Lookout log, for debug purposes, type `cat /var/log/openaps/lookout.log` or `tail -n 100 -F /var/log/openaps/lookout.log`.
+* If your lookout.log file contains messages similar to `Error: /root/Lookout/node_modules/bluetooth-hci-socket/build/Release/binding.node: undefined symbol: _ZN2v816FunctionTemplate3NewEPNS_7IsolateEPFvRKNS_20FunctionCallbackInfoINS_5ValueEEEENS_5LocalIS4_EENSA_INS_9SignatureEEEi` run the following command: `cd ~/Lookout; npm rebuild`
 
 ## Lookout Command Line Options
 * `--extend_sensor`, `-e`: Enables using the calibrated and unfiltered values reported by the CGM to calculate the running calibration slope and intercept values whenever the current calibration values it has produces a calibrated value that is more than 5 mg/dL away from the CGM reported calibrated value.  Lookout will apply the most recent calculated calibration to the CGM's unfiltered value if the transmitter does not report a calibrated glucose.  This enables Lookout to continue reporting glucose values after the sensor session is ended, providing greater flexibility on when the user changes the site.  This is not intended to extend a sensor life past 24 hours due to the lack of an ongoing calibration update mechanism.
@@ -280,4 +330,4 @@ sudo aptitude install nodejs-legacy
 ```
 
 ## Interaction with Dexcom Receiver
-YDMV, so test it until you are comfortable. A few people have run Lookout concurrently with their Dexcom receiver without perceiving negative impacts to either. Others have been succesfull.
+YDMV, so test it until you are comfortable. A few people have run Lookout concurrently with their Dexcom receiver (or Dexcom phone app with `--alternate` option) without perceiving negative impacts to either. Others have been less successfull.

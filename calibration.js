@@ -233,12 +233,12 @@ const calculateTxmitterCalibration = (
       || ((calErr > 1) && (calPairs.length > 8))) {
       const calResult = lsrCalibration(calPairs);
 
-      log(`CGM lsrCalibration: numPoints=${calPairs.length}, slope=${calResult.slope}, intercept=${calResult.intercept}`);
-
       if (!calResult) {
         error('CGM calculated calibration calculated denominator of zero');
         return null;
       }
+
+      log(`CGM lsrCalibration: numPoints=${calPairs.length}, slope=${calResult.slope}, intercept=${calResult.intercept}`);
 
       if ((calResult.slope > MAXSLOPE) || (calResult.slope < MINSLOPE)) {
         // wait until the next opportunity

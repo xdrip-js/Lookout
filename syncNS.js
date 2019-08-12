@@ -593,7 +593,7 @@ const syncNS = async (options_, storage_, transmitter_) => {
   if (sensorStart && (Date.now() - sensorStart.valueOf()) < 130 * 60000) {
     // if we just received a sensor start, go ahead
     // and see if we need to start a sensor session
-    if (!(await transmitter.inSensorSession())) {
+    if (transmitter && !(await transmitter.inSensorSession())) {
       transmitter.startSensorTime(sensorStart);
     }
   }

@@ -459,6 +459,9 @@ module.exports = async (options, storage, client, fakeMeter) => {
       case 0x13:
         state = 'Reserved';
         break;
+      case 0x16:
+        state = 'Sensor Failed Start';
+        break;
       case 0x80:
         state = 'Calibration State - Start';
         break;
@@ -577,6 +580,9 @@ module.exports = async (options, storage, client, fakeMeter) => {
         break;
       case 0x13:
         state = 'Reserved';
+        break;
+      case 0x16:
+        state = 'Failed Start';
         break;
       case 0x80:
         state = 'Cal - Start';

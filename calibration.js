@@ -781,6 +781,7 @@ calibrationExports.calibrateGlucose = async (
 
   let lastTxmitterCalTime = 0;
   let newCal = null;
+  let usedCal = null;
 
   const lastTxmitterCal = getLastTxmitterCal(bgChecks);
 
@@ -813,6 +814,8 @@ calibrationExports.calibrateGlucose = async (
     lastCal = newCal;
   }
 
+  usedCal = lastCal;
+
   if (!sgv.glucose && options.extend_sensor
     && validateTxmitterCalibration(sensorInsert, sensorStop, latestBgCheckTime, lastCal)) {
     sgv.glucose = calcGlucose(sgv, lastCal);
@@ -833,6 +836,7 @@ calibrationExports.calibrateGlucose = async (
     if (!sgv.glucose) {
       sgv.glucose = expiredCalGlucose;
       sgv.inExpiredSession = true;
+      usedCal = expiredCal;
 
       log('Invalid glucose value received from transmitter, replacing with calibrated unfiltered value from expired calibration algorithm');
       log(`Calibrated SGV: ${sgv.glucose} unfiltered: ${sgv.unfiltered} slope: ${expiredCal.slope} intercept: ${expiredCal.intercept}`);
@@ -850,14 +854,15 @@ calibrationExports.calibrateGlucose = async (
     saveTxmitterCal(storage, newCal);
   }
 
-  if (lastCal) {
+  if (usedCal) {
     // a valid calibration is available to use
-    sgv.trend = stats.calcTrend(calcGlucose, glucoseHist, lastCal, sgv);
+    sgv.trend = stats.calcTrend(calcGlucose, glucoseHist, usedCal, sgv);
 
-    sgv.noise = stats.calcSensorNoise(calcGlucose, glucoseHist, lastCal, sgv);
+    sgv.noise = stats.calcSensorNoise(calcGlucose, glucoseHist, usedCal, sgv);
 
     if ((sgv.noise < 0.4) && sensorInsert
-      && ((sgv.readDateMills - sensorInsert.valueOf()) < SENSOR_WARM * 60 * 60000)) {
+      && (((sgv.readDateMills - sensorInsert.valueOf()) < SENSOR_WARM * 60 * 60000)
+      || ((usedCal.dateMills - sensorInsert.valueOf()) < SENSOR_WARM * 60 * 60000))) {
       // put in light noise to account for warm up
       log(`Setting noise to light because SGV date (${moment(sgv.readDateMills).format()} - ${sensorInsert.format()} < ${SENSOR_WARM} hours`);
       sgv.noise = 0.4;

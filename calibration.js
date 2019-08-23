@@ -182,8 +182,17 @@ const calculateTxmitterCalibration = (
 
   // Do not calculate a new calibration value
   // if we don't have a valid calibrated glucose reading
-  if (currSGV.glucose > constants.MAX_CAL_SGV || currSGV.glucose < constants.MIN_CAL_SGV) {
+  if (currSGV.glucose > constants.MAX_CAL_SGV
+    || currSGV.glucose < constants.MIN_CAL_SGV) {
     log(`Current glucose out of range to calibrate: ${currSGV.glucose}`);
+    return null;
+  }
+
+  let rawDelta = Math.abs(currSGV.unfiltered - currSGV.filtered) * 1.0;
+
+  if (rawDelta / Math.min(currSGV.unfiltered, currSGV.filtered) > 0.1) {
+    log('Current glucose filtered more than 10% apart from unfiltered');
+    log(`Out of range to calibrate: ${currSGV.unfiltered} ${currSGV.filtered}`);
     return null;
   }
 
@@ -216,13 +225,19 @@ const calculateTxmitterCalibration = (
     // 4. 12 minutes after the last Txmitter calibration time
     //    (it takes up to 2 readings to reflect calibration updates)
     // 5. After the latest sensorInsert (ignore sensorInsert if we didn't get one)
+    // 6. Unfiltered and Filtered not more than 10% apart
     for (i = (glucoseHist.length - 1); ((i >= 0) && (calPairs.length < 10)); i -= 1) {
       // Only use up to 10 of the most recent suitable readings
       const sgv = glucoseHist[i];
+      rawDelta = Math.abs(sgv.unfiltered - sgv.filtered) * 1.0;
 
-      if (('unfiltered' in sgv) && (sgv.readDateMills > (lastTxmitterCalTime + 12 * 60 * 1000))
-        && (sgv.glucose < constants.MAX_CAL_SGV) && (sgv.glucose > constants.MIN_CAL_SGV)
-        && sgv.g5calibrated && (!sensorInsert || (sgv.readDateMills > sensorInsert.valueOf()))) {
+      if (('unfiltered' in sgv)
+        && (sgv.readDateMills > (lastTxmitterCalTime + 12 * 60 * 1000))
+        && (sgv.glucose < constants.MAX_CAL_SGV)
+        && (sgv.glucose > constants.MIN_CAL_SGV)
+        && sgv.g5calibrated
+        && (!sensorInsert || (sgv.readDateMills > sensorInsert.valueOf()))
+        && (rawDelta / Math.min(sgv.unfiltered, sgv.filtered) < 0.1)) {
         calPairs.unshift(sgv);
       }
     }
@@ -289,10 +304,11 @@ calibrationExports.saveExpiredCal = saveExpiredCal;
 const interpolateUnfiltered = (SGVBefore, SGVAfter, valueTime) => {
   const totalTime = SGVAfter.readDateMills - SGVBefore.readDateMills;
   const totalDelta = SGVAfter.unfiltered - SGVBefore.unfiltered;
+  const totalFilteredDelta = SGVAfter.filtered - SGVBefore.filtered;
   const fractionTime = (valueTime.valueOf() - SGVBefore.readDateMills) / totalTime;
 
-  debug(`SGVBefore Time: ${SGVBefore.readDateMills} SGVBefore Unfiltered: ${SGVBefore.unfiltered}`);
-  debug(` SGVAfter Time: ${SGVAfter.readDateMills}  SGVAfter Unfiltered: ${SGVAfter.unfiltered}`);
+  debug(`SGVBefore Time: ${SGVBefore.readDateMills} Unfiltered: ${SGVBefore.unfiltered} Filtered: ${SGVBefore.filtered}`);
+  debug(` SGVAfter Time: ${SGVAfter.readDateMills} Unfiltered: ${SGVAfter.unfiltered} Filtered: ${SGVAfter.filtered}`);
 
   if (totalTime > 12 * 60000) {
     debug(`Total time exceeds 12 minutes: ${totalTime}ms`);
@@ -301,9 +317,13 @@ const interpolateUnfiltered = (SGVBefore, SGVAfter, valueTime) => {
     return null;
   }
 
-  const returnVal = totalDelta * fractionTime + SGVBefore.unfiltered;
+  const returnVal = {
+    unfiltered: totalDelta * fractionTime + SGVBefore.unfiltered,
+    filtered: totalFilteredDelta * fractionTime + SGVBefore.filtered,
+  };
 
-  debug(`  BGCheck Time: ${valueTime.valueOf()}       Unfilter Value: ${Math.round(returnVal * 1000) / 1000}`);
+  debug(`  BGCheck Time: ${valueTime.valueOf()}`);
+  debug(`     Unfilter: ${Math.round(returnVal.unfiltered * 1000) / 1000} Filtered:${Math.round(returnVal.filtered * 1000) / 1000}`);
   debug(`     totalTime: ${totalTime} totalDelta: ${Math.round(totalDelta * 1000) / 1000} fractionTime: ${Math.round(fractionTime * 100) / 100}`);
 
   return returnVal;
@@ -359,6 +379,7 @@ const getUnfiltered = async (valueTime, glucoseHist, sgv) => {
   const rigSGVs = _.map(glucoseHist, value => ({
     readDateMills: value.readDateMills,
     unfiltered: value.unfiltered,
+    filtered: value.filtered,
   }));
 
   if (rigSGVs && (rigSGVs.length > 1)) {
@@ -421,21 +442,25 @@ const expiredCalibration = async (
   maxLsrPairsAge *= 24 * 60 * 60000;
 
   for (let i = 0; i < bgChecks.length; i += 1) {
-    let unfiltered = null;
+    let raw = null;
 
     if (!('unfiltered' in bgChecks[i]) || !bgChecks[i].unfiltered) {
       // Try to get the unfiltered value if we don't have it
       /* eslint-disable-next-line no-await-in-loop */
-      unfiltered = await getUnfiltered(moment(bgChecks[i].dateMills), glucoseHist, sgv);
+      raw = await getUnfiltered(moment(bgChecks[i].dateMills), glucoseHist, sgv);
     } else {
-      ({ unfiltered } = bgChecks[i]);
+      raw = bgChecks[i];
     }
 
-    if ((bgChecks[i].type !== 'Unity') && (unfiltered)
+    const rawDelta = Math.abs(raw.unfiltered - raw.filtered) * 1.0;
+
+    if ((bgChecks[i].type !== 'Unity') && (raw)
       && (bgChecks[i].glucose > constants.MIN_CAL_SGV)
-      && (bgChecks[i].glucose < constants.MAX_CAL_SGV)) {
+      && (bgChecks[i].glucose < constants.MAX_CAL_SGV)
+      && (rawDelta / Math.min(raw.unfiltered, raw.filtered) < 0.1)) {
       calPairs.push({
-        unfiltered,
+        unfiltered: raw.unfiltered,
+        filtered: raw.filtered,
         glucose: bgChecks[i].glucose,
         readDateMills: bgChecks[i].dateMills,
       });

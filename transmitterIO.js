@@ -903,11 +903,14 @@ module.exports = async (options, storage, client, fakeMeter) => {
       return;
     }
 
-    newCal.unfiltered = await calibration.getUnfiltered(valueTime, rigSGVs);
+    const raw = await calibration.getUnfiltered(valueTime, rigSGVs);
+    newCal.unfiltered = raw.unfiltered;
+    newCal.filtered = raw.filtered;
 
     if (bgCheckIdx >= 0) {
       // We already had this bgCheck but didn't have the unfiltered value
       bgChecks[bgCheckIdx].unfiltered = newCal.unfiltered;
+      bgChecks[bgCheckIdx].filtered = newCal.filtered;
       bgChecks[bgCheckIdx].type = newCal.type;
     } else {
       // This is a new bgCheck we didn't already have

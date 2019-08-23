@@ -323,8 +323,10 @@ const interpolateUnfiltered = (SGVBefore, SGVAfter, valueTime) => {
   };
 
   debug(`  BGCheck Time: ${valueTime.valueOf()}`);
-  debug(`     Unfilter: ${Math.round(returnVal.unfiltered * 1000) / 1000} Filtered:${Math.round(returnVal.filtered * 1000) / 1000}`);
-  debug(`     totalTime: ${totalTime} totalDelta: ${Math.round(totalDelta * 1000) / 1000} fractionTime: ${Math.round(fractionTime * 100) / 100}`);
+  debug(`      Unfilter: ${Math.round(returnVal.unfiltered * 1000) / 1000}`);
+  debug(`      Filtered: ${Math.round(returnVal.filtered * 1000) / 1000}`);
+  debug(`     totalTime: ${totalTime}   fractionTime: ${Math.round(fractionTime * 100) / 100}`);
+  debug(`    totalDelta: ${Math.round(totalDelta * 1000) / 1000}    fractionDelta: ${Math.round(fractionTime * totalDelta)}`);
 
   return returnVal;
 };
@@ -436,7 +438,7 @@ const expiredCalibration = async (
   const minLsrPairs = options.min_lsr_pairs;
   let maxLsrPairsAge = options.max_lsr_pairs_age;
 
-  debug(`options: %O\nmaxLsrPairs: ${maxLsrPairs}\nminLsrPairs: ${minLsrPairs}\nmaxLsrPairsAge: ${maxLsrPairsAge}`, options);
+  debug(`options: {\n     maxLsrPairs: ${maxLsrPairs},\n     minLsrPairs: ${minLsrPairs},\n  maxLsrPairsAge: ${maxLsrPairsAge}\n}`);
 
   // convert to milliseconds
   maxLsrPairsAge *= 24 * 60 * 60000;

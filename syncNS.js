@@ -474,8 +474,10 @@ const syncBGChecks = async (sensorInsert, sensorStop) => {
   const results = await Promise.all(promises);
 
   for (let i = 0; i < results.length; i += 1) {
-    rigBGChecks[bgIndexes[i]].unfiltered = results[i].unfiltered;
-    rigBGChecks[bgIndexes[i]].filtered = results[i].filtered;
+    if (results[i]) {
+      rigBGChecks[bgIndexes[i]].unfiltered = results[i].unfiltered;
+      rigBGChecks[bgIndexes[i]].filtered = results[i].filtered;
+    }
   }
 
   await storage.setItem('bgChecks', rigBGChecks)

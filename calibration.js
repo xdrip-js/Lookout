@@ -454,18 +454,20 @@ const expiredCalibration = async (
       raw = bgChecks[i];
     }
 
-    const rawDelta = Math.abs(raw.unfiltered - raw.filtered) * 1.0;
+    if (raw) {
+      const rawDelta = Math.abs(raw.unfiltered - raw.filtered) * 1.0;
 
-    if ((bgChecks[i].type !== 'Unity') && (raw)
-      && (bgChecks[i].glucose > constants.MIN_CAL_SGV)
-      && (bgChecks[i].glucose < constants.MAX_CAL_SGV)
-      && (rawDelta / Math.min(raw.unfiltered, raw.filtered) < 0.1)) {
-      calPairs.push({
-        unfiltered: raw.unfiltered,
-        filtered: raw.filtered,
-        glucose: bgChecks[i].glucose,
-        readDateMills: bgChecks[i].dateMills,
-      });
+      if ((bgChecks[i].type !== 'Unity') && (raw)
+        && (bgChecks[i].glucose > constants.MIN_CAL_SGV)
+        && (bgChecks[i].glucose < constants.MAX_CAL_SGV)
+        && (rawDelta / Math.min(raw.unfiltered, raw.filtered) < 0.1)) {
+        calPairs.push({
+          unfiltered: raw.unfiltered,
+          filtered: raw.filtered,
+          glucose: bgChecks[i].glucose,
+          readDateMills: bgChecks[i].dateMills,
+        });
+      }
     }
   }
 

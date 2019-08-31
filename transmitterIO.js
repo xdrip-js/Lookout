@@ -904,8 +904,11 @@ module.exports = async (options, storage, client, fakeMeter) => {
     }
 
     const raw = await calibration.getUnfiltered(valueTime, rigSGVs);
-    newCal.unfiltered = raw.unfiltered;
-    newCal.filtered = raw.filtered;
+
+    if (raw) {
+      newCal.unfiltered = raw.unfiltered;
+      newCal.filtered = raw.filtered;
+    }
 
     if (bgCheckIdx >= 0) {
       // We already had this bgCheck but didn't have the unfiltered value

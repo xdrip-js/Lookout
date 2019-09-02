@@ -196,6 +196,7 @@ describe('Test Calibration', () => {
         dateMills: 1544133780000,
         glucose: 127,
         type: 'NS',
+        filtered: 110298.86094477712,
         unfiltered: 110298.86094477712,
       },
       {
@@ -203,6 +204,7 @@ describe('Test Calibration', () => {
         dateMills: 1544237557000,
         glucose: 130,
         type: 'NS',
+        filtered: 113266.57133129044,
         unfiltered: 113266.57133129044,
       },
       {
@@ -219,7 +221,7 @@ describe('Test Calibration', () => {
       state: 7,
       readDate: 1544391333000,
       readDateMills: 1544391333000,
-      filtered: 161056,
+      filtered: 101056,
       unfiltered: 106000,
       glucose: 105,
       trend: -3.9982585362819747,
@@ -233,7 +235,7 @@ describe('Test Calibration', () => {
       state: 7,
       readDate: 1544391633000,
       readDateMills: 1544391633000,
-      filtered: 148544,
+      filtered: 108544,
       unfiltered: 108500,
       glucose: 106,
       trend: -6.002474353316756,
@@ -258,13 +260,14 @@ describe('Test Calibration', () => {
     lastCal.intercept.should.be.within(-24000, -23000);
   });
 
-  it('should calculate expired calibration using max_lsr_pairs option', async () => {
+  it('should ignore records when unfiltered and filtered more than 10% apart', async () => {
     const bgChecks = [
       {
         date: 1544133780000,
         dateMills: 1544133780000,
         glucose: 127,
         type: 'NS',
+        filtered: 110298.86094477712,
         unfiltered: 110298.86094477712,
       },
       {
@@ -272,6 +275,198 @@ describe('Test Calibration', () => {
         dateMills: 1544237557000,
         glucose: 130,
         type: 'NS',
+        filtered: 113266.57133129044,
+        unfiltered: 113266.57133129044,
+      },
+      {
+        date: 1544391573000,
+        dateMills: 1544391573000,
+        glucose: 125,
+        filtered: 105266.57133129044,
+        unfiltered: 105266.57133129044,
+        type: 'NS',
+      },
+      {
+        date: 1544545589000,
+        dateMills: 1544545589000,
+        glucose: 120,
+        filtered: 75266.57133129044,
+        unfiltered: 95266.57133129044,
+        type: 'NS',
+      },
+    ];
+
+    const glucoseHist = [{
+      inSession: true,
+      status: 0,
+      state: 7,
+      readDate: 1528890389945,
+      readDateMills: 1528890389945,
+      filtered: 161056,
+      unfiltered: 158400,
+      glucose: 155,
+      trend: -3.9982585362819747,
+      canBeCalibrated: true,
+      rssi: -59,
+      g5calibrated: true,
+      stateString: 'Need calibration',
+    }, {
+      inSession: true,
+      status: 0,
+      state: 7,
+      readDate: 1528890689766,
+      readDateMills: 1528890689766,
+      filtered: 159360,
+      unfiltered: 156544,
+      glucose: 153,
+      trend: -3.9992534726850986,
+      canBeCalibrated: true,
+      rssi: -63,
+      g5calibrated: true,
+      stateString: 'Need calibration',
+    }, {
+      inSession: true,
+      status: 0,
+      state: 7,
+      readDate: 1528890989467,
+      readDateMills: 1528890989467,
+      filtered: 157504,
+      unfiltered: 154432,
+      glucose: 150,
+      trend: -4.667973699302471,
+      canBeCalibrated: true,
+      rssi: -55,
+      g5calibrated: true,
+      stateString: 'Need calibration',
+    }, {
+      inSession: true,
+      status: 0,
+      state: 7,
+      readDate: 1528891289963,
+      readDateMills: 1528891289963,
+      filtered: 155488,
+      unfiltered: 151872,
+      glucose: 147,
+      trend: -5.3332266687999565,
+      canBeCalibrated: true,
+      rssi: -80,
+      g5calibrated: true,
+      stateString: 'Need calibration',
+    }, {
+      inSession: true,
+      status: 0,
+      state: 7,
+      readDate: 1528891589664,
+      readDateMills: 1528891589664,
+      filtered: 153312,
+      unfiltered: 149984,
+      glucose: 145,
+      trend: -5.333937846289246,
+      canBeCalibrated: true,
+      rssi: -82,
+      g5calibrated: true,
+      stateString: 'Need calibration',
+    }, {
+      inSession: true,
+      status: 0,
+      state: 7,
+      readDate: 1528891889576,
+      readDateMills: 1528891889576,
+      filtered: 151008,
+      unfiltered: 147264,
+      glucose: 141,
+      trend: -5.999273421330083,
+      canBeCalibrated: true,
+      rssi: -79,
+      g5calibrated: true,
+      stateString: 'Need calibration',
+    }, {
+      inSession: true,
+      status: 0,
+      state: 7,
+      readDate: 1528892189592,
+      readDateMills: 1528892189592,
+      filtered: 148544,
+      unfiltered: 144256,
+      glucose: 138,
+      trend: -6.002474353316756,
+      canBeCalibrated: true,
+      rssi: -77,
+      g5calibrated: true,
+      stateString: 'Need calibration',
+    }];
+
+    const currSGV = {
+      inSession: true,
+      status: 0,
+      state: 7,
+      readDate: 1528892489488,
+      readDateMills: 1528892489488,
+      filtered: 145920,
+      unfiltered: 141632,
+      glucose: 134,
+      trend: -7.334767687903413,
+      canBeCalibrated: true,
+      rssi: -79,
+      g5calibrated: true,
+      stateString: 'Need calibration',
+    };
+
+    const options = {
+      min_lsr_pairs: 2,
+      max_lsr_pairs: 10,
+      max_lsr_pairs_age: 6,
+    };
+
+    const txCal = calibration.calculateTxmitterCalibration(
+      options, null, 0, null, null, glucoseHist, currSGV,
+    );
+
+    glucoseHist[2].filtered = glucoseHist[2].unfiltered * 1.11;
+
+    const newTxCal = calibration.calculateTxmitterCalibration(
+      options, null, 0, null, null, glucoseHist, currSGV,
+    );
+
+    txCal.type.should.equal('LeastSquaresRegression');
+    newTxCal.type.should.equal('LeastSquaresRegression');
+
+    txCal.slope.should.not.equal(newTxCal.slope);
+    txCal.intercept.should.not.equal(newTxCal.intercept);
+
+    const expCal = await calibration.expiredCalibration(
+      options, null, bgChecks, null, null, glucoseHist, null,
+    );
+
+    bgChecks[2].filtered = bgChecks[2].unfiltered * 1.11;
+
+    const newExpCal = await calibration.expiredCalibration(
+      options, null, bgChecks, null, null, glucoseHist, null,
+    );
+
+    expCal.type.should.equal('LeastSquaresRegression');
+    newExpCal.type.should.equal('LeastSquaresRegression');
+
+    expCal.slope.should.not.equal(newExpCal.slope);
+    expCal.intercept.should.not.equal(newExpCal.intercept);
+  });
+
+  it('should calculate expired calibration using max_lsr_pairs option', async () => {
+    const bgChecks = [
+      {
+        date: 1544133780000,
+        dateMills: 1544133780000,
+        glucose: 127,
+        type: 'NS',
+        filtered: 110298.86094477712,
+        unfiltered: 110298.86094477712,
+      },
+      {
+        date: 1544237557000,
+        dateMills: 1544237557000,
+        glucose: 130,
+        type: 'NS',
+        filtered: 113266.57133129044,
         unfiltered: 113266.57133129044,
       },
       {
@@ -288,7 +483,7 @@ describe('Test Calibration', () => {
       state: 7,
       readDate: 1544391333000,
       readDateMills: 1544391333000,
-      filtered: 161056,
+      filtered: 101056,
       unfiltered: 106000,
       glucose: 105,
       trend: -3.9982585362819747,
@@ -302,7 +497,7 @@ describe('Test Calibration', () => {
       state: 7,
       readDate: 1544391633000,
       readDateMills: 1544391633000,
-      filtered: 148544,
+      filtered: 108544,
       unfiltered: 108500,
       glucose: 106,
       trend: -6.002474353316756,
@@ -334,6 +529,7 @@ describe('Test Calibration', () => {
         dateMills: 1544133780000,
         glucose: 127,
         type: 'NS',
+        filtered: 110298.86094477712,
         unfiltered: 110298.86094477712,
       },
       {
@@ -341,6 +537,7 @@ describe('Test Calibration', () => {
         dateMills: 1544237557000,
         glucose: 130,
         type: 'NS',
+        filtered: 113266.57133129044,
         unfiltered: 113266.57133129044,
       },
       {
@@ -357,7 +554,7 @@ describe('Test Calibration', () => {
       state: 7,
       readDate: 1544391333000,
       readDateMills: 1544391333000,
-      filtered: 161056,
+      filtered: 101056,
       unfiltered: 106000,
       glucose: 105,
       trend: -3.9982585362819747,
@@ -371,7 +568,7 @@ describe('Test Calibration', () => {
       state: 7,
       readDate: 1544391633000,
       readDateMills: 1544391633000,
-      filtered: 148544,
+      filtered: 108544,
       unfiltered: 108500,
       glucose: 106,
       trend: -6.002474353316756,
@@ -403,6 +600,7 @@ describe('Test Calibration', () => {
         dateMills: 1544133780000,
         glucose: 127,
         type: 'NS',
+        filtered: 110298.86094477712,
         unfiltered: 110298.86094477712,
       },
       {
@@ -410,6 +608,7 @@ describe('Test Calibration', () => {
         dateMills: 1544237557000,
         glucose: 130,
         type: 'NS',
+        filtered: 113266.57133129044,
         unfiltered: 113266.57133129044,
       },
       {
@@ -426,7 +625,7 @@ describe('Test Calibration', () => {
       state: 7,
       readDate: 1544391333000,
       readDateMills: 1544391333000,
-      filtered: 161056,
+      filtered: 101056,
       unfiltered: 106000,
       glucose: 105,
       trend: -3.9982585362819747,
@@ -440,7 +639,7 @@ describe('Test Calibration', () => {
       state: 7,
       readDate: 1544391633000,
       readDateMills: 1544391633000,
-      filtered: 148544,
+      filtered: 108544,
       unfiltered: 108500,
       glucose: 106,
       trend: -6.002474353316756,

@@ -11,6 +11,9 @@ const _ = require('lodash');
 const TimeLimitedPromise = require('./timeLimitedPromise');
 const xDripAPS = require('./xDripAPS')();
 
+const RIG_SOURCE = 0;
+const NS_SOURCE = 1;
+
 let options = null;
 let storage = null;
 let transmitter = null;
@@ -95,6 +98,8 @@ const syncCal = async (sensorInsert) => {
 const syncEvent = async (itemName, eventType) => {
   let rigItem = null;
   let nsEvent = null;
+  let nsTime = null;
+  let rigTime = null;
   let nsQueryError = false;
 
   log(`Syncing rig ${itemName} and NS ${eventType} started`);
@@ -110,7 +115,8 @@ const syncEvent = async (itemName, eventType) => {
   }
 
   if (nsEvent) {
-    debug(`SyncNS NS ${eventType}- date: ${nsEvent.format()}`);
+    nsTime = moment(nsTime.date);
+    debug(`SyncNS NS ${eventType}- date: ${nsTime.format()}`);
   }
 
   await storage.lock();
@@ -121,44 +127,59 @@ const syncEvent = async (itemName, eventType) => {
     });
 
   if (rigItem) {
-    rigItem = moment(rigItem);
-    debug(`SyncNS Rig ${itemName}- date: ${rigItem.format()}`);
+    if (typeof rigItem !== 'number') {
+      rigItem = {
+        date: rigItem,
+        notes: '',
+      };
+    }
+
+    rigTime = moment(rigItem.date);
+    debug(`SyncNS Rig ${itemName}- date: ${rigTime.format()}`);
   }
 
-  let latestEvent = rigItem;
+  const latestEvent = {
+    event: rigItem,
+    source: RIG_SOURCE,
+  };
 
   if (nsEvent) {
     if (!rigItem) {
       debug(`No rig ${itemName}, storing NS ${eventType}`);
 
-      latestEvent = nsEvent;
+      latestEvent.event = nsEvent;
+      latestEvent.source = NS_SOURCE;
 
-      await storage.setItem(itemName, nsEvent.valueOf())
+      await storage.setItem(itemName, nsEvent)
         .catch(() => {
           error(`Unable to store ${itemName}`);
         });
-    } else if (rigItem && ((nsEvent.valueOf() - rigItem.valueOf()) > 1000)) {
-      debug(`NS ${eventType} more recent than rig ${itemName} NS date: ${nsEvent.format()} Rig date: ${rigItem.format()}`);
+    } else if (rigItem && ((nsEvent.date - rigItem.date) > 1000)) {
+      debug(`NS ${eventType} more recent than rig ${itemName} NS date: ${nsTime.format()} Rig date: ${rigTime.format()}`);
 
-      latestEvent = nsEvent;
+      latestEvent.event = nsEvent;
+      latestEvent.source = NS_SOURCE;
 
-      storage.setItem(itemName, nsEvent.valueOf())
+      storage.setItem(itemName, nsEvent)
         .catch(() => {
           error(`Unable to store ${itemName}`);
         });
-    } else if (rigItem && ((rigItem.valueOf() - nsEvent.valueOf()) > 1000)) {
-      debug(`Rig ${itemName} more recent than NS ${eventType} NS date: ${nsEvent.format()} Rig date: ${rigItem.format()}`);
+    } else if (rigItem && ((rigItem.date - nsEvent.date) > 1000)) {
+      debug(`Rig ${itemName} more recent than NS ${eventType} NS date: ${nsTime.format()} Rig date: ${rigTime.format()}`);
       debug(`Uploading rig ${itemName}`);
 
-      latestEvent = rigItem;
-      xDripAPS.postEvent(eventType, rigItem);
+      latestEvent.event = rigItem;
+      latestEvent.source = RIG_SOURCE;
+      xDripAPS.postEvent(eventType, rigTime, rigItem.notes);
     } else {
       debug(`Rig and NS ${eventType} dates match - no sync needed`);
     }
   } else if (rigItem) {
     debug(`No NS ${eventType} - uploading rig sensor insert`);
-    latestEvent = rigItem;
-    xDripAPS.postEvent(eventType, rigItem);
+    latestEvent.event = rigItem;
+    latestEvent.source = RIG_SOURCE;
+
+    xDripAPS.postEvent(eventType, rigTime, rigItem.notes);
   } else {
     debug(`No rig ${itemName} or NS ${eventType}`);
   }
@@ -166,6 +187,10 @@ const syncEvent = async (itemName, eventType) => {
   storage.unlock();
 
   log(`Syncing rig ${itemName} and NS ${eventType} complete`);
+
+  if (latestEvent) {
+    latestEvent.date = moment(latestEvent.event.date);
+  }
 
   return latestEvent;
 };
@@ -566,7 +591,7 @@ const syncNS = async (options_, storage_, transmitter_) => {
       nsQueryError = true;
     });
 
-  if (!sensorInsert || (sensorStart && (sensorStart.valueOf() > sensorInsert.valueOf()))) {
+  if (!sensorInsert || (sensorStart && (sensorStart.event.date > sensorInsert.event.date))) {
     sensorInsert = sensorStart;
   }
 
@@ -590,11 +615,13 @@ const syncNS = async (options_, storage_, transmitter_) => {
     return;
   }
 
-  if (sensorStart && (Date.now() - sensorStart.valueOf()) < 130 * 60000) {
-    // if we just received a sensor start, go ahead
-    // and see if we need to start a sensor session
+  if (sensorStart
+    && sensorStart.source === NS_SOURCE
+    && (Date.now() - sensorStart.event.date) < 130 * 60000) {
+    // if we just received a sensor start from Nightscout,
+    // go ahead and see if we need to start a sensor session
     if (transmitter && !(await transmitter.inSensorSession())) {
-      transmitter.startSensorTime(sensorStart);
+      transmitter.startSensorTime(sensorStart.date);
     }
   }
 
@@ -602,7 +629,7 @@ const syncNS = async (options_, storage_, transmitter_) => {
   // call resolve so the Promise.all works as it
   // should and doesn't trigger early because of an error
   const syncCalPromise = new TimeLimitedPromise(4 * 60 * 1000, async (resolve) => {
-    await syncCal(sensorInsert);
+    await syncCal(sensorInsert.date);
     resolve();
   });
 
@@ -612,7 +639,7 @@ const syncNS = async (options_, storage_, transmitter_) => {
   });
 
   const syncBGChecksPromise = new TimeLimitedPromise(4 * 60 * 1000, async (resolve) => {
-    bgChecks = await syncBGChecks(sensorInsert, sensorStop);
+    bgChecks = await syncBGChecks(sensorInsert.date, sensorStop.date);
     resolve();
   });
 
@@ -623,7 +650,7 @@ const syncNS = async (options_, storage_, transmitter_) => {
 
   // have transmitterIO check if the sensor session should be ended.
   if (transmitter) {
-    transmitter.checkSensorSession(sensorInsert, sensorStop, bgChecks, latestSGV);
+    transmitter.checkSensorSession(sensorInsert.date, sensorStop.date, bgChecks, latestSGV);
   }
 
   const timeDelay = calcNextSyncTimeDelay(latestSGV);

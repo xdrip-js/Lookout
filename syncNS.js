@@ -127,7 +127,7 @@ const syncEvent = async (itemName, eventType) => {
     });
 
   if (rigItem) {
-    if (typeof rigItem !== 'number') {
+    if (typeof rigItem === 'number') {
       rigItem = {
         date: rigItem,
         notes: '',

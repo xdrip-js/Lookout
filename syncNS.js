@@ -115,7 +115,7 @@ const syncEvent = async (itemName, eventType) => {
   }
 
   if (nsEvent) {
-    nsTime = moment(nsTime.date);
+    nsTime = moment(nsEvent.date);
     debug(`SyncNS NS ${eventType}- date: ${nsTime.format()}`);
   }
 

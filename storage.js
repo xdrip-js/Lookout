@@ -8,13 +8,26 @@ const debug = Debug('storage:debug'); /* eslint-disable-line no-unused-vars */
 
 const storageLock = require('./storageLock');
 
+const getItem = async (name) => {
+  if (!storage) {
+    throw Error('Storage not initialized');
+  }
+
+  try {
+    return storage.getItem(name);
+  } catch (e) {
+    error(`Unable to read item ${name}:`, e);
+    return null;
+  }
+};
+
 const getEvent = async (name) => {
   if (!storage) {
     throw Error('Storage not initialized');
   }
 
   try {
-    const item = await getItem(name);
+    let item = await getItem(name);
 
     if (item) {
       if (typeof item === 'number') {
@@ -28,32 +41,6 @@ const getEvent = async (name) => {
     }
 
     return item;
-  } catch (e) {
-    error(`Unable to read item ${name}:`, e);
-    return null;
-  }
-};
-
-const setEvent = async (name, value) => {
-  if (!storage) {
-    throw Error('Storage not initialized');
-  }
-
-  const saveValue = {
-    date: value.date.valueOf(),
-    notes: value.notes,
-  };
-
-  return storage.setItem(name, saveValue);
-};
-
-const getItem = async (name) => {
-  if (!storage) {
-    throw Error('Storage not initialized');
-  }
-
-  try {
-    return storage.getItem(name);
   } catch (e) {
     error(`Unable to read item ${name}:`, e);
     return null;
@@ -76,6 +63,19 @@ const setItem = async (name, value) => {
   }
 
   return storage.setItem(name, value);
+};
+
+const setEvent = async (name, value) => {
+  if (!storage) {
+    throw Error('Storage not initialized');
+  }
+
+  const saveValue = {
+    date: value.date.valueOf(),
+    notes: value.notes,
+  };
+
+  return storage.setItem(name, saveValue);
 };
 
 const setItemSync = (name, value) => {

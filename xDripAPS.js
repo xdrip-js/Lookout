@@ -658,12 +658,15 @@ module.exports = () => ({
 
     const eventRecord = await queryLatestEvent(type);
 
-    if (eventRecord && (eventRecord.length > 0)
-      && eventRecord[0].created_at && (eventRecord[0].created_at.length > 10)) {
-      nsEvent = {
-        date: moment(eventRecord[0].created_at).valueOf(),
-        notes: eventRecord[0].notes,
-      };
+    if (eventRecord && (eventRecord.length > 0)) {
+      if (eventRecord[0].created_at && (eventRecord[0].created_at.length > 10)) {
+        nsEvent = {
+          date: moment(eventRecord[0].created_at).valueOf(),
+          notes: eventRecord[0].notes,
+        };
+      } else {
+        error(`Received event record for ${type}, but created_at field validation failed:\n%O`, eventRecord);
+      }
     }
 
     return nsEvent;

@@ -98,8 +98,6 @@ const syncCal = async (sensorInsert) => {
 const syncEvent = async (itemName, eventType) => {
   let rigItem = null;
   let nsEvent = null;
-  let nsTime = null;
-  let rigTime = null;
   let nsQueryError = false;
 
   log(`Syncing rig ${itemName} and NS ${eventType} started`);
@@ -115,27 +113,19 @@ const syncEvent = async (itemName, eventType) => {
   }
 
   if (nsEvent) {
-    nsTime = moment(nsEvent.date);
-    debug(`SyncNS NS ${eventType}- date: ${nsTime.format()}`);
+    nsEvent.date = moment(nsEvent.date);
+    debug(`SyncNS NS ${eventType}- date: ${nsEvent.date.format()}`);
   }
 
   await storage.lock();
 
-  rigItem = await storage.getItem(itemName)
+  rigItem = await storage.getEvent(itemName)
     .catch((err) => {
       error(`Error getting rig ${itemName}: ${err}`);
     });
 
   if (rigItem) {
-    if (typeof rigItem === 'number') {
-      rigItem = {
-        date: rigItem,
-        notes: '',
-      };
-    }
-
-    rigTime = moment(rigItem.date);
-    debug(`SyncNS Rig ${itemName}- date: ${rigTime.format()}`);
+    debug(`SyncNS Rig ${itemName}- date: ${rigItem.date.format()}`);
   }
 
   const latestEvent = {
@@ -150,27 +140,27 @@ const syncEvent = async (itemName, eventType) => {
       latestEvent.event = nsEvent;
       latestEvent.source = NS_SOURCE;
 
-      await storage.setItem(itemName, nsEvent)
+      await storage.setEvent(itemName, nsEvent)
         .catch(() => {
           error(`Unable to store ${itemName}`);
         });
     } else if (rigItem && ((nsEvent.date - rigItem.date) > 1000)) {
-      debug(`NS ${eventType} more recent than rig ${itemName} NS date: ${nsTime.format()} Rig date: ${rigTime.format()}`);
+      debug(`NS ${eventType} more recent than rig ${itemName} NS date: ${nsEvent.date.format()} Rig date: ${rigItem.date.format()}`);
 
       latestEvent.event = nsEvent;
       latestEvent.source = NS_SOURCE;
 
-      storage.setItem(itemName, nsEvent)
+      storage.setEvent(itemName, nsEvent)
         .catch(() => {
           error(`Unable to store ${itemName}`);
         });
     } else if (rigItem && ((rigItem.date - nsEvent.date) > 1000)) {
-      debug(`Rig ${itemName} more recent than NS ${eventType} NS date: ${nsTime.format()} Rig date: ${rigTime.format()}`);
+      debug(`Rig ${itemName} more recent than NS ${eventType} NS date: ${nsEvent.date.format()} Rig date: ${rigItem.date.format()}`);
       debug(`Uploading rig ${itemName}`);
 
       latestEvent.event = rigItem;
       latestEvent.source = RIG_SOURCE;
-      xDripAPS.postEvent(eventType, rigTime, rigItem.notes);
+      xDripAPS.postEvent(eventType, rigItem.date, rigItem.notes);
     } else {
       debug(`Rig and NS ${eventType} dates match - no sync needed`);
     }
@@ -179,7 +169,7 @@ const syncEvent = async (itemName, eventType) => {
     latestEvent.event = rigItem;
     latestEvent.source = RIG_SOURCE;
 
-    xDripAPS.postEvent(eventType, rigTime, rigItem.notes);
+    xDripAPS.postEvent(eventType, rigItem.date, rigItem.notes);
   } else {
     debug(`No rig ${itemName} or NS ${eventType}`);
   }

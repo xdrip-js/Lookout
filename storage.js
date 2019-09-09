@@ -14,8 +14,19 @@ const getEvent = async (name) => {
   }
 
   try {
-    const item = storage.getItem(name);
-    item.date = moment(item.date);
+    const item = await getItem(name);
+
+    if (item) {
+      if (typeof item === 'number') {
+        item = {
+          date: moment(item),
+          notes: '',
+        };
+      } else {
+        item.date = moment(item.date);
+      }
+    }
+
     return item;
   } catch (e) {
     error(`Unable to read item ${name}:`, e);

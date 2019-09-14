@@ -175,7 +175,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
     // if the commanded stop time is older than 2 hours, use current time - 120 minutes
     if (stopTime.diff(now, 'minutes') > 132) {
-      stopWhen = now - 120 * 60000;
+      stopWhen = moment(now.valueOf() - 120 * 60000);
     }
 
     const sensorStop = {
@@ -282,7 +282,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
     return calibration.haveCalibration(storage);
   };
 
-  const startSession = async (startTime, sensorSerialCode) => {
+  const startSession = async (startTime, sensorSerialCode, reason) => {
     const sgv = await getGlucose();
 
     log(
@@ -294,7 +294,11 @@ module.exports = async (options, storage, client, fakeMeter) => {
     if (!inSensorSession(sgv)) {
       // Only enter a sensorStart if we aren't
       // in either a transmitter session, extend session, or expired session
-      await storage.setItem('sensorStart', Date.now())
+      await storage.setEvent('sensorStart',
+        {
+          date: moment(),
+          notes: reason,
+        })
         .catch((err) => {
           error(`Error setting rig sensorStart: ${err}`);
         });
@@ -1283,27 +1287,27 @@ module.exports = async (options, storage, client, fakeMeter) => {
     },
 
     // Start a sensor session
-    startSensor: (sensorSerialCode) => {
-      startSession(Date.now(), sensorSerialCode);
+    startSensor: (sensorSerialCode, reason) => {
+      startSession(Date.now(), sensorSerialCode, reason);
     },
 
     // Start a sensor session at time
-    startSensorTime: (startTime) => {
+    startSensorTime: (startTime, reason) => {
       if (g6Txmitter()) {
         xDripAPS.postAnnouncement('G6 Start Unsupported by NS');
       } else {
-        startSession(startTime.valueOf());
+        startSession(startTime.valueOf(), null, reason);
       }
     },
 
     // Start a sensor session back started 2 hours
-    backStartSensor: (sensorSerialCode) => {
-      startSession(Date.now() - 2 * 60 * 60 * 1000, sensorSerialCode);
+    backStartSensor: (sensorSerialCode, reason) => {
+      startSession(Date.now() - 2 * 60 * 60 * 1000, sensorSerialCode, reason);
     },
 
-    stopSensor: async () => {
+    stopSensor: async (reason) => {
       const stopTime = moment().subtract(2, 'hours');
-      await stopSensorSession(stopTime);
+      await stopSensorSession(stopTime, reason);
 
       const sgv = await getGlucose();
 

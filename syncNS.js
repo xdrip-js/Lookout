@@ -113,7 +113,6 @@ const syncEvent = async (itemName, eventType) => {
   }
 
   if (nsEvent) {
-    nsEvent.date = moment(nsEvent.date);
     debug(`SyncNS NS ${eventType}- date: ${nsEvent.date.format()}`);
   }
 
@@ -611,7 +610,7 @@ const syncNS = async (options_, storage_, transmitter_) => {
     // if we just received a sensor start from Nightscout,
     // go ahead and see if we need to start a sensor session
     if (transmitter && !(await transmitter.inSensorSession())) {
-      transmitter.startSensorTime(sensorStart.date);
+      transmitter.startSensorTime(sensorStart.date, sensorStart.event.notes);
     }
   }
 

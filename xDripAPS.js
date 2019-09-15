@@ -661,7 +661,7 @@ module.exports = () => ({
     if (eventRecord && (eventRecord.length > 0)) {
       if (eventRecord[0].created_at && (eventRecord[0].created_at.length > 10)) {
         nsEvent = {
-          date: moment(eventRecord[0].created_at).valueOf(),
+          date: moment(eventRecord[0].created_at),
           notes: eventRecord[0].notes,
         };
       } else {

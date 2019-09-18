@@ -27,7 +27,7 @@ You can use Lookout  also  with expired transmitters - in this case, Lookout use
 
 There are three ways to monitor and control Lookout:
 1) Web-based graphical interface,
-2) the `lookout` command line interface, 
+2) The `lookout` command line interface, 
 3) Nightscout.
 
 Typically, Lookout can run in parallel with a Dexcom receiver.  There are reported cases where Lookout did not interact well with a Dexcom receiver so YMMV.  
@@ -48,6 +48,7 @@ To stop Lookout from continuing to report glucose values at the end of a sensor 
 * Enter a Sensor Stop in Nightscout
 * Enter a Sensor Start in Nightscout --non-preferred method--
 * Enter a Sensor Insert in Nightscout --non-preferred method--
+
 Use case for Extended Calibration Mode: This enables Lookout to continue reporting glucose values after the sensor session is ended, providing greater flexibility on when the user changes the site.  This is not intended to extend a sensor life past 24 hours due to the lack of an ongoing calibration update mechanism.
 
 ### Expired Calibration Mode
@@ -141,7 +142,7 @@ After updating the rig, reboot to restart Lookout with the updated version.
 ## Example usage
 Just type `Lookout`. The app will run on port 3000.
 
-To see verbose output (>> Lookout's log messages have more detail - can help with trouble-shooting, and help you understand what Lookout is doing when it runs), use `Lookout -v`. To see even more verbose output, use `Lookout -vv`. Alternatively, use `sudo DEBUG=* Lookout`, and replace the `*` with a comma separated list of the modules you would like to debug. E.g. `sudo DEBUG=transmitterIO:*,smp,transmitter,bluetooth-manager Lookout`. 
+To see verbose output (Add more detail to Lookout's log messages - can help with trouble-shooting and help you understand what Lookout is doing when it runs), use `Lookout -v`. To see even more verbose output, use `Lookout -vv`. Alternatively, use `sudo DEBUG=* Lookout`, and replace the `*` with a comma separated list of the modules you would like to debug. E.g. `sudo DEBUG=transmitterIO:*,smp,transmitter,bluetooth-manager Lookout`. 
 
 To run in simulated mode, use `node index.js --sim`.
 
@@ -172,18 +173,18 @@ Once the browser is open to your Lookout page (see above steps), you can:
 1. Put the sensor/transmitter on your body, if you haven't already
 2. Click the "Home" button (looks like a person) at the bottom left of the Lookout page
 3. Click `Start sensor` (starting a sensor can be done either from the receiver or Lookout and it will show started on both)
-4. Click the "Menu" button, then `CGM` and `Sensor`
-** New:** If you are using Dexcom G6, you can now enter the sensor code when you use the browser to start the sensor. 
+4. Click the "Menu" button, then `CGM` and `Sensor` ** New:** If you are using Dexcom G6, you can now enter the sensor code when you use the browser to start the sensor. 
 5. Within 5 minutes the `State` should show as `Warmup`
 6. Click the "Home" screen (bottom left, person button), you will also see Warmup on the Home screen
-**G5 only:** 
+**(G5 or G6 Session Started Without Serial #)only:** 
   7. After 2 hours the state will change to `First calibration`
   8. Click the `Calibrate` button to enter the first calibration
   9. Enter the value from a finger stick and click `Save` 
   10. Click the "Home" screen
   11. Click the `Calibrate` button to enter the second (you can wait for the state to change in 5 minutes, or enter it right after the first calibration)
   12. Enter the value from a second finger stick and click `Save`
-  13. After 5 minutes the state will change to `OK` and calibrated BG values will be displayed. 
+  13. After 5 minutes the state will change to `OK` and calibrated BG values will be displayed.
+
 **G6:** Lookout normally moves from warmup to reporting BG levels - no calibration needed. It takes 10 - 15 minutes time to get there.
 
 **NOTE** There is a second button on the "Home" screen, `Start sensor 2 hours ago`, that can be used to send a start message backdated by 2 hours from the current time.  This allows the user to pre-soak a sensor while the ongoing session continues.  When the ongoing session ends, move the transmitter to the new sensor and use the `Start sensor 2 hours ago` button to start the new session.  This will normally provide the user with a First calibration request within 5 to 10 minutes instead of 2 hours. (**For G6:** Lookout will move into logging the BGs, without need for calibration)
@@ -194,6 +195,7 @@ Once the browser is open to your Lookout page (see above steps), you can:
 1. Click the "Home" button (looks like a person) at the bottom left of the Lookout page
 2. Click the `Calibrate` button to enter a finger stick calibration value
 3. Enter the value from a finger stick and click `Save`
+
 **NOTE** Calibrating a sensor is a significant event that affects future BG readings. Know what you are doing, and calibrate following manufacturer's instructions. (examples: Use valid BGs, calibrate only when BGs are flat, don't calibrate too often, ...)
 
 ### Using the browser to stop a CGM sensor session
@@ -302,14 +304,16 @@ To look at the Lookout log, for debug purposes, type `cat /var/log/openaps/looko
 * If your lookout.log file contains messages similar to `Error: /root/Lookout/node_modules/bluetooth-hci-socket/build/Release/binding.node: undefined symbol: _ZN2v816FunctionTemplate3NewEPNS_7IsolateEPFvRKNS_20FunctionCallbackInfoINS_5ValueEEEENS_5LocalIS4_EENSA_INS_9SignatureEEEi` run the following command: `cd ~/Lookout; npm rebuild`
 
 * If Lookout is not running after it worked fine previously, a corrupted storage file might be the reason. 
-run `npm test` in the Lookout directory.
-if `npm test` shows an error involving /root/Lookout/storage/4043d6c394234319fe0d3f18c04e3eb9, remove the implicated file, then reboot. If this does not fix the problem, and you cannot get Lookout to work, hop on Gitter to ask for help.
-The command is `rm`. To do all this: 
-`cd` to get to the root level, `cd Lookout` to get into the Lookout directory, then `npm test`. It takes a few minutes to finish the test: You see the result of the testing, and the command promp appears again. If `npm test` finds the problem described above, copy the path that is implicated as the problem, then enter the following in the command line: 
-`rm` and paste the file path. The enter. If all goes well, you see another command prompt. You can enter the same command to see what happens; it should error out, telling you that there is no such file (since it was removed in the previous step, this is what you want to see)
-enter   `reboot`. Get a coffee. 
-A few minutes later, after rebooting the rig, Lookout should be working again, if you included Lookout in your crontab (see above #making it permanent# . 
-Enter `Lookout` in the command line, and it should "report for work" by showing the transmitter code, sensor status, etc.
+1. run `npm test` in the Lookout directory.
+2. if `npm test` shows an error involving /root/Lookout/storage/4043d6c394234319fe0d3f18c04e3eb9, remove the implicated file, then reboot. If this does not fix the problem, and you cannot get Lookout to work, hop on Gitter to ask for help.
+
+To remove a corrupt storage file:
+1. `cd ~/Lookout` to get to the Lookout directory
+2. `npm test`. It takes a few minutes to finish the test: You see the result of the testing, and the command promp appears again. If `npm test` finds the problem described above, copy the path that is implicated as the problem, then enter the following in the command line: 
+3. `rm` and paste the file path, then press enter. If all goes well, you see another command prompt. (You can enter the same `rm` command again to see what happens; it should error out, telling you that there is no such file since it was removed in the previous step. This is what you want to see)
+4. `reboot` and press enter. Get a coffee.  A few minutes after rebooting the rig, Lookout should be working again, if you included Lookout in your crontab (see above #making it permanent#. 
+5. Enter `lookout` in the command line, and it should "report for work" by showing the transmitter code, sensor status, etc.
+
 Happy Looping.
 
 

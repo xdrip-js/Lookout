@@ -22,8 +22,10 @@ Lookout provides a rig-based interface to a Dexcom G5 CGM using Bluetooth Low En
 - report detail transmitter and device status to Nightscout (requires Nightscout xdrip-js plugin to be enabled)
 
 You can use Lookout with unexpired G5 and G6 transmitters relying on the official calibration built into the transmitter to calibrate the raw sensor values.  
+
 Lookout enables you to reset expired transmitters, allowing you to use them past their normal expiration dates.  
-You can use Lookout  also  with expired transmitters - in this case, Lookout uses a least squares regression calibration method to calculate calibration values for raw sensor values based on user entered glucose checks.
+
+You can use Lookout also with expired transmitters - in this case, Lookout uses a least squares regression calibration method to calculate calibration values for raw sensor values based on user entered glucose checks.
 
 There are three ways to monitor and control Lookout:
 1) Web-based graphical interface,
@@ -176,7 +178,7 @@ Once the browser is open to your Lookout page (see above steps), you can:
 4. Click the "Menu" button, then `CGM` and `Sensor` ** New:** If you are using Dexcom G6, you can now enter the sensor code when you use the browser to start the sensor. 
 5. Within 5 minutes the `State` should show as `Warmup`
 6. Click the "Home" screen (bottom left, person button), you will also see Warmup on the Home screen
-**(G5 or G6 Session Started Without Serial #)only:** 
+**(G5 or G6 Session Started Without Serial # only)** 
   7. After 2 hours the state will change to `First calibration`
   8. Click the `Calibrate` button to enter the first calibration
   9. Enter the value from a finger stick and click `Save` 
@@ -196,7 +198,7 @@ Once the browser is open to your Lookout page (see above steps), you can:
 2. Click the `Calibrate` button to enter a finger stick calibration value
 3. Enter the value from a finger stick and click `Save`
 
-**NOTE** Calibrating a sensor is a significant event that affects future BG readings. Know what you are doing, and calibrate following manufacturer's instructions. (examples: Use valid BGs, calibrate only when BGs are flat, don't calibrate too often, ...)
+**NOTE** Calibrating a sensor is a significant event that affects future BG readings. Know what you are doing, and calibrate following manufacturer's instructions. (examples: Use valid BGs, calibrate only when BGs are flat, don't calibrate too often, etc.)
 
 ### Using the browser to stop a CGM sensor session
 1. Click the "Menu" button, then `CGM` and `Sensor`
@@ -269,14 +271,14 @@ Note: Don't reset the transmitter now, or you will have to wait the 2 hours desi
 5. After a few minutes, the sensor should be reporting BG values. You might be asked to calibrate, or not. Keep that glucose meter handy, just in case.
 Yay. Go on looping with a new sensor!
 
-** Note:** `lookout back-start` will probably not work if you reset/have reset the transmitter after the "back-start" time, or start with a new transmitter. The transmitter must be "known to the rig" for 2 hours or more, to successfully back-start a sensor.
+**Note** `lookout back-start` will probably not work if you reset/have reset the transmitter after the "back-start" time, or start with a new transmitter. The transmitter must be "known to the rig" for 2 hours or more, to successfully back-start a sensor.
 
 
 ## Using Nightscout to control your CGM
 Entering records in Nightscout can also be used to control your CGM. Lookout synchronizes with Nightscout 30 seconds prior to every transmitter read event. Therefore, the entries described below must be inserted into Nightscout at least 30 seconds prior to the next read event or it will not be executed until the following event.
 
 ### CGM Sensor Start
-Enter a CGM Sensor Start into Nightscout to start a sensor session if one is not running. A sensor start will also cause Lookout to delete the extended and expired calibration values if they exist which will effectively end any extended or expired sensor sessions. If the transmitter does not have an active sensor session, Lookout will cease reporting calibrated glucose values.  Sensor start on a G6 does not yet support adding the sensor serial number when you use Nightscout, so the session will require calibration and not benefit from the G6's feature for 10 days without calibrations. (use command line or browser instead for "10 days no cal" on a G6 sensor)
+Enter a CGM Sensor Start into Nightscout to start a sensor session if one is not running. A sensor start will also cause Lookout to delete the extended and expired calibration values if they exist which will effectively end any extended or expired sensor sessions. If the transmitter does not have an active sensor session, Lookout will cease reporting calibrated glucose values.  Sensor start on a G6 does not yet support adding the sensor serial number when you use Nightscout, so the session will require calibration and not benefit from the G6's feature for 10 days without calibrations. Use command line or browser instead for "10 days no cal" on a G6 sensor.
 
 ### CGM Sensor Insert
 Entering a CGM Sensor Insert will also cause Lookout to delete the extend and expired calibration values if they exist which will effectively end any extended or expired sensor sessions. If the transmitter does not have an active sensor session, Lookout will cease reporting calibrated glucose values.

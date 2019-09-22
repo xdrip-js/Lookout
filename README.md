@@ -178,18 +178,20 @@ Once the browser is open to your Lookout page (see above steps), you can:
 4. Click the "Menu" button, then `CGM` and `Sensor` ** New:** If you are using Dexcom G6, you can now enter the sensor code when you use the browser to start the sensor. 
 5. Within 5 minutes the `State` should show as `Warmup`
 6. Click the "Home" screen (bottom left, person button), you will also see Warmup on the Home screen
-**(G5 or G6 Session Started Without Serial # only)** 
-  7. After 2 hours the state will change to `First calibration`
-  8. Click the `Calibrate` button to enter the first calibration
-  9. Enter the value from a finger stick and click `Save` 
-  10. Click the "Home" screen
-  11. Click the `Calibrate` button to enter the second (you can wait for the state to change in 5 minutes, or enter it right after the first calibration)
-  12. Enter the value from a second finger stick and click `Save`
-  13. After 5 minutes the state will change to `OK` and calibrated BG values will be displayed.
 
-**G6:** Lookout normally moves from warmup to reporting BG levels - no calibration needed. It takes 10 - 15 minutes time to get there.
+    **Following Steps G5 or G6 Session Started Without Serial # only** 
 
-**NOTE** There is a second button on the "Home" screen, `Start sensor 2 hours ago`, that can be used to send a start message backdated by 2 hours from the current time.  This allows the user to pre-soak a sensor while the ongoing session continues.  When the ongoing session ends, move the transmitter to the new sensor and use the `Start sensor 2 hours ago` button to start the new session.  This will normally provide the user with a First calibration request within 5 to 10 minutes instead of 2 hours. (**For G6:** Lookout will move into logging the BGs, without need for calibration)
+7. After 2 hours the state will change to `First calibration`
+8. Click the `Calibrate` button to enter the first calibration
+9. Enter the value from a finger stick and click `Save` 
+10. Click the "Home" screen
+11. Click the `Calibrate` button to enter the second (you can wait for the state to change in 5 minutes, or enter it right after the first calibration)
+12. Enter the value from a second finger stick and click `Save`
+13. After 5 minutes the state will change to `OK` and calibrated BG values will be displayed.
+
+**NOTE** No calibration is required when G6 started with Sensor Serial #. After the 2 hour warmup, the G6 begins reporting BG levels.
+
+**NOTE** There is a second button on the "Home" screen, `Start sensor 2 hours ago`, that can be used to send a start message backdated by 2 hours from the current time.  This allows the user to pre-soak a sensor while the ongoing session continues.  When the ongoing session ends, move the transmitter to the new sensor and use the `Start sensor 2 hours ago` button to start the new session.  This will normally provide the user with a First calibration request within 5 to 10 minutes instead of 2 hours or start reporting BG levels for a G6 started with a sensor serial #.
 
 **NOTE**: As always, closely monitor the sensor behavior and BGs. If you are using back-start with a sensor that has already been in use for a few days, there is a higher chance that the sensor readings are off than with a new sensor - act accordingly. Never forget that your APS system uses these BG values to make insulin dosing decisions. It is essential that the BGs are valid. When in doubt, take action, and don't loop with bad BGs readings! It can be educational to run two sensors/transmitters in parallel sometimes, to learn more about behaviors.
 
@@ -252,23 +254,18 @@ Use `-m` option for mmol instead of mg/dL. For example, `lookout -m cal 4.1` wil
 ## Replacing a Sensor, using the command line
 This assumes that a sensor session is active, and that you are using the same transmitter for both sessions. The goal is to minimize looping-downtime during the sensor change. This method works with G5 or G6 sensors.
 
-### Pre-soak the sensor
-1. Insert new sensor some time before old sensor is ready to come out (2+ hours).
+1. ** Pre-soak the sensor ** Insert new sensor some time before old sensor is ready to come out (2+ hours).
 If using a G6, note the sensor serial number. You will want need it later to start, to restart the sensor, and for troubleshooting. (take a photo ...)
 
-### Stop current sensor session once you are ready to change sensors
-2. To stop the current sensor session, enter `lookout stop`.
+2. ** Stop current sensor session once you are ready to change sensors ** To stop the current sensor session, enter `lookout stop`.
 Note: Time the sensor change for a time where "not looping" for a while is OK - this might take some time to complete. Plan for 30 min, or more if something goes wrong.
 
-### Swap transmitter to new sensor
-3. Transfer the current transmitter from the old sensor to the new, pre-soaked sensor.
+3. ** Swap transmitter to new sensor ** Transfer the current transmitter from the old sensor to the new, pre-soaked sensor.
 Note: Don't reset the transmitter now, or you will have to wait the 2 hours designed into the Dexcom system for a sensor change. Same, if you are starting with a new transmitter.
 
-### Start new sensor - "2 hours ago"
-4. Enter `lookout back-start sensor_serial`
+4. ** Start new sensor - "2 hours ago" ** Enter `lookout back-start sensor_serial`
 
-### Wait a few minutes (~10 - 20 min)
-5. After a few minutes, the sensor should be reporting BG values. You might be asked to calibrate, or not. Keep that glucose meter handy, just in case.
+5. ** Wait a few minutes (~10 - 20 min) ** After a few minutes, the sensor should be reporting BG values. You might be asked to calibrate, or not. Keep that glucose meter handy, just in case.
 Yay. Go on looping with a new sensor!
 
 **Note** `lookout back-start` will probably not work if you reset/have reset the transmitter after the "back-start" time, or start with a new transmitter. The transmitter must be "known to the rig" for 2 hours or more, to successfully back-start a sensor.
@@ -303,9 +300,12 @@ So far in the above you've only run Lookout from the command line - the next tim
 
 ## Debugging
 To look at the Lookout log, for debug purposes, type `cat /var/log/openaps/lookout.log` or `tail -n 100 -F /var/log/openaps/lookout.log`.
-* If your lookout.log file contains messages similar to `Error: /root/Lookout/node_modules/bluetooth-hci-socket/build/Release/binding.node: undefined symbol: _ZN2v816FunctionTemplate3NewEPNS_7IsolateEPFvRKNS_20FunctionCallbackInfoINS_5ValueEEEENS_5LocalIS4_EENSA_INS_9SignatureEEEi` run the following command: `cd ~/Lookout; npm rebuild`
 
-* If Lookout is not running after it worked fine previously, a corrupted storage file might be the reason. 
+### Binding Errors
+If your lookout.log file contains messages similar to `Error: /root/Lookout/node_modules/bluetooth-hci-socket/build/Release/binding.node: undefined symbol: _ZN2v816FunctionTemplate3NewEPNS_7IsolateEPFvRKNS_20FunctionCallbackInfoINS_5ValueEEEENS_5LocalIS4_EENSA_INS_9SignatureEEEi` run the following command: `cd ~/Lookout; npm rebuild`
+
+### Corrupt Storage File
+If Lookout is not running after it worked fine previously, a corrupted storage file might be the reason. 
 1. run `npm test` in the Lookout directory.
 2. if `npm test` shows an error involving /root/Lookout/storage/4043d6c394234319fe0d3f18c04e3eb9, remove the implicated file, then reboot. If this does not fix the problem, and you cannot get Lookout to work, hop on Gitter to ask for help.
 

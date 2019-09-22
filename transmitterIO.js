@@ -469,6 +469,9 @@ module.exports = async (options, storage, client, fakeMeter) => {
       case 0x13:
         state = 'Reserved';
         break;
+      case 0x15:
+        state = 'Sensor Failed';
+        break;
       case 0x16:
         state = 'Sensor Failed Start';
         break;
@@ -590,6 +593,9 @@ module.exports = async (options, storage, client, fakeMeter) => {
         break;
       case 0x13:
         state = 'Reserved';
+        break;
+      case 0x15:
+        state = 'Sensor Failed';
         break;
       case 0x16:
         state = 'Failed Start';
@@ -908,11 +914,17 @@ module.exports = async (options, storage, client, fakeMeter) => {
       return;
     }
 
-    newCal.unfiltered = await calibration.getUnfiltered(valueTime, rigSGVs);
+    const raw = await calibration.getUnfiltered(valueTime, rigSGVs);
+
+    if (raw) {
+      newCal.unfiltered = raw.unfiltered;
+      newCal.filtered = raw.filtered;
+    }
 
     if (bgCheckIdx >= 0) {
       // We already had this bgCheck but didn't have the unfiltered value
       bgChecks[bgCheckIdx].unfiltered = newCal.unfiltered;
+      bgChecks[bgCheckIdx].filtered = newCal.filtered;
       bgChecks[bgCheckIdx].type = newCal.type;
     } else {
       // This is a new bgCheck we didn't already have

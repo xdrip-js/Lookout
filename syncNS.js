@@ -475,7 +475,11 @@ const syncBGChecks = async (sensorInsert, sensorStop) => {
 
   // try to fill in any missing unfiltered values
   for (let i = 0; i < rigBGChecks.length; i += 1) {
-    if (transmitter && (!('unfiltered' in rigBGChecks[i]) || !rigBGChecks[i].unfiltered)) {
+    if (transmitter
+      && (!('unfiltered' in rigBGChecks[i])
+      || !rigBGChecks[i].unfiltered
+      || !('filtered' in rigBGChecks[i])
+      || !rigBGChecks[i].filtered)) {
       bgIndexes.push(i);
       promises.push(transmitter.getUnfiltered(moment(rigBGChecks[i].dateMills)));
     }
@@ -484,7 +488,10 @@ const syncBGChecks = async (sensorInsert, sensorStop) => {
   const results = await Promise.all(promises);
 
   for (let i = 0; i < results.length; i += 1) {
-    rigBGChecks[bgIndexes[i]].unfiltered = results[i];
+    if (results[i]) {
+      rigBGChecks[bgIndexes[i]].unfiltered = results[i].unfiltered;
+      rigBGChecks[bgIndexes[i]].filtered = results[i].filtered;
+    }
   }
 
   await storage.setItem('bgChecks', rigBGChecks)

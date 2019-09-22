@@ -22,6 +22,13 @@ const calcStatsExports = module.exports;
 // Also add multiplier to get more weight to the latest BG values
 // Also added weight for points where the delta shifts from pos to neg or neg to pos (peaks/valleys)
 // the more peaks and valleys, the more noise is amplified
+// Input:
+// [
+//   {
+//     real glucose   -- glucose value in mg/dL
+//     real readDate  -- milliseconds since Epoch
+//   },...
+// ]
 const calcNoise = (sgvArr) => {
   let noise = 0;
 

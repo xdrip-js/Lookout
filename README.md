@@ -254,18 +254,18 @@ Use `-m` option for mmol instead of mg/dL. For example, `lookout -m cal 4.1` wil
 ## Replacing a Sensor, using the command line
 This assumes that a sensor session is active, and that you are using the same transmitter for both sessions. The goal is to minimize looping-downtime during the sensor change. This method works with G5 or G6 sensors.
 
-1. ** Pre-soak the sensor ** Insert new sensor some time before old sensor is ready to come out (2+ hours).
+1. **Pre-soak the sensor** Insert new sensor some time before old sensor is ready to come out (2+ hours).
 If using a G6, note the sensor serial number. You will want need it later to start, to restart the sensor, and for troubleshooting. (take a photo ...)
 
-2. ** Stop current sensor session once you are ready to change sensors ** To stop the current sensor session, enter `lookout stop`.
+2. **Stop current sensor session** Once you are ready to change sensors, stop the current sensor session, enter `lookout stop`.
 Note: Time the sensor change for a time where "not looping" for a while is OK - this might take some time to complete. Plan for 30 min, or more if something goes wrong.
 
-3. ** Swap transmitter to new sensor ** Transfer the current transmitter from the old sensor to the new, pre-soaked sensor.
+3. **Swap transmitter to new sensor** Transfer the current transmitter from the old sensor to the new, pre-soaked sensor.
 Note: Don't reset the transmitter now, or you will have to wait the 2 hours designed into the Dexcom system for a sensor change. Same, if you are starting with a new transmitter.
 
-4. ** Start new sensor - "2 hours ago" ** Enter `lookout back-start sensor_serial`
+4. **Start new sensor - "2 hours ago"** Enter `lookout back-start sensor_serial`
 
-5. ** Wait a few minutes (~10 - 20 min) ** After a few minutes, the sensor should be reporting BG values. You might be asked to calibrate, or not. Keep that glucose meter handy, just in case.
+5. **Wait a few minutes (~10 - 20 min)** After a few minutes, the sensor should be reporting BG values. You might be asked to calibrate, or not. Keep that glucose meter handy, just in case.
 Yay. Go on looping with a new sensor!
 
 **Note** `lookout back-start` will probably not work if you reset/have reset the transmitter after the "back-start" time, or start with a new transmitter. The transmitter must be "known to the rig" for 2 hours or more, to successfully back-start a sensor.

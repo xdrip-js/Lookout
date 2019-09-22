@@ -465,7 +465,7 @@ const expiredCalibration = async (
   // don't use too many
   calPairs = calPairs.slice(Math.max(0, calPairs.length - maxLsrPairs + 1));
 
-  // If we have at least 3 good pairs, use LSR
+  // If we have at least minLsrPairs good pairs, use LSR
   if (calPairs.length >= minLsrPairs) {
     const calResult = lsrCalibration(calPairs);
 

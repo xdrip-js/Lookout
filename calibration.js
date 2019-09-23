@@ -177,6 +177,8 @@ const singlePointCalibration = (calibrationPairs) => {
 const calculateTxmitterCalibration = (
   options, lastCal, lastTxmitterCalTime, latestBgCheckTime, sensorInsert, glucoseHist, currSGV,
 ) => {
+  log('Calculating transmitter calibration');
+
   // set it to a high number so we upload a new cal
   // if we don't have a previous calibration
 
@@ -440,6 +442,7 @@ const expiredCalibration = async (
   const minLsrPairs = options.min_lsr_pairs;
   let maxLsrPairsAge = options.max_lsr_pairs_age;
 
+  log('Calculating expired calibration');
   debug(`options: {\n     maxLsrPairs: ${maxLsrPairs},\n     minLsrPairs: ${minLsrPairs},\n  maxLsrPairsAge: ${maxLsrPairsAge}\n}`);
 
   // convert to milliseconds

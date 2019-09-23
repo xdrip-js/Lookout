@@ -80,13 +80,14 @@ const postToXdrip = (entry) => {
     json: true,
   };
 
+  debug('Sending entry to xDripAPS:\n%O', entry);
+
   /* eslint-disable-next-line no-unused-vars */
   request(optionsX, (err, response, body) => {
     if (err) {
       error('error posting SGV to xDripAPS: ', err);
     } else {
       log(`uploaded SGV to xDripAPS, statusCode = ${response.statusCode}`);
-      debug('Entry:\n%O', entry);
     }
   });
 };
@@ -113,13 +114,14 @@ const postToNS = (entry) => {
     json: true,
   };
 
+  debug('Uploading entry:\n%O', entry);
+
   /* eslint-disable-next-line no-unused-vars */
   request(optionsNS, (err, response, body) => {
     if (err) {
       error('error posting SGV to NS: ', err);
     } else {
       log(`uploaded SGV to NS, statusCode = ${response.statusCode}`);
-      debug('Entry:\n%O', entry);
     }
   });
 };
@@ -426,13 +428,14 @@ module.exports = () => ({
       json: true,
     };
 
+    debug('Uploading announcement:\n%O', entry);
+
     /* eslint-disable-next-line no-unused-vars */
     request(optionsNS, (err, response, body) => {
       if (err) {
         error('error posting Announcement to NS: ', err);
       } else {
         log(`uploaded new Announcement to NS, statusCode = ${response.statusCode}`);
-        debug('Announcement:\n%O', entry);
       }
     });
   },
@@ -490,13 +493,14 @@ module.exports = () => ({
       json: true,
     };
 
+    debug('Uploading status:\n%O', entry);
+
     /* eslint-disable-next-line no-unused-vars */
     request(optionsNS, (err, response, body) => {
       if (err) {
         error('error posting DeviceStatus to NS: ', err);
       } else {
         log(`uploaded new DeviceStatus to NS, statusCode = ${response.statusCode}`);
-        debug('Status:\n%O', entry);
       }
     });
   },
@@ -525,13 +529,14 @@ module.exports = () => ({
       json: true,
     };
 
+    debug('Uploading BG Check:\n%O', entry);
+
     /* eslint-disable-next-line no-unused-vars */
     request(optionsNS, (err, response, body) => {
       if (err) {
         error('error posting BG Check to NS: ', err);
       } else {
         log(`uploaded new BG Check to NS, statusCode = ${response.statusCode}`);
-        debug('BG Check:\n%O', entry);
       }
     });
   },
@@ -568,13 +573,14 @@ module.exports = () => ({
       json: true,
     };
 
+    debug('uploading calibration:\n%O', entry);
+
     /* eslint-disable-next-line no-unused-vars */
     request(optionsNS, (err, response, body) => {
       if (err) {
         error('error posting calibration to NS: ', err);
       } else {
         log(`uploaded new calibration to NS, statusCode = ${response.statusCode}`);
-        debug('calibration:\n%O', entry);
       }
     });
   },
@@ -608,13 +614,14 @@ module.exports = () => ({
       json: true,
     };
 
+    debug('Uploading event:\n%O', entry);
+
     /* eslint-disable-next-line no-unused-vars */
     request(optionsNS, (err, response, body) => {
       if (err) {
         error(`error posting ${eventType} to NS: `, err);
       } else {
         log(`uploaded new ${eventType} event to NS, statusCode = ${response.statusCode}`);
-        debug('event:\n%O', entry);
       }
     });
   },

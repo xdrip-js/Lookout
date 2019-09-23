@@ -195,6 +195,7 @@ describe('Test Calibration', () => {
         glucose: 127,
         type: 'NS',
         unfiltered: 110298.86094477712,
+        filtered: 110298.86094477712,
       },
       {
         date: 1544237557000,
@@ -202,6 +203,7 @@ describe('Test Calibration', () => {
         glucose: 130,
         type: 'NS',
         unfiltered: 113266.57133129044,
+        filtered: 113266.57133129044,
       },
       {
         date: 1544391573000,
@@ -217,7 +219,7 @@ describe('Test Calibration', () => {
       state: 7,
       readDate: 1544391333000,
       readDateMills: 1544391333000,
-      filtered: 161056,
+      filtered: 101056,
       unfiltered: 106000,
       glucose: 105,
       trend: -3.9982585362819747,
@@ -231,7 +233,7 @@ describe('Test Calibration', () => {
       state: 7,
       readDate: 1544391633000,
       readDateMills: 1544391633000,
-      filtered: 148544,
+      filtered: 108544,
       unfiltered: 108500,
       glucose: 106,
       trend: -6.002474353316756,
@@ -264,6 +266,7 @@ describe('Test Calibration', () => {
         glucose: 127,
         type: 'NS',
         unfiltered: 110298.86094477712,
+        filtered: 110298.86094477712,
       },
       {
         date: 1544237557000,
@@ -271,6 +274,7 @@ describe('Test Calibration', () => {
         glucose: 130,
         type: 'NS',
         unfiltered: 113266.57133129044,
+        filtered: 113266.57133129044,
       },
       {
         date: 1544391573000,
@@ -286,7 +290,7 @@ describe('Test Calibration', () => {
       state: 7,
       readDate: 1544391333000,
       readDateMills: 1544391333000,
-      filtered: 161056,
+      filtered: 106056,
       unfiltered: 106000,
       glucose: 105,
       trend: -3.9982585362819747,
@@ -300,7 +304,7 @@ describe('Test Calibration', () => {
       state: 7,
       readDate: 1544391633000,
       readDateMills: 1544391633000,
-      filtered: 148544,
+      filtered: 108544,
       unfiltered: 108500,
       glucose: 106,
       trend: -6.002474353316756,
@@ -333,6 +337,7 @@ describe('Test Calibration', () => {
         glucose: 127,
         type: 'NS',
         unfiltered: 110298.86094477712,
+        filtered: 110298.86094477712,
       },
       {
         date: 1544237557000,
@@ -340,6 +345,7 @@ describe('Test Calibration', () => {
         glucose: 130,
         type: 'NS',
         unfiltered: 113266.57133129044,
+        filtered: 113266.57133129044,
       },
       {
         date: 1544391573000,
@@ -355,7 +361,7 @@ describe('Test Calibration', () => {
       state: 7,
       readDate: 1544391333000,
       readDateMills: 1544391333000,
-      filtered: 161056,
+      filtered: 101056,
       unfiltered: 106000,
       glucose: 105,
       trend: -3.9982585362819747,
@@ -369,7 +375,7 @@ describe('Test Calibration', () => {
       state: 7,
       readDate: 1544391633000,
       readDateMills: 1544391633000,
-      filtered: 148544,
+      filtered: 108544,
       unfiltered: 108500,
       glucose: 106,
       trend: -6.002474353316756,
@@ -402,6 +408,7 @@ describe('Test Calibration', () => {
         glucose: 127,
         type: 'NS',
         unfiltered: 110298.86094477712,
+        filtered: 110298.86094477712,
       },
       {
         date: 1544237557000,
@@ -409,6 +416,78 @@ describe('Test Calibration', () => {
         glucose: 130,
         type: 'NS',
         unfiltered: 113266.57133129044,
+        filtered: 113266.57133129044,
+      },
+      {
+        date: 1544391573000,
+        dateMills: 1544391573000,
+        glucose: 125,
+        type: 'NS',
+      },
+    ];
+
+    const glucoseHist = [{
+      inSession: true,
+      status: 0,
+      state: 7,
+      readDate: 1544391333000,
+      readDateMills: 1544391333000,
+      filtered: 101056,
+      unfiltered: 106000,
+      glucose: 105,
+      trend: -3.9982585362819747,
+      canBeCalibrated: true,
+      rssi: -59,
+      g5calibrated: true,
+      stateString: 'Need calibration',
+    }, {
+      inSession: true,
+      status: 0,
+      state: 7,
+      readDate: 1544391633000,
+      readDateMills: 1544391633000,
+      filtered: 108544,
+      unfiltered: 108500,
+      glucose: 106,
+      trend: -6.002474353316756,
+      canBeCalibrated: true,
+      rssi: -77,
+      g5calibrated: true,
+      stateString: 'Need calibration',
+    }];
+
+    const options = {
+      min_lsr_pairs: 2,
+      max_lsr_pairs: 10,
+      max_lsr_pairs_age: 2,
+    };
+
+    const lastCal = await calibration.expiredCalibration(
+      options, null, bgChecks, null, null, glucoseHist, null,
+    );
+
+    lastCal.type.should.equal('LeastSquaresRegression');
+    lastCal.slope.should.be.within(1050, 1060);
+    lastCal.intercept.should.be.within(-24000, -23000);
+  });
+
+  it('should ignore glucose records with filtered and unfiltered > 10% apart', async () => {
+    const bgChecks = [
+      {
+        date: 1544133780000,
+        dateMills: 1544133780000,
+        glucose: 127,
+        type: 'NS',
+        unfiltered: 110298.86094477712,
+        filtered: 110298.86094477712,
+      },
+      {
+        date: 1544237557000,
+        dateMills: 1544237557000,
+        glucose: 130,
+        type: 'NS',
+        unfiltered: 113266.57133129044,
+        filtered: 113266.57133129044,
       },
       {
         date: 1544391573000,
@@ -459,8 +538,8 @@ describe('Test Calibration', () => {
     );
 
     lastCal.type.should.equal('LeastSquaresRegression');
-    lastCal.slope.should.be.within(1050, 1060);
-    lastCal.intercept.should.be.within(-24000, -23000);
+    lastCal.slope.should.be.within(989, 990);
+    lastCal.intercept.should.be.within(-15335, -15334);
   });
 
   it('should calculate Single Point during warmup', async () => {
@@ -468,15 +547,17 @@ describe('Test Calibration', () => {
       {
         date: 1569159944000,
         dateMills: 1569159944000,
-        glucose: 255,
+        glucose: 235,
         type: 'NS',
         unfiltered: 152880.59868282842,
+        filtered: 152880.59868282842,
       }, {
         date: 1569162968000,
         dateMills: 1569162968000,
-        glucose: 265,
+        glucose: 245,
         type: 'NS',
         unfiltered: 156040.64327247645,
+        filtered: 156040.64327247645,
       },
     ];
 
@@ -1013,7 +1094,7 @@ describe('Test Calibration', () => {
     );
 
     lastCal.type.should.equal('SinglePoint');
-    lastCal.slope.should.be.within(860, 870);
+    lastCal.slope.should.be.within(636, 637);
     lastCal.intercept.should.equal(0);
   });
 });

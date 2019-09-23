@@ -340,6 +340,8 @@ const getUnfilteredFromNS = async (valueTime) => {
   let SGVAfter = null;
   let SGVAfterTime = null;
 
+  log(`Retrieving raw glucose value from NS for ${valueTime.format()}`);
+
   // Get NS SGV immediately before BG Check
   NSSGVs = await xDripAPS.SGVsBetween(timeStart, timeEnd, 5)
     .catch((err) => {

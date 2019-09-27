@@ -51,9 +51,9 @@ module.exports = async (options, storage, client, fakeMeter) => {
       if (msg.type === 'BatteryStatus') {
         if (haveBatteryStatus) {
           return false;
-        } else {
-          haveBatteryStatus = true;
         }
+
+        haveBatteryStatus = true;
       }
 
       return true;

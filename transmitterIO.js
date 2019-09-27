@@ -30,6 +30,8 @@ module.exports = async (options, storage, client, fakeMeter) => {
   };
 
   const filterPending = (oldPending) => {
+    let haveBatteryStatus = false;
+
     const newPending = oldPending.filter((msg) => {
       // Don't send stop or start sensors older than 2 hours and 12 minutes
       if (((msg.type === 'StopSensor') || (msg.type === 'StartSensor')) && ((Date.now() - msg.date) > 132 * 60000)) {
@@ -43,6 +45,10 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
       // Don't send any commands if in read only mode
       if (options.read_only && (msg.type !== 'BatteryStatus')) {
+        return false;
+      }
+
+      if ((msgs.type === 'BatteryStatus') && haveBatteryStatus) {
         return false;
       }
 

@@ -177,6 +177,8 @@ const singlePointCalibration = (calibrationPairs) => {
 const calculateTxmitterCalibration = (
   options, lastCal, lastTxmitterCalTime, latestBgCheckTime, sensorInsert, glucoseHist, currSGV,
 ) => {
+  log('Calculating transmitter calibration');
+
   // set it to a high number so we upload a new cal
   // if we don't have a previous calibration
 
@@ -340,6 +342,8 @@ const getUnfilteredFromNS = async (valueTime) => {
   let SGVAfter = null;
   let SGVAfterTime = null;
 
+  log(`Retrieving raw glucose value from NS for ${valueTime.format()}`);
+
   // Get NS SGV immediately before BG Check
   NSSGVs = await xDripAPS.SGVsBetween(timeStart, timeEnd, 5)
     .catch((err) => {
@@ -438,6 +442,7 @@ const expiredCalibration = async (
   const minLsrPairs = options.min_lsr_pairs;
   let maxLsrPairsAge = options.max_lsr_pairs_age;
 
+  log('Calculating expired calibration');
   debug(`options: {\n     maxLsrPairs: ${maxLsrPairs},\n     minLsrPairs: ${minLsrPairs},\n  maxLsrPairsAge: ${maxLsrPairsAge}\n}`);
 
   // convert to milliseconds
@@ -494,7 +499,7 @@ const expiredCalibration = async (
   // don't use too many
   calPairs = calPairs.slice(Math.max(0, calPairs.length - maxLsrPairs + 1));
 
-  // If we have at least 3 good pairs, use LSR
+  // If we have at least minLsrPairs good pairs, use LSR
   if (calPairs.length >= minLsrPairs) {
     const calResult = lsrCalibration(calPairs);
 

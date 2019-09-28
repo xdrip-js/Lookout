@@ -131,16 +131,17 @@ calcStatsExports.calcTrend = (calcGlucose, glucoseHist, lastCal, sgv) => {
 
   let trend = 0;
 
-
   if (glucoseHist.length > 0) {
     let maxDate = null;
     let timeSpan = 0;
     let totalDelta = 0;
+    const currentTime = sgv ? moment(sgv.readDateMills)
+      : moment(glucoseHist[glucoseHist.length - 1].readDateMills);
 
     sgvHist = [];
 
     // delete any deltas > 16 minutes and any that don't have an unfiltered value (backfill records)
-    let minDate = moment().subtract(16, 'minutes').valueOf();
+    let minDate = currentTime.valueOf() - 16 * 60 * 1000;
     for (let i = 0; i < glucoseHist.length; i += 1) {
       if ((glucoseHist[i].readDateMills >= minDate) && ('unfiltered' in glucoseHist[i]) && (glucoseHist[i].unfiltered > 100)) {
         sgvHist.push({
@@ -156,7 +157,7 @@ calcStatsExports.calcTrend = (calcGlucose, glucoseHist, lastCal, sgv) => {
     }
 
     if (sgv) {
-      if ('unfiltered' in sgv && sgv.unfiltered > 100) {
+      if (('unfiltered' in sgv) && (sgv.unfiltered > 100)) {
         sgvHist.push({
           glucose: calcGlucose(sgv, lastCal),
           readDate: sgv.readDateMills,
@@ -170,8 +171,8 @@ calcStatsExports.calcTrend = (calcGlucose, glucoseHist, lastCal, sgv) => {
     }
 
     if (sgvHist.length > 1) {
-      minDate = sgvHist[0].readDateMills;
-      maxDate = sgvHist[sgvHist.length - 1].readDateMills;
+      minDate = sgvHist[0].readDate;
+      maxDate = sgvHist[sgvHist.length - 1].readDate;
 
       // Use the current calibration value to calculate the glucose from the
       // unfiltered data. This allows the trend calculation to be independent

@@ -106,10 +106,17 @@ calcStatsExports.calcSensorNoise = (calcGlucose, glucoseHist, lastCal, sgv) => {
   }
 
   if (sgv) {
-    sgvArr.push({
-      glucose: calcGlucose(sgv, lastCal),
-      readDate: sgv.readDateMills,
-    });
+    if ('unfiltered' in sgv && sgv.unfiltered > 100) {
+      sgvArr.push({
+        glucose: calcGlucose(sgv, lastCal),
+        readDate: sgv.readDateMills,
+      });
+    } else {
+      sgvArr.push({
+        glucose: sgv.glucose,
+        readDate: sgv.readDateMills,
+      });
+    }
   }
 
   if (sgvArr.length < MINRECORDS) {
@@ -135,13 +142,31 @@ calcStatsExports.calcTrend = (calcGlucose, glucoseHist, lastCal, sgv) => {
     // delete any deltas > 16 minutes and any that don't have an unfiltered value (backfill records)
     let minDate = moment().subtract(16, 'minutes').valueOf();
     for (let i = 0; i < glucoseHist.length; i += 1) {
-      if ((glucoseHist[i].readDateMills >= minDate) && ('unfiltered' in glucoseHist[i])) {
-        sgvHist.push(glucoseHist[i]);
+      if ((glucoseHist[i].readDateMills >= minDate) && ('unfiltered' in glucoseHist[i]) && (glucoseHist[i].unfiltered > 100)) {
+        sgvHist.push({
+          glucose: calcGlucose(glucoseHist[i], lastCal),
+          readDate: glucoseHist[i].readDateMills,
+        });
+      } else if (glucoseHist[i].readDateMills >= minDate) {
+        sgvHist.push({
+          glucose: glucoseHist[i].glucose,
+          readDate: glucoseHist[i].readDateMills,
+        });
       }
     }
 
     if (sgv) {
-      sgvHist.push(sgv);
+      if ('unfiltered' in sgv && sgv.unfiltered > 100) {
+        sgvHist.push({
+          glucose: calcGlucose(sgv, lastCal),
+          readDate: sgv.readDateMills,
+        });
+      } else {
+        sgvHist.push({
+          glucose: sgv.glucose,
+          readDate: sgv.readDateMills,
+        });
+      }
     }
 
     if (sgvHist.length > 1) {
@@ -151,9 +176,7 @@ calcStatsExports.calcTrend = (calcGlucose, glucoseHist, lastCal, sgv) => {
       // Use the current calibration value to calculate the glucose from the
       // unfiltered data. This allows the trend calculation to be independent
       // of the calibration jumps
-      totalDelta = calcGlucose(
-        sgvHist[sgvHist.length - 1], lastCal,
-      ) - calcGlucose(sgvHist[0], lastCal);
+      totalDelta = sgvHist[sgvHist.length - 1].glucose - sgvHist[0].glucose;
 
       timeSpan = (maxDate - minDate) / 1000.0 / 60.0;
 

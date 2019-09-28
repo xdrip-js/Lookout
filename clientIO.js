@@ -93,21 +93,21 @@ module.exports = (options) => {
       }
 
       if (transmitter) {
-        transmitter.startSensor(sensorSerialCode);
+        transmitter.startSensor(sensorSerialCode, 'Start Commanded by Client');
       }
     });
     socket.on('backStartSensor', (sensorSerialCode) => {
       debug('received backStartSensor command');
 
       if (transmitter) {
-        transmitter.backStartSensor(sensorSerialCode);
+        transmitter.backStartSensor(sensorSerialCode, 'Backdated Start Commanded by Client');
       }
     });
     socket.on('stopSensor', () => {
       debug('received stopSensor command');
 
       if (transmitter) {
-        transmitter.stopSensor();
+        transmitter.stopSensor('Stop Commanded by Client');
       }
     });
     socket.on('calibrate', (glucose) => {

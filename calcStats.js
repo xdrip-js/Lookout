@@ -89,11 +89,17 @@ calcStatsExports.calcSensorNoise = (calcGlucose, glucoseHist, lastCal, sgv) => {
 
   for (let i = numRecords; i < glucoseHist.length; i += 1) {
     // Only use values that are > 30 to filter out invalid values.
-    if ((glucoseHist[i].glucose > 30) && ('unfiltered' in glucoseHist[i])) {
+    if ((glucoseHist[i].glucose > 30) && ('unfiltered' in glucoseHist[i]) && (glucoseHist[i].unfiltered > 100)) {
       // use the unfiltered data with the most recent calculated calibration value
       // this will provide a noise calculation that is independent of calibration jumps
       sgvArr.push({
         glucose: calcGlucose(glucoseHist[i], lastCal),
+        readDate: glucoseHist[i].readDateMills,
+      });
+    } else if (glucoseHist[i].glucose > 30) {
+      // if raw data isn't available, use the transmitter calibrated glucose
+      sgvArr.push({
+        glucose: glucoseHist[i].glucose,
         readDate: glucoseHist[i].readDateMills,
       });
     }

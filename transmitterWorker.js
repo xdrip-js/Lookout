@@ -42,6 +42,10 @@ transmitter.on('batteryStatus', (data) => {
   process.send({ msg: 'batteryStatus', data });
 });
 
+transmitter.on('version', (data) => {
+  process.send({ msg: 'version', data });
+});
+
 transmitter.on('sawTransmitter', (data) => {
   process.send({ msg: 'sawTransmitter', data });
 });

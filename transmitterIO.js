@@ -16,6 +16,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
   let txAddress = null;
   let txFailedReads = 0;
   let txStatus = null;
+  let txFirmware = null;
   let pending = [];
   let worker = null;
   let timerObj = null;
@@ -31,6 +32,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
   const filterPending = (oldPending) => {
     let haveBatteryStatus = false;
+    let haveFirmwareRequest = false;
 
     const newPending = oldPending.filter((msg) => {
       // Don't send stop or start sensors older than 2 hours and 12 minutes
@@ -54,6 +56,14 @@ module.exports = async (options, storage, client, fakeMeter) => {
         }
 
         haveBatteryStatus = true;
+      }
+
+      if (msg.type === 'VersionRequest') {
+        if (haveFirmwareRequest) {
+          return false;
+        }
+
+        haveFirmwareRequest = true;
       }
 
       return true;
@@ -1102,6 +1112,10 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
         pendingCalTime = await calibrateFromNS();
 
+        if (!txFirmware) {
+          pending.push({ type: 'VersionRequest' });
+        }
+
         pending = filterPending(pending);
 
         const glucoseHist = await storage.getArray('glucoseHist');
@@ -1189,6 +1203,8 @@ module.exports = async (options, storage, client, fakeMeter) => {
         processTxmitterCalData(m.data);
       } else if (m.msg === 'batteryStatus') {
         processBatteryStatus(m.data);
+      } else if (m.msg === 'version') {
+        txFirmware = m.data.firmwareVersion;
       } else if (m.msg === 'sawTransmitter') {
         // increment failed reads counter so we know how many
         // times we saw the transmitter
@@ -1260,6 +1276,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
       log(`received id of ${value}`);
       txId = value;
+      txFirmware = null;
 
       calibration.clearCalibration(storage);
       storage.delItem('glucoseHist');

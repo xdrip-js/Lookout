@@ -1205,6 +1205,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
         processBatteryStatus(m.data);
       } else if (m.msg === 'version') {
         txFirmware = m.data.firmwareVersion;
+        log('Version message:\n%O', m.data);
       } else if (m.msg === 'sawTransmitter') {
         // increment failed reads counter so we know how many
         // times we saw the transmitter

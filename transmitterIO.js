@@ -856,7 +856,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
       glucose: calData.glucose,
     };
 
-    log(`Last calibration: ${Math.round((Date.now() - newCal.dateMills) / 1000 / 60 / 60 * 10) / 10} hours ago`);
+    log(`Last calibration: ${Math.round((Date.now() - newCal.dateMills) / 1000 / 60 / 60 * 10) / 10} hours ago, ${newCal.glucose} mg/dL`);
 
     if (newCal.glucose > 400 || newCal.glucose < 20) {
       log('Txmitter Last Calibration Data glucose out of range - ignoring');

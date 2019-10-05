@@ -12,14 +12,16 @@ Lookout provides a rig-based interface to a Dexcom G5 CGM using Bluetooth Low En
 - send glucose values to OpenAPS and Nightscout
 - send glucose values to Pump via fakemeter
 - send finger stick calibration values to the transmitter
-- reset expired transmitters
+- reset expired transmitters ** See note below
 - calculate and report trend and noise values
 - calculate and report CGM calibration slope and offset values
 - report BG Check records to Nightscout obtained from transmitter's CGM calibration events
 - report sensor state changes to Nightscout as announcements
-- extend sensor operation beyond sensor expiration (limitations described below)
+- extend sensor operation beyond sensor expiration (limitations described below) ** See note below
 - report raw unfiltered values to Nightscout during warmup for trend visibility
 - report detail transmitter and device status to Nightscout (requires Nightscout xdrip-js plugin to be enabled)
+
+**NOTE** G6 Transmitters with Serial Number starting 8G do not support reset, expired calibration mode, or extended calibration mode.
 
 You can use Lookout with unexpired G5 and G6 transmitters relying on the official calibration built into the transmitter to calibrate the raw sensor values.  
 

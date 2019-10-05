@@ -16,6 +16,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
   let txAddress = null;
   let txFailedReads = 0;
   let txStatus = null;
+  let txFirmware = null;
   let pending = [];
   let worker = null;
   let timerObj = null;
@@ -30,6 +31,9 @@ module.exports = async (options, storage, client, fakeMeter) => {
   };
 
   const filterPending = (oldPending) => {
+    let haveBatteryStatus = false;
+    let haveFirmwareRequest = false;
+
     const newPending = oldPending.filter((msg) => {
       // Don't send stop or start sensors older than 2 hours and 12 minutes
       if (((msg.type === 'StopSensor') || (msg.type === 'StartSensor')) && ((Date.now() - msg.date) > 132 * 60000)) {
@@ -44,6 +48,22 @@ module.exports = async (options, storage, client, fakeMeter) => {
       // Don't send any commands if in read only mode
       if (options.read_only && (msg.type !== 'BatteryStatus')) {
         return false;
+      }
+
+      if (msg.type === 'BatteryStatus') {
+        if (haveBatteryStatus) {
+          return false;
+        }
+
+        haveBatteryStatus = true;
+      }
+
+      if (msg.type === 'VersionRequest') {
+        if (haveFirmwareRequest) {
+          return false;
+        }
+
+        haveFirmwareRequest = true;
       }
 
       return true;
@@ -836,7 +856,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
       glucose: calData.glucose,
     };
 
-    log(`Last calibration: ${Math.round((Date.now() - newCal.dateMills) / 1000 / 60 / 60 * 10) / 10} hours ago`);
+    log(`Last calibration: ${Math.round((Date.now() - newCal.dateMills) / 1000 / 60 / 60 * 10) / 10} hours ago, ${newCal.glucose} mg/dL`);
 
     if (newCal.glucose > 400 || newCal.glucose < 20) {
       log('Txmitter Last Calibration Data glucose out of range - ignoring');
@@ -1092,6 +1112,10 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
         pendingCalTime = await calibrateFromNS();
 
+        if (!txFirmware) {
+          pending.push({ type: 'VersionRequest' });
+        }
+
         pending = filterPending(pending);
 
         const glucoseHist = await storage.getArray('glucoseHist');
@@ -1179,6 +1203,9 @@ module.exports = async (options, storage, client, fakeMeter) => {
         processTxmitterCalData(m.data);
       } else if (m.msg === 'batteryStatus') {
         processBatteryStatus(m.data);
+      } else if (m.msg === 'version') {
+        txFirmware = m.data.firmwareVersion;
+        log('Version message:\n%O', m.data);
       } else if (m.msg === 'sawTransmitter') {
         // increment failed reads counter so we know how many
         // times we saw the transmitter
@@ -1250,6 +1277,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
       log(`received id of ${value}`);
       txId = value;
+      txFirmware = null;
 
       calibration.clearCalibration(storage);
       storage.delItem('glucoseHist');

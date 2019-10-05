@@ -9,6 +9,7 @@ const debug = Debug('transmitterWorker:debug');
 const Transmitter = require('xdrip-js');
 
 const id = process.argv[2];
+const altBtChannel = parseInt(process.argv[3], 10);
 
 /* eslint-disable-next-line no-unused-vars */
 const getMessages = () => new Promise((resolve, reject) => {
@@ -18,9 +19,12 @@ const getMessages = () => new Promise((resolve, reject) => {
   // TODO: consider adding a timeout here, with resolve([]), or reject
   process.send({ msg: 'getMessages' });
 });
-log('kicking off');
 
-const transmitter = new Transmitter(id, getMessages);
+const btChannel = altBtChannel ? 'alternate' : 'standard';
+
+log(`kicking off using ${btChannel} Bluetooth channel`);
+
+const transmitter = new Transmitter(id, getMessages, altBtChannel);
 
 transmitter.on('glucose', (glucose) => {
   process.send({ msg: 'glucose', data: glucose });
@@ -36,6 +40,10 @@ transmitter.on('calibrationData', (data) => {
 
 transmitter.on('batteryStatus', (data) => {
   process.send({ msg: 'batteryStatus', data });
+});
+
+transmitter.on('version', (data) => {
+  process.send({ msg: 'version', data });
 });
 
 transmitter.on('sawTransmitter', (data) => {

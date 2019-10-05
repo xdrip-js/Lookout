@@ -11,6 +11,10 @@ const _ = require('lodash');
 const TimeLimitedPromise = require('./timeLimitedPromise');
 const xDripAPS = require('./xDripAPS')();
 
+const RIG_SOURCE = 0;
+const NS_SOURCE = 1;
+
+let options = null;
 let storage = null;
 let transmitter = null;
 
@@ -109,60 +113,62 @@ const syncEvent = async (itemName, eventType) => {
   }
 
   if (nsEvent) {
-    debug(`SyncNS NS ${eventType}- date: ${nsEvent.format()}`);
+    debug(`SyncNS NS ${eventType}- date: ${nsEvent.date.format()}`);
   }
 
   await storage.lock();
 
-  rigItem = await storage.getItem(itemName)
+  rigItem = await storage.getEvent(itemName)
     .catch((err) => {
       error(`Error getting rig ${itemName}: ${err}`);
     });
 
   if (rigItem) {
-    rigItem = moment(rigItem);
-    debug(`SyncNS Rig ${itemName}- date: ${rigItem.format()}`);
+    debug(`SyncNS Rig ${itemName}- date: ${rigItem.date.format()}`);
   }
 
-  if (nsQueryError) {
-    // ns query failed, so just return the rig sensor insert
-    return rigItem;
-  }
-
-  let latestEvent = rigItem;
+  const latestEvent = {
+    event: rigItem,
+    source: RIG_SOURCE,
+  };
 
   if (nsEvent) {
     if (!rigItem) {
       debug(`No rig ${itemName}, storing NS ${eventType}`);
 
-      latestEvent = nsEvent;
+      latestEvent.event = nsEvent;
+      latestEvent.source = NS_SOURCE;
 
-      await storage.setItem(itemName, nsEvent.valueOf())
+      await storage.setEvent(itemName, nsEvent)
         .catch(() => {
           error(`Unable to store ${itemName}`);
         });
-    } else if (rigItem && ((nsEvent.valueOf() - rigItem.valueOf()) > 1000)) {
-      debug(`NS ${eventType} more recent than rig ${itemName} NS date: ${nsEvent.format()} Rig date: ${rigItem.format()}`);
+    } else if (rigItem && ((nsEvent.date - rigItem.date) > 1000)) {
+      debug(`NS ${eventType} more recent than rig ${itemName} NS date: ${nsEvent.date.format()} Rig date: ${rigItem.date.format()}`);
 
-      latestEvent = nsEvent;
+      latestEvent.event = nsEvent;
+      latestEvent.source = NS_SOURCE;
 
-      storage.setItem(itemName, nsEvent.valueOf())
+      storage.setEvent(itemName, nsEvent)
         .catch(() => {
           error(`Unable to store ${itemName}`);
         });
-    } else if (rigItem && ((rigItem.valueOf() - nsEvent.valueOf()) > 1000)) {
-      debug(`Rig ${itemName} more recent than NS ${eventType} NS date: ${nsEvent.format()} Rig date: ${rigItem.format()}`);
+    } else if (rigItem && ((rigItem.date - nsEvent.date) > 1000)) {
+      debug(`Rig ${itemName} more recent than NS ${eventType} NS date: ${nsEvent.date.format()} Rig date: ${rigItem.date.format()}`);
       debug(`Uploading rig ${itemName}`);
 
-      latestEvent = rigItem;
-      xDripAPS.postEvent(eventType, rigItem);
+      latestEvent.event = rigItem;
+      latestEvent.source = RIG_SOURCE;
+      xDripAPS.postEvent(eventType, rigItem.date, rigItem.notes);
     } else {
       debug(`Rig and NS ${eventType} dates match - no sync needed`);
     }
   } else if (rigItem) {
     debug(`No NS ${eventType} - uploading rig sensor insert`);
-    latestEvent = rigItem;
-    xDripAPS.postEvent(eventType, rigItem);
+    latestEvent.event = rigItem;
+    latestEvent.source = RIG_SOURCE;
+
+    xDripAPS.postEvent(eventType, rigItem.date, rigItem.notes);
   } else {
     debug(`No rig ${itemName} or NS ${eventType}`);
   }
@@ -170,6 +176,10 @@ const syncEvent = async (itemName, eventType) => {
   storage.unlock();
 
   log(`Syncing rig ${itemName} and NS ${eventType} complete`);
+
+  if (latestEvent) {
+    latestEvent.date = moment(latestEvent.event.date);
+  }
 
   return latestEvent;
 };
@@ -277,7 +287,7 @@ const syncSGVs = async () => {
     // upload any gapSGVs to NS that we haven't found a NS match
     _.each(nsGap.gapSGVs, (gapSGV) => {
       if (gapSGV.glucose && !gapSGV.inNS) {
-        xDripAPS.post(gapSGV, false);
+        xDripAPS.post(gapSGV, false, true);
       }
     });
   }));
@@ -465,7 +475,11 @@ const syncBGChecks = async (sensorInsert, sensorStop) => {
 
   // try to fill in any missing unfiltered values
   for (let i = 0; i < rigBGChecks.length; i += 1) {
-    if (transmitter && (!('unfiltered' in rigBGChecks[i]) || !rigBGChecks[i].unfiltered)) {
+    if (transmitter
+      && (!('unfiltered' in rigBGChecks[i])
+      || !rigBGChecks[i].unfiltered
+      || !('filtered' in rigBGChecks[i])
+      || !rigBGChecks[i].filtered)) {
       bgIndexes.push(i);
       promises.push(transmitter.getUnfiltered(moment(rigBGChecks[i].dateMills)));
     }
@@ -474,7 +488,10 @@ const syncBGChecks = async (sensorInsert, sensorStop) => {
   const results = await Promise.all(promises);
 
   for (let i = 0; i < results.length; i += 1) {
-    rigBGChecks[bgIndexes[i]].unfiltered = results[i];
+    if (results[i]) {
+      rigBGChecks[bgIndexes[i]].unfiltered = results[i].unfiltered;
+      rigBGChecks[bgIndexes[i]].filtered = results[i].filtered;
+    }
   }
 
   await storage.setItem('bgChecks', rigBGChecks)
@@ -525,19 +542,24 @@ const calcNextSyncTimeDelay = (sgv) => {
   let sgvTime = sgv.readDateMills;
   const now = moment().valueOf();
 
+  // If lazy upload is enabled, sync 30 seconds earlier
+  // so the prumary rig and the delayed upload rig
+  // don't try to upload the same missing data
+  const preDelta = options.read_only ? 60000 : 30000;
+
   // Find the next point in time where
   // 30 seconds less than the next possible
   // transmitter wake up time is later than now
-  while ((sgvTime - 30000) < now) {
+  while ((sgvTime - preDelta) < now) {
     sgvTime += 5 * 60000;
   }
 
   // Return the amount of time in milliseconds between
   // now and 30 seconds before the next wake up time
-  return (sgvTime - 30000 - now);
+  return (sgvTime - preDelta - now);
 };
 
-const syncNS = async (storage_, transmitter_) => {
+const syncNS = async (options_, storage_, transmitter_) => {
   let sensorInsert = null;
   let sensorStart = null;
   let sensorStop = null;
@@ -553,6 +575,7 @@ const syncNS = async (storage_, transmitter_) => {
 
   storage = storage_;
   transmitter = transmitter_;
+  options = options_;
 
   sensorInsert = await syncEvent('sensorInsert', 'Sensor Change')
     .catch(() => {
@@ -564,7 +587,7 @@ const syncNS = async (storage_, transmitter_) => {
       nsQueryError = true;
     });
 
-  if (!sensorInsert || (sensorStart && (sensorStart.valueOf() > sensorInsert.valueOf()))) {
+  if (!sensorInsert || (sensorStart && (sensorStart.event.date > sensorInsert.event.date))) {
     sensorInsert = sensorStart;
   }
 
@@ -582,17 +605,19 @@ const syncNS = async (storage_, transmitter_) => {
 
     setTimeout(() => {
       // Restart the syncNS after 5 minute
-      syncNS(storage, transmitter);
+      syncNS(options, storage, transmitter);
     }, 5 * 60000);
 
     return;
   }
 
-  if (sensorStart && (Date.now() - sensorStart.valueOf()) < 130 * 60000) {
-    // if we just received a sensor start, go ahead
-    // and see if we need to start a sensor session
-    if (!(await transmitter.inSensorSession())) {
-      transmitter.startSensorTime(sensorStart);
+  if (sensorStart
+    && sensorStart.source === NS_SOURCE
+    && (Date.now() - sensorStart.event.date) < 130 * 60000) {
+    // if we just received a sensor start from Nightscout,
+    // go ahead and see if we need to start a sensor session
+    if (transmitter && !(await transmitter.inSensorSession())) {
+      transmitter.startSensorTime(sensorStart.date, sensorStart.event.notes);
     }
   }
 
@@ -600,7 +625,7 @@ const syncNS = async (storage_, transmitter_) => {
   // call resolve so the Promise.all works as it
   // should and doesn't trigger early because of an error
   const syncCalPromise = new TimeLimitedPromise(4 * 60 * 1000, async (resolve) => {
-    await syncCal(sensorInsert);
+    await syncCal(sensorInsert.date);
     resolve();
   });
 
@@ -610,7 +635,7 @@ const syncNS = async (storage_, transmitter_) => {
   });
 
   const syncBGChecksPromise = new TimeLimitedPromise(4 * 60 * 1000, async (resolve) => {
-    bgChecks = await syncBGChecks(sensorInsert, sensorStop);
+    bgChecks = await syncBGChecks(sensorInsert.date, sensorStop.date);
     resolve();
   });
 
@@ -621,7 +646,7 @@ const syncNS = async (storage_, transmitter_) => {
 
   // have transmitterIO check if the sensor session should be ended.
   if (transmitter) {
-    transmitter.checkSensorSession(sensorInsert, sensorStop, bgChecks, latestSGV);
+    transmitter.checkSensorSession(sensorInsert.date, sensorStop.date, bgChecks, latestSGV);
   }
 
   const timeDelay = calcNextSyncTimeDelay(latestSGV);
@@ -633,7 +658,7 @@ const syncNS = async (storage_, transmitter_) => {
 
   setTimeout(() => {
     // Restart the syncNS after 5 minute
-    syncNS(storage, transmitter);
+    syncNS(options, storage, transmitter);
   }, timeDelay);
 };
 

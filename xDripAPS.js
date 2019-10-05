@@ -80,13 +80,14 @@ const postToXdrip = (entry) => {
     json: true,
   };
 
+  debug('Sending entry to xDripAPS:\n%O', entry);
+
   /* eslint-disable-next-line no-unused-vars */
   request(optionsX, (err, response, body) => {
     if (err) {
       error('error posting SGV to xDripAPS: ', err);
     } else {
       log(`uploaded SGV to xDripAPS, statusCode = ${response.statusCode}`);
-      debug('Entry:\n%O', entry);
     }
   });
 };
@@ -113,13 +114,14 @@ const postToNS = (entry) => {
     json: true,
   };
 
+  debug('Uploading entry:\n%O', entry);
+
   /* eslint-disable-next-line no-unused-vars */
   request(optionsNS, (err, response, body) => {
     if (err) {
       error('error posting SGV to NS: ', err);
     } else {
       log(`uploaded SGV to NS, statusCode = ${response.statusCode}`);
-      debug('Entry:\n%O', entry);
     }
   });
 };
@@ -128,8 +130,10 @@ const queryLatestCal = () => {
   const secret = process.env.API_SECRET;
   let nsUrl = `${process.env.NIGHTSCOUT_HOST}/api/v1/entries.json?`;
 
+  const thirtyDaysAgo = moment().subtract(30, 'days');
+
   // time format needs to match the output of 'date -d "3 hours ago" -Iminutes -u'
-  const nsQuery = 'find[type]=cal&count=1';
+  const nsQuery = `find[type]=cal&find[date][$gte]=${thirtyDaysAgo.valueOf()}&count=1`;
 
   const nsHeaders = {
     'Content-Type': 'application/json',
@@ -347,14 +351,16 @@ const convertBGCheck = BGCheck => [{
 
 module.exports = () => ({
   // API (public) functions
-  post: (glucose, sendToXdrip) => {
+  post: (glucose, sendToXdrip, sendToNS) => {
     const entry = [convertEntryToNS(glucose)];
 
     if (sendToXdrip) {
       postToXdrip(entry);
     }
 
-    postToNS(entry);
+    if (sendToNS) {
+      postToNS(entry);
+    }
   },
 
   updateBGCheck: (id, BGCheck) => {
@@ -422,13 +428,14 @@ module.exports = () => ({
       json: true,
     };
 
+    debug('Uploading announcement:\n%O', entry);
+
     /* eslint-disable-next-line no-unused-vars */
     request(optionsNS, (err, response, body) => {
       if (err) {
         error('error posting Announcement to NS: ', err);
       } else {
         log(`uploaded new Announcement to NS, statusCode = ${response.statusCode}`);
-        debug('Announcement:\n%O', entry);
       }
     });
   },
@@ -486,13 +493,14 @@ module.exports = () => ({
       json: true,
     };
 
+    debug('Uploading status:\n%O', entry);
+
     /* eslint-disable-next-line no-unused-vars */
     request(optionsNS, (err, response, body) => {
       if (err) {
         error('error posting DeviceStatus to NS: ', err);
       } else {
         log(`uploaded new DeviceStatus to NS, statusCode = ${response.statusCode}`);
-        debug('Status:\n%O', entry);
       }
     });
   },
@@ -521,13 +529,14 @@ module.exports = () => ({
       json: true,
     };
 
+    debug('Uploading BG Check:\n%O', entry);
+
     /* eslint-disable-next-line no-unused-vars */
     request(optionsNS, (err, response, body) => {
       if (err) {
         error('error posting BG Check to NS: ', err);
       } else {
         log(`uploaded new BG Check to NS, statusCode = ${response.statusCode}`);
-        debug('BG Check:\n%O', entry);
       }
     });
   },
@@ -564,22 +573,24 @@ module.exports = () => ({
       json: true,
     };
 
+    debug('uploading calibration:\n%O', entry);
+
     /* eslint-disable-next-line no-unused-vars */
     request(optionsNS, (err, response, body) => {
       if (err) {
         error('error posting calibration to NS: ', err);
       } else {
         log(`uploaded new calibration to NS, statusCode = ${response.statusCode}`);
-        debug('calibration:\n%O', entry);
       }
     });
   },
 
-  postEvent: (eventType, eventTime) => {
+  postEvent: (eventType, eventTime, notes) => {
     const entry = [{
       enteredBy: `xdripjs://${os.hostname()}`,
       eventType,
       created_at: eventTime.utc().format(),
+      notes,
     }];
 
     const secret = process.env.API_SECRET;
@@ -603,13 +614,14 @@ module.exports = () => ({
       json: true,
     };
 
+    debug('Uploading event:\n%O', entry);
+
     /* eslint-disable-next-line no-unused-vars */
     request(optionsNS, (err, response, body) => {
       if (err) {
         error(`error posting ${eventType} to NS: `, err);
       } else {
         log(`uploaded new ${eventType} event to NS, statusCode = ${response.statusCode}`);
-        debug('event:\n%O', entry);
       }
     });
   },
@@ -649,16 +661,22 @@ module.exports = () => ({
   BGChecksSince: async startTime => queryBGChecksSince(startTime),
 
   latestEvent: async (type) => {
-    let eventTime = null;
+    let nsEvent = null;
 
     const eventRecord = await queryLatestEvent(type);
 
-    if (eventRecord && (eventRecord.length > 0)
-      && eventRecord[0].created_at && (eventRecord[0].created_at.length > 10)) {
-      eventTime = moment(eventRecord[0].created_at);
+    if (eventRecord && (eventRecord.length > 0)) {
+      if (eventRecord[0].created_at && (eventRecord[0].created_at.length > 10)) {
+        nsEvent = {
+          date: moment(eventRecord[0].created_at),
+          notes: eventRecord[0].notes,
+        };
+      } else {
+        error(`Received event record for ${type}, but created_at field validation failed:\n%O`, eventRecord);
+      }
     }
 
-    return eventTime;
+    return nsEvent;
   },
 
   convertEntryToNS: (glucose) => {

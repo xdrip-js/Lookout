@@ -16,6 +16,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
   let txAddress = null;
   let txFailedReads = 0;
   let txStatus = null;
+  let txFirmware = null;
   let pending = [];
   let worker = null;
   let timerObj = null;
@@ -30,6 +31,9 @@ module.exports = async (options, storage, client, fakeMeter) => {
   };
 
   const filterPending = (oldPending) => {
+    let haveBatteryStatus = false;
+    let haveFirmwareRequest = false;
+
     const newPending = oldPending.filter((msg) => {
       // Don't send stop or start sensors older than 2 hours and 12 minutes
       if (((msg.type === 'StopSensor') || (msg.type === 'StartSensor')) && ((Date.now() - msg.date) > 132 * 60000)) {
@@ -39,6 +43,27 @@ module.exports = async (options, storage, client, fakeMeter) => {
       // Don't send other messages older than 12 minutes
       if (((msg.type !== 'StopSensor') && (msg.type !== 'StartSensor')) && (Date.now() - msg.date) > 12 * 60000) {
         return false;
+      }
+
+      // Don't send any commands if in read only mode
+      if (options.read_only && (msg.type !== 'BatteryStatus')) {
+        return false;
+      }
+
+      if (msg.type === 'BatteryStatus') {
+        if (haveBatteryStatus) {
+          return false;
+        }
+
+        haveBatteryStatus = true;
+      }
+
+      if (msg.type === 'VersionRequest') {
+        if (haveFirmwareRequest) {
+          return false;
+        }
+
+        haveFirmwareRequest = true;
       }
 
       return true;
@@ -164,16 +189,21 @@ module.exports = async (options, storage, client, fakeMeter) => {
     }
   };
 
-  const stopSensorSession = async (stopTime) => {
+  const stopSensorSession = async (stopTime, reason) => {
     const now = moment();
     let stopWhen = stopTime || now;
 
     // if the commanded stop time is older than 2 hours, use current time - 120 minutes
     if (stopTime.diff(now, 'minutes') > 132) {
-      stopWhen = now - 120 * 60000;
+      stopWhen = moment(now.valueOf() - 120 * 60000);
     }
 
-    await storage.setItem('sensorStop', stopWhen.valueOf())
+    const sensorStop = {
+      date: stopWhen,
+      notes: reason,
+    };
+
+    await storage.setEvent('sensorStop', sensorStop)
       .catch((err) => {
         error(`Unable to store sensorStop: ${err}`);
       });
@@ -202,6 +232,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
     let sessionStart = 0;
     let sensorStartDelta = 0;
     let sensorStopDelta = 0;
+    let reason = null;
     const txmitterInSession = transmitterInSession(sgv);
 
     if (txmitterInSession) {
@@ -219,23 +250,22 @@ module.exports = async (options, storage, client, fakeMeter) => {
       // give a 2 hour play between the sensor insert record
       // and the session start date from the transmitter
       if (sensorStartDelta > 0) {
-        log(
-          '\n===================================='
+        reason = '\n===================================='
           + `\nSensor Insert, ${sensorInsert.format()}, is after Sensor Start, ${sessionStart.format()}`
           + '\nStopping Sensor Session'
-          + '\n====================================',
-        );
+          + '\n====================================';
       } else {
-        log(
-          '\n===================================='
+        reason = '\n===================================='
           + `\nSensor Stop, ${sensorStop.format()}, is after Sensor Start, ${sessionStart.format()}`
           + '\nStopping Sensor Session'
-          + '\n====================================',
-        );
+          + '\n====================================';
       }
+
+      log(reason);
+
       debug(`Session Start: ${sessionStart} sensorStart: ${sensorInsert} sensorStop: ${sensorStop}`);
       stopTransmitterSession(sensorStop);
-      await stopSensorSession(sensorStop);
+      await stopSensorSession(sensorStop, reason);
     } else if (isControlling(sgv)) {
       const haveCal = await calibration.haveCalibration(storage);
 
@@ -250,13 +280,14 @@ module.exports = async (options, storage, client, fakeMeter) => {
       );
 
       if (haveCal && !haveValidCal) {
-        log(
-          '\n===================================='
+        reason = '\n===================================='
           + '\nTransmitter not in session and found sensor change, start, or stop after latest calibration and transmitter not in session. Stopping Sensor Session.'
           + '\nSee calibration log messages above for details'
-          + '\n====================================',
-        );
-        await stopSensorSession(sensorStop);
+          + '\n====================================';
+
+        log(reason);
+
+        await stopSensorSession(sensorStop, reason);
       }
     }
   };
@@ -271,7 +302,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
     return calibration.haveCalibration(storage);
   };
 
-  const startSession = async (startTime, sensorSerialCode) => {
+  const startSession = async (startTime, sensorSerialCode, reason) => {
     const sgv = await getGlucose();
 
     log(
@@ -283,7 +314,11 @@ module.exports = async (options, storage, client, fakeMeter) => {
     if (!inSensorSession(sgv)) {
       // Only enter a sensorStart if we aren't
       // in either a transmitter session, extend session, or expired session
-      await storage.setItem('sensorStart', Date.now())
+      await storage.setEvent('sensorStart',
+        {
+          date: moment(),
+          notes: reason,
+        })
         .catch((err) => {
           error(`Error setting rig sensorStart: ${err}`);
         });
@@ -308,7 +343,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
     }
   };
 
-  const sendNewGlucose = async (sgv, sendSGV) => {
+  const sendNewGlucose = async (sgv, sendToXdrip) => {
     client.newSGV(sgv);
 
     if (sgv.glucose) {
@@ -317,9 +352,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
       await fakeMeter.glucose(sgv.glucose);
     }
 
-    if (options.nightscout) {
-      xDripAPS.post(sgv, sendSGV);
-    }
+    xDripAPS.post(sgv, sendToXdrip, options.nightscout && !options.read_only);
   };
 
   const sendCGMStatus = async (sgv, bgChecks) => {
@@ -456,6 +489,12 @@ module.exports = async (options, storage, client, fakeMeter) => {
       case 0x13:
         state = 'Reserved';
         break;
+      case 0x15:
+        state = 'Sensor Failed';
+        break;
+      case 0x16:
+        state = 'Sensor Failed Start';
+        break;
       case 0x80:
         state = 'Calibration State - Start';
         break;
@@ -575,6 +614,12 @@ module.exports = async (options, storage, client, fakeMeter) => {
       case 0x13:
         state = 'Reserved';
         break;
+      case 0x15:
+        state = 'Sensor Failed';
+        break;
+      case 0x16:
+        state = 'Failed Start';
+        break;
       case 0x80:
         state = 'Cal - Start';
         break;
@@ -642,23 +687,15 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
     let sgv = _.cloneDeep(newSgv);
 
-    let sensorInsert = await storage.getItem('sensorInsert')
+    let sensorInsert = await storage.getEvent('sensorInsert')
       .catch((err) => {
         error(`Error getting rig sensorInsert: ${err}`);
       });
-    if (sensorInsert) {
-      sensorInsert = moment(sensorInsert);
-      debug(`SyncNS Rig sensor insert - date: ${sensorInsert.format()}`);
-    }
 
-    let sensorStart = await storage.getItem('sensorStart')
+    let sensorStart = await storage.getEvent('sensorStart')
       .catch((err) => {
         error(`Error getting rig sensorStart: ${err}`);
       });
-
-    if (sensorStart) {
-      sensorStart = moment(sensorStart);
-    }
 
     if (transmitterInSession(sgv)) {
       const txmitterSessionStart = moment(sgv.sessionStartDate);
@@ -668,21 +705,29 @@ module.exports = async (options, storage, client, fakeMeter) => {
       // Else, check if the sensor session start time reported by the transmitter is
       // after the stored sensor start.
       if (!sensorStart) {
-        sensorStart = txmitterSessionStart;
+        sensorStart = {
+          date: txmitterSessionStart,
+          notes: 'Transmitter Reported Start Time',
+        };
+
         updatedStart = true;
-      } else if (txmitterSessionStart.diff(sensorStart, 'hours') > 2) {
+      } else if (txmitterSessionStart.diff(sensorStart.date, 'hours') > 2) {
         log(
           '\n===================================='
           + '\nTransmitter session start date more than 2 hours after stored sensorStart'
           + `\nSetting stored sensorStart to ${txmitterSessionStart.format()}`
           + '\n====================================',
         );
-        sensorStart = txmitterSessionStart;
+        sensorStart = {
+          date: txmitterSessionStart,
+          notes: 'Transmitter Reported Start Time',
+        };
+
         updatedStart = true;
       }
 
       if (updatedStart) {
-        storage.setItem('sensorStart', sensorStart.valueOf())
+        storage.setEvent('sensorStart', sensorStart)
           .catch((err) => {
             error(`Error saving rig sensorStart: ${err}`);
           });
@@ -690,22 +735,21 @@ module.exports = async (options, storage, client, fakeMeter) => {
     }
 
     if (sensorStart) {
-      debug(`SyncNS Rig sensor start - date: ${sensorStart.format()}`);
+      debug(`SyncNS Rig sensor start - date: ${sensorStart.date.format()}`);
 
-      if (!sensorInsert || (sensorStart.valueOf() > sensorInsert.valueOf())) {
+      if (!sensorInsert || (sensorStart.date.valueOf() > sensorInsert.date.valueOf())) {
         // allow the user to enter either to reset the session.
         sensorInsert = sensorStart;
       }
     }
 
-    let sensorStop = await storage.getItem('sensorStop')
+    const sensorStop = await storage.getEvent('sensorStop')
       .catch((err) => {
         error(`Error getting rig sensorStop: ${err}`);
       });
 
     if (sensorStop) {
-      sensorStop = moment(sensorStop);
-      debug(`SyncNS Rig sensor stop - date: ${sensorStop.format()}`);
+      debug(`SyncNS Rig sensor stop - date: ${sensorStop.date.format()}`);
     }
 
     await storage.lock();
@@ -717,7 +761,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
         error(`Error getting bgChecks: ${err}`);
       });
 
-    await checkSensorSession(sensorInsert, sensorStop, bgChecks, sgv);
+    await checkSensorSession(sensorInsert.date, sensorStop.date, bgChecks, sgv);
 
     glucoseHist = await storage.getArray('glucoseHist')
       .catch((err) => {
@@ -725,19 +769,19 @@ module.exports = async (options, storage, client, fakeMeter) => {
       });
 
     sgv = await calibration.calibrateGlucose(
-      storage, options, sensorInsert, sensorStop, glucoseHist, sgv,
+      storage, options, sensorInsert.date, sensorStop.date, glucoseHist, sgv,
     );
 
     if (sgv.inExtendedSession) {
       sgv.mode = 'extended cal';
       // set the sessionStartDate from the known start since transmitter
       // no longer reports it
-      sgv.sessionStartDate = sensorStart.format();
+      sgv.sessionStartDate = sensorStart.date.format();
     } else if (sgv.inExpiredSession) {
       sgv.mode = 'expired cal';
       // set the sessionStartDate from the known start since transmitter
       // no longer reports it
-      sgv.sessionStartDate = sensorStart.format();
+      sgv.sessionStartDate = sensorStart.date.format();
     } else {
       sgv.mode = 'txmitter cal';
     }
@@ -746,10 +790,10 @@ module.exports = async (options, storage, client, fakeMeter) => {
     // Otherwise, the session would be immediately stopped if a BG Check is entered
     if (sgv.state === 0x1 && options.expired_cal
       && (sgv.inExtendedSession || sgv.inExpiredSession)) {
-      if (moment().diff(sensorStart, 'days') <= 4 && bgChecks.length > 0 && moment().diff(moment(bgChecks[bgChecks.length - 1].dateMills), 'hours') > 12) {
+      if (moment().diff(sensorStart.date, 'days') <= 4 && bgChecks.length > 0 && moment().diff(moment(bgChecks[bgChecks.length - 1].dateMills), 'hours') > 12) {
         // set session state to Need Calibration - cal every 12 hours for first 4 days
         sgv.state = 0x7;
-      } else if (moment().diff(sensorStart, 'days') > 4 && bgChecks.length > 0 && moment().diff(moment(bgChecks[bgChecks.length - 1].dateMills), 'hours') > 24) {
+      } else if (moment().diff(sensorStart.date, 'days') > 4 && bgChecks.length > 0 && moment().diff(moment(bgChecks[bgChecks.length - 1].dateMills), 'hours') > 24) {
         // set session state to Need Calibration - cal every 24 hours after first 4 days
         sgv.state = 0x7;
       } else {
@@ -812,7 +856,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
       glucose: calData.glucose,
     };
 
-    log(`Last calibration: ${Math.round((Date.now() - newCal.dateMills) / 1000 / 60 / 60 * 10) / 10} hours ago`);
+    log(`Last calibration: ${Math.round((Date.now() - newCal.dateMills) / 1000 / 60 / 60 * 10) / 10} hours ago, ${newCal.glucose} mg/dL`);
 
     if (newCal.glucose > 400 || newCal.glucose < 20) {
       log('Txmitter Last Calibration Data glucose out of range - ignoring');
@@ -874,18 +918,14 @@ module.exports = async (options, storage, client, fakeMeter) => {
       }
     }
 
-    let sensorInsert = await storage.getItem('sensorInsert')
+    const sensorInsert = await storage.getEvent('sensorInsert')
       .catch((err) => {
         error(`Error getting rig sensorInsert: ${err}`);
       });
 
-    if (sensorInsert) {
-      sensorInsert = moment(sensorInsert);
-    }
-
     const valueTime = moment(newCal.date);
 
-    if (sensorInsert && (sensorInsert.diff(valueTime) > 0)) {
+    if (sensorInsert && (sensorInsert.date.diff(valueTime) > 0)) {
       // The calibration value pre-dates the NS sensorInsert record
       // Bail out.
 
@@ -894,11 +934,17 @@ module.exports = async (options, storage, client, fakeMeter) => {
       return;
     }
 
-    newCal.unfiltered = await calibration.getUnfiltered(valueTime, rigSGVs);
+    const raw = await calibration.getUnfiltered(valueTime, rigSGVs);
+
+    if (raw) {
+      newCal.unfiltered = raw.unfiltered;
+      newCal.filtered = raw.filtered;
+    }
 
     if (bgCheckIdx >= 0) {
       // We already had this bgCheck but didn't have the unfiltered value
       bgChecks[bgCheckIdx].unfiltered = newCal.unfiltered;
+      bgChecks[bgCheckIdx].filtered = newCal.filtered;
       bgChecks[bgCheckIdx].type = newCal.type;
     } else {
       // This is a new bgCheck we didn't already have
@@ -954,9 +1000,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
             glucoseHist.push(newSGV);
 
-            if (options.nightscout) {
-              xDripAPS.post(newSGV, true);
-            }
+            xDripAPS.post(newSGV, true, options.nightscout && !options.read_only);
           }
         });
       }
@@ -1053,8 +1097,9 @@ module.exports = async (options, storage, client, fakeMeter) => {
       worker = cp.fork(`${__dirname}/transmitterSimulator`, [prevGlucose], { });
     } else {
       const workerOptions = { };
+      const btChannel = options.alternate_bt_channel ? '1' : '0';
 
-      worker = cp.fork(`${__dirname}/transmitterWorker`, [id], workerOptions);
+      worker = cp.fork(`${__dirname}/transmitterWorker`, [id, btChannel], workerOptions);
     }
 
     worker.on('message', async (m) => {
@@ -1066,6 +1111,10 @@ module.exports = async (options, storage, client, fakeMeter) => {
         }
 
         pendingCalTime = await calibrateFromNS();
+
+        if (!txFirmware) {
+          pending.push({ type: 'VersionRequest' });
+        }
 
         pending = filterPending(pending);
 
@@ -1154,6 +1203,9 @@ module.exports = async (options, storage, client, fakeMeter) => {
         processTxmitterCalData(m.data);
       } else if (m.msg === 'batteryStatus') {
         processBatteryStatus(m.data);
+      } else if (m.msg === 'version') {
+        txFirmware = m.data.firmwareVersion;
+        log('Version message:\n%O', m.data);
       } else if (m.msg === 'sawTransmitter') {
         // increment failed reads counter so we know how many
         // times we saw the transmitter
@@ -1225,6 +1277,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
       log(`received id of ${value}`);
       txId = value;
+      txFirmware = null;
 
       calibration.clearCalibration(storage);
       storage.delItem('glucoseHist');
@@ -1274,27 +1327,27 @@ module.exports = async (options, storage, client, fakeMeter) => {
     },
 
     // Start a sensor session
-    startSensor: (sensorSerialCode) => {
-      startSession(Date.now(), sensorSerialCode);
+    startSensor: (sensorSerialCode, reason) => {
+      startSession(Date.now(), sensorSerialCode, reason);
     },
 
     // Start a sensor session at time
-    startSensorTime: (startTime) => {
+    startSensorTime: (startTime, reason) => {
       if (g6Txmitter()) {
         xDripAPS.postAnnouncement('G6 Start Unsupported by NS');
       } else {
-        startSession(startTime.valueOf());
+        startSession(startTime.valueOf(), null, reason);
       }
     },
 
     // Start a sensor session back started 2 hours
-    backStartSensor: (sensorSerialCode) => {
-      startSession(Date.now() - 2 * 60 * 60 * 1000, sensorSerialCode);
+    backStartSensor: (sensorSerialCode, reason) => {
+      startSession(Date.now() - 2 * 60 * 60 * 1000, sensorSerialCode, reason);
     },
 
-    stopSensor: async () => {
+    stopSensor: async (reason) => {
       const stopTime = moment().subtract(2, 'hours');
-      await stopSensorSession(stopTime);
+      await stopSensorSession(stopTime, reason);
 
       const sgv = await getGlucose();
 

@@ -13,7 +13,7 @@ const debug = Debug('calcStats:debug');
 module.exports = {};
 const calcStatsExports = module.exports;
 
-// Calculate the sum of the distance of all points (overallDistance)
+// Calculate the sum of the distance of all points (sod)
 // Calculate the overall distance between the first and the last point (overallDistance)
 // Calculate the noise as the following formula: 1 - sod / overallDistance
 // Noise will get closer to zero as the sum of the individual lines are mostly
@@ -65,10 +65,12 @@ const calcNoise = (sgvArr) => {
       y2y1Delta *= 1.2;
     }
 
-    sod += Math.sqrt((x2x1Delta ** 2) + (y2y1Delta ** 2));
+    // eslint-disable-next-line no-restricted-properties
+    sod += Math.sqrt(Math.pow(x2x1Delta, 2) + Math.pow(y2y1Delta, 2));
   }
 
-  const overallsod = Math.sqrt(((lastSGV - firstSGV) ** 2) + ((lastTime - firstTime) ** 2));
+  // eslint-disable-next-line no-restricted-properties
+  const overallsod = Math.sqrt(Math.pow(lastSGV - firstSGV, 2) + Math.pow(lastTime - firstTime, 2));
 
   if (sod === 0) {
     // protect from divide by 0
@@ -89,7 +91,7 @@ calcStatsExports.calcSensorNoise = (calcGlucose, glucoseHist, lastCal, sgv) => {
 
   for (let i = numRecords; i < glucoseHist.length; i += 1) {
     // Only use values that are > 30 to filter out invalid values.
-    if ((glucoseHist[i].glucose > 30) && ('unfiltered' in glucoseHist[i]) && (glucoseHist[i].unfiltered > 100)) {
+    if (lastCal && (glucoseHist[i].glucose > 30) && ('unfiltered' in glucoseHist[i]) && (glucoseHist[i].unfiltered > 100)) {
       // use the unfiltered data with the most recent calculated calibration value
       // this will provide a noise calculation that is independent of calibration jumps
       sgvArr.push({
@@ -106,7 +108,7 @@ calcStatsExports.calcSensorNoise = (calcGlucose, glucoseHist, lastCal, sgv) => {
   }
 
   if (sgv) {
-    if ('unfiltered' in sgv && sgv.unfiltered > 100) {
+    if (lastCal && 'unfiltered' in sgv && sgv.unfiltered > 100) {
       sgvArr.push({
         glucose: calcGlucose(sgv, lastCal),
         readDate: sgv.readDateMills,
@@ -143,7 +145,7 @@ calcStatsExports.calcTrend = (calcGlucose, glucoseHist, lastCal, sgv) => {
     // delete any deltas > 16 minutes and any that don't have an unfiltered value (backfill records)
     let minDate = currentTime.valueOf() - 16 * 60 * 1000;
     for (let i = 0; i < glucoseHist.length; i += 1) {
-      if ((glucoseHist[i].readDateMills >= minDate) && ('unfiltered' in glucoseHist[i]) && (glucoseHist[i].unfiltered > 100)) {
+      if (lastCal && (glucoseHist[i].readDateMills >= minDate) && ('unfiltered' in glucoseHist[i]) && (glucoseHist[i].unfiltered > 100)) {
         sgvHist.push({
           glucose: calcGlucose(glucoseHist[i], lastCal),
           readDate: glucoseHist[i].readDateMills,
@@ -157,7 +159,7 @@ calcStatsExports.calcTrend = (calcGlucose, glucoseHist, lastCal, sgv) => {
     }
 
     if (sgv) {
-      if (('unfiltered' in sgv) && (sgv.unfiltered > 100)) {
+      if (lastCal && ('unfiltered' in sgv) && (sgv.unfiltered > 100)) {
         sgvHist.push({
           glucose: calcGlucose(sgv, lastCal),
           readDate: sgv.readDateMills,

@@ -65,10 +65,12 @@ const calcNoise = (sgvArr) => {
       y2y1Delta *= 1.2;
     }
 
-    sod += Math.sqrt((x2x1Delta ** 2) + (y2y1Delta ** 2));
+    // eslint-disable-next-line no-restricted-properties
+    sod += Math.sqrt(Math.pow(x2x1Delta, 2) + Math.pow(y2y1Delta, 2));
   }
 
-  const overallsod = Math.sqrt(((lastSGV - firstSGV) ** 2) + ((lastTime - firstTime) ** 2));
+  // eslint-disable-next-line no-restricted-properties
+  const overallsod = Math.sqrt(Math.pow(lastSGV - firstSGV, 2) + Math.pow(lastTime - firstTime, 2));
 
   if (sod === 0) {
     // protect from divide by 0

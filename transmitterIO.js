@@ -1107,13 +1107,13 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
       if (m.msg === 'getMessages') {
         if (!txStatus || (moment().diff(txStatus.timestamp, 'minutes') > 25)) {
-          pending.push({ type: 'BatteryStatus' });
+          pending.push({ type: 'BatteryStatus', date: moment().valueOf() });
         }
 
         pendingCalTime = await calibrateFromNS();
 
         if (!txFirmware) {
-          pending.push({ type: 'VersionRequest' });
+          pending.push({ type: 'VersionRequest', date: moment().valueOf() });
         }
 
         pending = filterPending(pending);

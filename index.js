@@ -115,6 +115,12 @@ const argv = yargs
     alias: 'i',
     default: false,
   })
+  .option('auto_stop', {
+    boolean: true,
+    describe: 'Automatically stop sensor session 10 minutes prior to transmitter reported session stop time',
+    alias: 'u',
+    default: false,
+  })
   .wrap(null)
   .strict(true)
   .help('help');
@@ -138,6 +144,7 @@ const options = {
   hci: params.hci,
   alternate_bt_channel: params.alternate,
   read_only: params.read_only,
+  auto_stop: params.auto_stop,
 };
 
 const init = async () => {

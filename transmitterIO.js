@@ -1401,6 +1401,8 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
       if (transmitterInSession(sgv)) {
         stopTransmitterSession(stopTime);
+      } else {
+        log('stopSensor received - no active transmitter session to end');
       }
     },
 

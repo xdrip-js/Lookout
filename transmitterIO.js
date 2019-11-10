@@ -1194,12 +1194,17 @@ module.exports = async (options, storage, client, fakeMeter) => {
         });
 
         if (!stoppingSession && autoStopSession(glucoseHist)) {
-          // const stopWhen = moment().subtract(2, 'hours');
+          const stopWhen = moment().subtract(2, 'hours');
 
           // Stop sensor 2 hours prior to now to enable a rapid restart
           // if one is desired.
-          log('Automatically Stopping Session');
-          // pending.push({ date: stopWhen.valueOf(), type: 'StopSensor' });
+          log(
+            '\n====================================\n'
+            + 'Automatically Stopping Session'
+            + '\n====================================',
+          );
+
+          pending.push({ date: stopWhen.valueOf(), type: 'StopSensor' });
         }
 
         stoppingSession = false;

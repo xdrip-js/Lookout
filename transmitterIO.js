@@ -208,7 +208,6 @@ module.exports = async (options, storage, client, fakeMeter) => {
         error(`Unable to store sensorStop: ${err}`);
       });
 
-    await storage.delItem('glucoseHist');
     await calibration.clearCalibration(storage);
   };
 
@@ -1292,7 +1291,6 @@ module.exports = async (options, storage, client, fakeMeter) => {
       txFirmware = null;
 
       calibration.clearCalibration(storage);
-      storage.delItem('glucoseHist');
 
       storage.setItemSync('id', txId);
     }
@@ -1359,9 +1357,11 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
     stopSensor: async (reason) => {
       const stopTime = moment().subtract(2, 'hours');
-      await stopSensorSession(stopTime, reason);
 
+      // Get SGV first before we call stopSensorSession
       const sgv = await getGlucose();
+
+      await stopSensorSession(stopTime, reason);
 
       if (transmitterInSession(sgv)) {
         stopTransmitterSession(stopTime);

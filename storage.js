@@ -9,16 +9,20 @@ const debug = Debug('storage:debug'); /* eslint-disable-line no-unused-vars */
 const storageLock = require('./storageLock');
 
 const getItem = async (name) => {
+  let returnVal = null;
+
   if (!storage) {
     throw Error('Storage not initialized');
   }
 
   try {
-    return storage.getItem(name);
+    returnVal = await storage.getItem(name);
   } catch (e) {
     error(`Unable to read item ${name}:`, e);
-    return null;
+    returnVal = null;
   }
+
+  return returnVal;
 };
 
 const getEvent = async (name) => {

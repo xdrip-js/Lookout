@@ -242,7 +242,6 @@ module.exports = async (options, storage, client, fakeMeter) => {
         error(`Unable to store sensorStop: ${err}`);
       });
 
-    await storage.delItem('glucoseHist');
     await calibration.clearCalibration(storage);
   };
 
@@ -952,10 +951,22 @@ module.exports = async (options, storage, client, fakeMeter) => {
       }
     }
 
-    const sensorInsert = await storage.getEvent('sensorInsert')
+    const sensorStart = await storage.getEvent('sensorStart')
+      .catch((err) => {
+        error(`Error getting rig sensorStart: ${err}`);
+      });
+
+    let sensorInsert = await storage.getEvent('sensorInsert')
       .catch((err) => {
         error(`Error getting rig sensorInsert: ${err}`);
       });
+
+    if (sensorStart) {
+      if (!sensorInsert || (sensorStart.date.valueOf() > sensorInsert.date.valueOf())) {
+        // allow the user to enter either to reset the session.
+        sensorInsert = sensorStart;
+      }
+    }
 
     const valueTime = moment(newCal.date);
 
@@ -1333,7 +1344,6 @@ module.exports = async (options, storage, client, fakeMeter) => {
       txFirmware = null;
 
       calibration.clearCalibration(storage);
-      storage.delItem('glucoseHist');
 
       storage.setItemSync('id', txId);
     }
@@ -1400,9 +1410,11 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
     stopSensor: async (reason) => {
       const stopTime = moment().subtract(2, 'hours');
-      await stopSensorSession(stopTime, reason);
 
+      // Get SGV first before we call stopSensorSession
       const sgv = await getGlucose();
+
+      await stopSensorSession(stopTime, reason);
 
       if (transmitterInSession(sgv)) {
         stopTransmitterSession(stopTime);

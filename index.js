@@ -5,6 +5,7 @@ const store = require('node-persist');
 const Debug = require('debug');
 
 const log = Debug('Lookout:log');
+const error = Debug('Lookout:error');
 
 const yargs = require('yargs');
 const storage = require('./storage');
@@ -115,6 +116,12 @@ const argv = yargs
     alias: 'i',
     default: false,
   })
+  .option('auto_stop', {
+    boolean: true,
+    describe: 'Automatically stop sensor session 10 minutes prior to transmitter reported session stop time',
+    alias: 'u',
+    default: false,
+  })
   .wrap(null)
   .strict(true)
   .help('help');
@@ -138,10 +145,11 @@ const options = {
   hci: params.hci,
   alternate_bt_channel: params.alternate,
   read_only: params.read_only,
+  auto_stop: params.auto_stop,
 };
 
 const init = async () => {
-  let lookoutDebug = 'calcStats:*,calibration:*,clientIO:*,fakemeter:*,loopIO:*';
+  let lookoutDebug = 'Lookout:*,calcStats:*,calibration:*,clientIO:*,fakemeter:*,loopIO:*';
   lookoutDebug += ',pumpIO:*,storageLock:*,syncNS:*,transmitterIO:*,transmitterWorker:*';
   lookoutDebug += ',xDripAPS:*,transmitter,smp,bluetooth-manager';
 
@@ -169,7 +177,11 @@ const init = async () => {
   // handle persistence here
   // make the storage direction relative to the install directory,
   // not the calling directory
-  await store.init({ dir: `${__dirname}/storage`, forgiveParseErrors: false });
+  try {
+    await store.init({ dir: `${__dirname}/storage`, forgiveParseErrors: true });
+  } catch (e) {
+    error('Storage Init Error: ', e);
+  }
 
   storage.init(store);
 

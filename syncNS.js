@@ -18,7 +18,7 @@ let options = null;
 let storage = null;
 let transmitter = null;
 
-const syncCal = async (sensorInsert) => {
+const syncCal = async (sensorStart) => {
   let rigCal = null;
   let NSCal = null;
   let nsQueryError = false;
@@ -60,8 +60,8 @@ const syncCal = async (sensorInsert) => {
     if (!rigCal) {
       debug('No rig calibration, storing NS calibration');
 
-      if (sensorInsert && sensorInsert.diff(moment(NSCal.date)) > 0) {
-        debug('Found sensor insert after latest NS calibration. Not updating local rig calibration');
+      if (sensorStart && sensorStart.diff(moment(NSCal.date)) > 0) {
+        debug('Found sensor start after latest NS calibration. Not updating local rig calibration');
       } else {
         await storage.setItem(rigCalStr, NSCal)
           .catch(() => {
@@ -98,18 +98,17 @@ const syncCal = async (sensorInsert) => {
 const syncEvent = async (itemName, eventType) => {
   let rigItem = null;
   let nsEvent = null;
-  let nsQueryError = false;
+  let nsQueryError = null;
 
   log(`Syncing rig ${itemName} and NS ${eventType} started`);
 
   nsEvent = await xDripAPS.latestEvent(eventType)
     .catch((err) => {
-      error(`Unable to get latest ${eventType} record from NS: ${err}`);
-      nsQueryError = true;
+      nsQueryError = err;
     });
 
   if (nsQueryError) {
-    throw new Error('NS Query Error');
+    throw new Error(`NS Query Error syncing ${eventType}: ${nsQueryError}`);
   }
 
   if (nsEvent) {
@@ -164,7 +163,7 @@ const syncEvent = async (itemName, eventType) => {
       debug(`Rig and NS ${eventType} dates match - no sync needed`);
     }
   } else if (rigItem) {
-    debug(`No NS ${eventType} - uploading rig sensor insert`);
+    debug(`No NS ${eventType} - uploading rig ${itemName}`);
     latestEvent.event = rigItem;
     latestEvent.source = RIG_SOURCE;
 
@@ -350,16 +349,16 @@ const syncSGVs = async () => {
   return ((rigSGVs.length > 0) && rigSGVs[rigSGVs.length - 1]) || null;
 };
 
-const syncBGChecks = async (sensorInsert, sensorStop) => {
+const syncBGChecks = async (sensorStart, sensorStop) => {
   let NSBGChecks = null;
   let nsQueryError = false;
   const bgChecksFromNS = [];
   let sliceStart = 0;
-  let validBGCheckStartTime = sensorInsert;
+  let validBGCheckStartTime = sensorStart;
 
   log('syncBGChecks started');
 
-  if (!sensorInsert || (sensorStop && sensorStop.valueOf() > sensorInsert.valueOf())) {
+  if (!sensorStart || (sensorStop && sensorStop.valueOf() > sensorStart.valueOf())) {
     validBGCheckStartTime = sensorStop;
   }
 
@@ -461,7 +460,7 @@ const syncBGChecks = async (sensorInsert, sensorStop) => {
   sliceStart = 0;
 
   // Remove any cal data we have
-  // that predates the last sensor insert
+  // that predates the last sensor start
   for (let i = 0; i < rigBGChecks.length; i += 1) {
     if (rigBGChecks[i].dateMills < validBGCheckStartTime.valueOf()) {
       sliceStart = i + 1;
@@ -578,12 +577,13 @@ const syncNS = async (options_, storage_, transmitter_) => {
   options = options_;
 
   sensorInsert = await syncEvent('sensorInsert', 'Sensor Change')
-    .catch(() => {
-      nsQueryError = true;
+    .catch((err) => {
+      log(err);
     });
 
   sensorStart = await syncEvent('sensorStart', 'Sensor Start')
-    .catch(() => {
+    .catch((err) => {
+      log(err);
       nsQueryError = true;
     });
 
@@ -592,14 +592,15 @@ const syncNS = async (options_, storage_, transmitter_) => {
   }
 
   sensorStop = await syncEvent('sensorStop', 'Sensor Stop')
-    .catch(() => {
+    .catch((err) => {
+      log(err);
       nsQueryError = true;
     });
 
   if (nsQueryError) {
     log(
       '\n====================================\n'
-      + 'syncNS - No known sensor insert -  Setting 5 minute timer to try again'
+      + 'syncNS - Error querying NS -  Setting 5 minute timer to try again'
       + '\n====================================',
     );
 

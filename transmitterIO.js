@@ -30,6 +30,40 @@ module.exports = async (options, storage, client, fakeMeter) => {
     return false;
   };
 
+  const sessionLength = () => {
+    // G6s are 10 days
+    if (txId.substr(0, 1) === '8') {
+      return 10 * 24 * 60;
+    }
+
+    // default to G5's 7 days
+    return 7 * 24 * 60;
+  };
+
+  const autoStopSession = (glucoseHist) => {
+    if (!options.auto_stop || (glucoseHist.length === 0)) {
+      return false;
+    }
+
+    const lastSGV = glucoseHist[glucoseHist.length - 1];
+
+    if (!lastSGV.sessionStartDate) {
+      return false;
+    }
+
+    const sessionEndTime = moment(lastSGV.sessionStartDate);
+
+    sessionEndTime.add(sessionLength(), 'minutes');
+
+    const minutesRemaining = sessionEndTime.diff(moment(), 'minutes');
+
+    if (minutesRemaining > 15) {
+      return false;
+    }
+
+    return true;
+  };
+
   const filterPending = (oldPending) => {
     let haveBatteryStatus = false;
     let haveFirmwareRequest = false;
@@ -208,7 +242,6 @@ module.exports = async (options, storage, client, fakeMeter) => {
         error(`Unable to store sensorStop: ${err}`);
       });
 
-    await storage.delItem('glucoseHist');
     await calibration.clearCalibration(storage);
   };
 
@@ -918,10 +951,22 @@ module.exports = async (options, storage, client, fakeMeter) => {
       }
     }
 
-    const sensorInsert = await storage.getEvent('sensorInsert')
+    const sensorStart = await storage.getEvent('sensorStart')
+      .catch((err) => {
+        error(`Error getting rig sensorStart: ${err}`);
+      });
+
+    let sensorInsert = await storage.getEvent('sensorInsert')
       .catch((err) => {
         error(`Error getting rig sensorInsert: ${err}`);
       });
+
+    if (sensorStart) {
+      if (!sensorInsert || (sensorStart.date.valueOf() > sensorInsert.date.valueOf())) {
+        // allow the user to enter either to reset the session.
+        sensorInsert = sensorStart;
+      }
+    }
 
     const valueTime = moment(newCal.date);
 
@@ -1085,6 +1130,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
     }
 
     let startingSession = false;
+    let stoppingSession = false;
 
     // Remove the BT device so it starts from scratch
     removeBTDevices();
@@ -1153,8 +1199,26 @@ module.exports = async (options, storage, client, fakeMeter) => {
         _.each(pending, (msg) => {
           if (msg.type === 'StartSensor') {
             startingSession = true;
+          } else if (msg.type === 'StopSensor') {
+            stoppingSession = true;
           }
         });
+
+        if (!stoppingSession && autoStopSession(glucoseHist)) {
+          const stopWhen = moment().subtract(2, 'hours');
+
+          // Stop sensor 2 hours prior to now to enable a rapid restart
+          // if one is desired.
+          log(
+            '\n====================================\n'
+            + 'Automatically Stopping Session'
+            + '\n====================================',
+          );
+
+          pending.push({ date: stopWhen.valueOf(), type: 'StopSensor' });
+        }
+
+        stoppingSession = false;
 
         worker.send(pending);
         // NOTE: this will lead to missed messages if the rig
@@ -1280,7 +1344,6 @@ module.exports = async (options, storage, client, fakeMeter) => {
       txFirmware = null;
 
       calibration.clearCalibration(storage);
-      storage.delItem('glucoseHist');
 
       storage.setItemSync('id', txId);
     }
@@ -1347,12 +1410,16 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
     stopSensor: async (reason) => {
       const stopTime = moment().subtract(2, 'hours');
-      await stopSensorSession(stopTime, reason);
 
+      // Get SGV first before we call stopSensorSession
       const sgv = await getGlucose();
+
+      await stopSensorSession(stopTime, reason);
 
       if (transmitterInSession(sgv)) {
         stopTransmitterSession(stopTime);
+      } else {
+        log('stopSensor received - no active transmitter session to end');
       }
     },
 

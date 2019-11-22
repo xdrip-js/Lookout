@@ -24,7 +24,7 @@ angular.module('AngularOpenAPS.loop', [
         return iob;
       },
       get cob() {
-        return enacted.COB;
+        return enacted ? enacted.COB : 0;
       },
       get enacted() {
         return enacted;
@@ -52,4 +52,4 @@ angular.module('AngularOpenAPS.loop', [
 
   .filter('units', () => value => (value ? `${value.toFixed(1)} U` : '--'))
 
-  .filter('grams', () => value => `${value.toFixed(0)} g`);
+  .filter('grams', () => value => `${value && value.toFixed(0)} g`);

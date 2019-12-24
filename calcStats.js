@@ -48,7 +48,7 @@ const calcNoise = (sgvArr) => {
 
   // sod = sum of distances
   let sod = 0;
-  const lastDelta = 0;
+  let lastDelta = 0;
 
   for (let i = 1; i < n; i += 1) {
     // y2y1Delta adds a multiplier that gives
@@ -64,6 +64,8 @@ const calcNoise = (sgvArr) => {
       // switched from negative delta to positive, increase noise impact
       y2y1Delta *= 1.2;
     }
+
+    lastDelta = y2y1Delta;
 
     // eslint-disable-next-line no-restricted-properties
     sod += Math.sqrt(Math.pow(x2x1Delta, 2) + Math.pow(y2y1Delta, 2));

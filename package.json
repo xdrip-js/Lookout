@@ -1,6 +1,6 @@
 {
     "name": "Lookout",
-    "version": "2.0.5",
+    "version": "2.0.6",
     "description": "A web app for controlling and monitoring an Dexcom CGM via Lookout.",
     "main": "index.js",
     "scripts": {
@@ -35,7 +35,7 @@
         "request-promise-native": "^1.0.8",
         "socket.io": "^2.3.0",
         "socket.io-client": "^2.3.0",
-        "xdrip-js": "github:xdrip-js/xdrip-js#v2.1.5",
+        "xdrip-js": "github:xdrip-js/xdrip-js#v2.1.6",
         "yargs": "^10.0.3"
     },
     "devDependencies": {

@@ -133,7 +133,7 @@ const queryLatestCal = () => {
   const thirtyDaysAgo = moment().subtract(30, 'days');
 
   // time format needs to match the output of 'date -d "3 hours ago" -Iminutes -u'
-  const nsQuery = `find[type]=cal&find[date][$gte]=${thirtyDaysAgo.valueOf()}&count=1`;
+  const nsQuery = `find[type][$eq]=cal&find[date][$gte]=${thirtyDaysAgo.valueOf()}&count=1`;
 
   const nsHeaders = {
     'Content-Type': 'application/json',
@@ -163,7 +163,7 @@ const queryLatestSGVs = (numResults) => {
   let nsUrl = `${process.env.NIGHTSCOUT_HOST}/api/v1/entries.json?`;
 
   // time format needs to match the output of 'date -d "3 hours ago" -Iminutes -u'
-  const nsQuery = `find[type]=sgv&count=${numResults}`;
+  const nsQuery = `find[type][$eq]=sgv&count=${numResults}`;
 
   const nsHeaders = {
     'Content-Type': 'application/json',
@@ -193,7 +193,7 @@ const querySGVsBefore = (startTime, count) => {
   let nsUrl = `${process.env.NIGHTSCOUT_HOST}/api/v1/entries.json?`;
 
   // time format needs to match the output of 'date -d "3 hours ago" -Iminutes -u'
-  const nsQuery = `find[type]=sgv&find[dateString][$lte]=${startTime.toISOString()}&count=${count}`;
+  const nsQuery = `find[type][$eq]=sgv&find[dateString][$lte]=${startTime.toISOString()}&count=${count}`;
 
   const nsHeaders = {
     'Content-Type': 'application/json',
@@ -223,7 +223,7 @@ const querySGVsBetween = (startTime, endTime, count) => {
   let nsUrl = `${process.env.NIGHTSCOUT_HOST}/api/v1/entries.json?`;
 
   // time format needs to match the output of 'date -d "3 hours ago" -Iminutes -u'
-  const nsQuery = `find[type]=sgv&find[dateString][$gte]=${startTime.toISOString()}&find[dateString][$lte]=${endTime.toISOString()}&count=${count}`;
+  const nsQuery = `find[type][$eq]=sgv&find[dateString][$gte]=${startTime.toISOString()}&find[dateString][$lte]=${endTime.toISOString()}&count=${count}`;
 
   const nsHeaders = {
     'Content-Type': 'application/json',
@@ -253,7 +253,7 @@ const querySGVsSince = (startTime, count) => {
   let nsUrl = `${process.env.NIGHTSCOUT_HOST}/api/v1/entries.json?`;
 
   // time format needs to match the output of 'date -d "3 hours ago" -Iminutes -u'
-  const nsQuery = `find[type]=sgv&find[dateString][$gte]=${startTime.toISOString()}&count=${count}`;
+  const nsQuery = `find[type][$eq]=sgv&find[dateString][$gte]=${startTime.toISOString()}&count=${count}`;
 
   const nsHeaders = {
     'Content-Type': 'application/json',

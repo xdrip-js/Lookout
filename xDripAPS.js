@@ -446,7 +446,7 @@ module.exports = () => ({
 
     const batteryStatusFile = `${process.env.HOME}/myopenaps/monitor/edison-battery.json`;
 
-    const batteryStatus = fs.readFileSync(batteryStatusFile);
+    const batteryStatus = JSON.parse(fs.readFileSync(batteryStatusFile));
 
     const entry = [{
       device: `xdripjs://${os.hostname()}`,

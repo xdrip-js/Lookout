@@ -1,6 +1,8 @@
 // const http = require("http");
 const os = require('os');
 const request = require('request');
+const fs = require('fs');
+
 const requestPromise = require('request-promise-native');
 const moment = require('moment');
 
@@ -441,6 +443,11 @@ module.exports = () => ({
   },
 
   postStatus: (txId, sgv, txStatus, cal, lastTxmitterCalTime) => {
+
+    const batteryStatusFile = `${process.env.HOME}/myopenaps/monitor/edison-battery.json`;
+
+    const batteryStatus = fs.readFileSync(batteryStatusFile);
+
     const entry = [{
       device: `xdripjs://${os.hostname()}`,
       xdripjs: {
@@ -471,6 +478,7 @@ module.exports = () => ({
         resistance: (txStatus && txStatus.resist) || null,
       },
       created_at: moment().utc().format(),
+      uploader: batteryStatus || null,
     }];
 
     const secret = process.env.API_SECRET;

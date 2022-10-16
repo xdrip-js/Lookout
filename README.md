@@ -306,6 +306,8 @@ To look at the Lookout log, for debug purposes, type `cat /var/log/openaps/looko
 ### Binding Errors
 If your lookout.log file contains messages similar to `Error: /root/Lookout/node_modules/bluetooth-hci-socket/build/Release/binding.node: undefined symbol: _ZN2v816FunctionTemplate3NewEPNS_7IsolateEPFvRKNS_20FunctionCallbackInfoINS_5ValueEEEENS_5LocalIS4_EENSA_INS_9SignatureEEEi` run the following command: `cd ~/Lookout; npm rebuild`
 
+If the rebuild failes with an error saying napi_build_vresion is undefined in usb\binding.gyp, add the following in the variables section: `'napi_build_version%': '4',`
+
 ### Corrupt Storage File
 If Lookout is not running after it worked fine previously, a corrupted storage file might be the reason. 
 1. run `npm test` in the Lookout directory.

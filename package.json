@@ -33,7 +33,7 @@
         "node-persist": "^2.1.0",
         "request": "^2.88.0",
         "request-promise-native": "^1.0.8",
-        "socket.io": "^2.4.0",
+        "socket.io": "^2.5.0",
         "socket.io-client": "^2.3.0",
         "xdrip-js": "github:xdrip-js/xdrip-js#v2.1.8",
         "yargs": "^10.0.3"

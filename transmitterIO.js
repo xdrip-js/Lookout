@@ -716,6 +716,8 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
   const processNewGlucose = async (newSgv, startingSession) => {
     let glucoseHist = null;
+    let sensorInsertDate = null;
+    let sensorStopDate = null;
     let sendSGV = true;
 
     let sgv = _.cloneDeep(newSgv);
@@ -776,6 +778,10 @@ module.exports = async (options, storage, client, fakeMeter) => {
       }
     }
 
+    if (sensorInsert) {
+      sensorInsertDate = sensorInsert.date;
+    }
+
     const sensorStop = await storage.getEvent('sensorStop')
       .catch((err) => {
         error(`Error getting rig sensorStop: ${err}`);
@@ -783,6 +789,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
     if (sensorStop) {
       debug(`SyncNS Rig sensor stop - date: ${sensorStop.date.format()}`);
+      sensorStopDate = sensorStop.date;
     }
 
     await storage.lock();
@@ -794,7 +801,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
         error(`Error getting bgChecks: ${err}`);
       });
 
-    await checkSensorSession(sensorInsert.date, sensorStop.date, bgChecks, sgv);
+    await checkSensorSession(sensorInsertDate, sensorStopDate, bgChecks, sgv);
 
     glucoseHist = await storage.getArray('glucoseHist')
       .catch((err) => {

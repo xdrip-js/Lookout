@@ -398,7 +398,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
     const activeCal = await calibration.getActiveCal(options, storage);
 
     if (options.nightscout) {
-      xDripAPS.postStatus(txId, sgv, txStatus, activeCal, latestBGCheckTime);
+      xDripAPS.postStatus(txId, sgv, txStatus, activeCal, latestBGCheckTime, options.battery);
     }
   };
 

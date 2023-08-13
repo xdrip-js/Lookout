@@ -19,7 +19,7 @@ const MAX_LSR_PAIRS = 10;
 const MAX_LSR_PAIRS_AGE = 6; // days
 
 const argv = yargs
-  .usage('$0 [--extend_sensor] [--expired_cal] [--port <port>] [--openaps <directory>] [--sim] [--fakemeter] [--offline_fakemeter] [--no_nightscout] [--include_mode] [--alternate] [--read_only] [--hci <interface>] [--openaps <directory>] [--no_nightscout]')
+  .usage('$0 [--extend_sensor] [--expired_cal] [--port <port>] [--openaps <directory>] [--sim] [--fakemeter] [--offline_fakemeter] [--no_nightscout] [--include_mode] [--alternate] [--read_only] [--hci <interface>] [--openaps <directory>] [--no_nightscout] [--uploader_battery]')
   .option('extend_sensor', {
     boolean: true,
     describe: 'Enables extended sensor session mode',
@@ -92,6 +92,12 @@ const argv = yargs
     alias: 'n',
     default: false,
   })
+  .option('uploader_battery', {
+    boolean: true,
+    describe: 'Collect Edison battery status and send to Nightscout',
+    alias: 'b',
+    default: false,
+  })
   .option('min_lsr_pairs', {
     nargs: 1,
     describe: 'Minimum number of pairs required for LSR calibration',
@@ -146,6 +152,7 @@ const options = {
   alternate_bt_channel: params.alternate,
   read_only: params.read_only,
   auto_stop: params.auto_stop,
+  battery: params.uploader_battery,
 };
 
 const init = async () => {

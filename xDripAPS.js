@@ -442,8 +442,7 @@ module.exports = () => ({
     });
   },
 
-  postStatus: (txId, sgv, txStatus, cal, lastTxmitterCalTime) => {
-
+  postStatus: (txId, sgv, txStatus, cal, lastTxmitterCalTime, sendBattery) => {
     const batteryStatusFile = `${process.env.HOME}/myopenaps/monitor/edison-battery.json`;
 
     const batteryStatus = JSON.parse(fs.readFileSync(batteryStatusFile));
@@ -478,8 +477,11 @@ module.exports = () => ({
         resistance: (txStatus && txStatus.resist) || null,
       },
       created_at: moment().utc().format(),
-      uploader: batteryStatus || null,
     }];
+
+    if (sendBattery) {
+      entry.uploader = batteryStatus || null;
+    }
 
     const secret = process.env.API_SECRET;
     let nsUrl = `${process.env.NIGHTSCOUT_HOST}/api/v1/devicestatus.json`;

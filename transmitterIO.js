@@ -809,7 +809,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
       });
 
     sgv = await calibration.calibrateGlucose(
-      storage, options, sensorInsert.date, sensorStop.date, glucoseHist, sgv,
+      storage, options, sensorInsertDate, sensorStopDate, glucoseHist, sgv,
     );
 
     if (sgv.inExtendedSession) {

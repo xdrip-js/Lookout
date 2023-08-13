@@ -445,8 +445,6 @@ module.exports = () => ({
   postStatus: (txId, sgv, txStatus, cal, lastTxmitterCalTime, sendBattery) => {
     const batteryStatusFile = `${process.env.HOME}/myopenaps/monitor/edison-battery.json`;
 
-    const batteryStatus = JSON.parse(fs.readFileSync(batteryStatusFile));
-
     const entry = [{
       device: `xdripjs://${os.hostname()}`,
       xdripjs: {
@@ -480,6 +478,8 @@ module.exports = () => ({
     }];
 
     if (sendBattery) {
+      const batteryStatus = JSON.parse(fs.readFileSync(batteryStatusFile));
+
       entry.uploader = batteryStatus || null;
     }
 

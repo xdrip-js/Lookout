@@ -52,6 +52,7 @@ const convertEntryToNS = (glucose) => {
     noise: glucose.nsNoise,
     trend: glucose.trend,
     glucose: sgv,
+    state: glucose.state,
   };
 };
 

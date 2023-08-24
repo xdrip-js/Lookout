@@ -853,7 +853,8 @@ module.exports = async (options, storage, client, fakeMeter) => {
     if (glucoseHist.length > 0) {
       const prevSgv = await getGlucose();
 
-      if ((!prevSgv || (sgv.state !== prevSgv.state)) && options.nightscout) {
+      // Only test if there is a validate state in the prevSgv
+      if ((!prevSgv || (prevSgv.state && (sgv.state !== prevSgv.state))) && options.nightscout) {
         xDripAPS.postAnnouncement(`Sensor: ${sgv.stateString}`);
       } else if (startingSession && sgv.state !== 0x02) {
         xDripAPS.postAnnouncement(`Unable to Start Session: ${sgv.stateString} should have been 'Warmup'`);

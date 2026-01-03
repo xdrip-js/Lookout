@@ -528,6 +528,30 @@ module.exports = async (options, storage, client, fakeMeter) => {
       case 0x16:
         state = 'Sensor Failed Start';
         break;
+      case 0x17:
+        state = 'Sensor Failed Start2';
+        break;
+      case 0x18:
+        state = 'Sensor Expired';
+        break;
+      case 0x19:
+        state = 'Sensor Failed 7';
+        break;
+      case 0x1A:
+        state = 'Sensor Stopped 2';
+        break;
+      case 0x1B:
+        state = 'Sensor Failed 8';
+        break;
+      case 0x1C:
+        state = 'Sensor Failed 9';
+        break;
+      case 0x1D:
+        state = 'Sensor Failed 10';
+        break;
+      case 0x1E:
+        state = 'Sensor Failed 11';
+        break;
       case 0x80:
         state = 'Calibration State - Start';
         break;

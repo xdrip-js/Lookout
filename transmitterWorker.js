@@ -10,6 +10,8 @@ const Transmitter = require('xdrip-js');
 
 const id = process.argv[2];
 const altBtChannel = parseInt(process.argv[3], 10);
+const key = process.argv[4].length > 0 ? process.argv[4] : null;
+const macAddress = process.argv[5].length > 0 ? process.argv[5] : null;
 
 /* eslint-disable-next-line no-unused-vars */
 const getMessages = () => new Promise((resolve, reject) => {
@@ -24,7 +26,7 @@ const btChannel = altBtChannel ? 'alternate' : 'standard';
 
 log(`kicking off using ${btChannel} Bluetooth channel`);
 
-const transmitter = new Transmitter(id, getMessages, altBtChannel);
+const transmitter = new Transmitter(id, getMessages, altBtChannel, key, macAddress);
 
 transmitter.on('glucose', (glucose) => {
   process.send({ msg: 'glucose', data: glucose });
@@ -52,6 +54,10 @@ transmitter.on('sawTransmitter', (data) => {
 
 transmitter.on('backfillData', (data) => {
   process.send({ msg: 'backfillData', data });
+});
+
+transmitter.on('sensorKey', (data) => {
+  process.send({ msg: 'sensorKey', data });
 });
 
 transmitter.on('disconnect', process.exit);

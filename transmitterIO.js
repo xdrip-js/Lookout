@@ -13,6 +13,7 @@ const xDripAPS = require('./xDripAPS')();
 
 module.exports = async (options, storage, client, fakeMeter) => {
   let txId;
+  let sensorKey;
   let txAddress = null;
   let txFailedReads = 0;
   let txStatus = null;
@@ -34,6 +35,10 @@ module.exports = async (options, storage, client, fakeMeter) => {
     // G6s are 10 days
     if (txId.substr(0, 1) === '8') {
       return 10 * 24 * 60;
+    }
+
+    if (txId.length === 4) {
+      return 15 * 25 * 60;
     }
 
     // default to G5's 7 days
@@ -1176,8 +1181,10 @@ module.exports = async (options, storage, client, fakeMeter) => {
     } else {
       const workerOptions = { };
       const btChannel = options.alternate_bt_channel ? '1' : '0';
+      const key = sensorKey ? sensorKey.key : '';
+      const macAddress = sensorKey ? sensorKey.macAddress : '';
 
-      worker = cp.fork(`${__dirname}/transmitterWorker`, [id, btChannel], workerOptions);
+      worker = cp.fork(`${__dirname}/transmitterWorker`, [id, btChannel, key, macAddress], workerOptions);
     }
 
     worker.on('message', async (m) => {
@@ -1309,6 +1316,15 @@ module.exports = async (options, storage, client, fakeMeter) => {
         txFailedReads += 1;
       } else if (m.msg === 'backfillData') {
         processBackfillData(m.data);
+      } else if (m.msg === 'sensorKey') {
+        sensorKey = m.data;
+
+        await storage.lock();
+        await storage.setItem('sensorKey', m.data)
+          .catch((err) => {
+            error(`Unable to store sensorKey: ${err}`);
+          });
+        await storage.unlock();
       }
     });
 
@@ -1353,9 +1369,12 @@ module.exports = async (options, storage, client, fakeMeter) => {
   };
 
   const changeTxId = (value) => {
-    if (value.length !== 6) {
+    if ((value.length !== 6) && (value.length !== 4)) {
       error(`received invalid transmitter id of ${value}`);
     } else {
+      sensorKey = null;
+      storage.setItemSync('sensorKey', null);
+
       if (worker !== null) {
         // When worker exits, listenToTransmitter will
         // be scheduled
@@ -1539,9 +1558,10 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
   // Read the current stored transmitter value
   txId = await storage.getItem('id');
+  sensorKey = await storage.getItem('sensorKey');
 
   // Start the transmitter loop task
-  listenToTransmitter(txId);
+  listenToTransmitter(txId, sensorKey);
 
   return transmitterIO;
 };

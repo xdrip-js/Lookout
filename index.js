@@ -158,7 +158,7 @@ const options = {
 const init = async () => {
   let lookoutDebug = 'Lookout:*,calcStats:*,calibration:*,clientIO:*,fakemeter:*,loopIO:*';
   lookoutDebug += ',pumpIO:*,storageLock:*,syncNS:*,transmitterIO:*,transmitterWorker:*';
-  lookoutDebug += ',xDripAPS:*,transmitter,smp,bluetooth-manager';
+  lookoutDebug += ',xDripAPS:*,transmitter,smp,bluetooth-manager,keks-plugin:*';
 
   // Disable hangup signal so we don't terminate unexpectedly
   process.on('SIGHUP', (signal) => {

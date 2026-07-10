@@ -50,6 +50,6 @@ angular.module('AngularOpenAPS.loop', [
     $scope.loop = OpenAPS.loop;
   }])
 
-  .filter('units', () => value => (value ? `${value.toFixed(1)} U` : '--'))
+  .filter('units', () => (value) => (value ? `${value.toFixed(1)} U` : '--'))
 
-  .filter('grams', () => value => `${value && value.toFixed(0)} g`);
+  .filter('grams', () => (value) => `${value && value.toFixed(0)} g`);

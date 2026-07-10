@@ -92,7 +92,7 @@ const processGlucose = (glucose) => {
   let sgv = glucose.glucose;
 
   if (params.mmol) {
-    sgv = Math.round(sgv / 18 * 10) / 10;
+    sgv = Math.round((sgv / 18) * 10) / 10;
   }
 
   console.log(`          glucose: ${sgv}`);

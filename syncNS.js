@@ -1,5 +1,3 @@
-
-
 const moment = require('moment');
 const Debug = require('debug');
 
@@ -204,11 +202,11 @@ const syncSGVs = async () => {
   const minDate = moment().subtract(24, 'hours').valueOf();
 
   // remote items older than 24 hours
-  rigSGVs = rigSGVs.filter(sgv => sgv.readDateMills >= minDate);
+  rigSGVs = rigSGVs.filter((sgv) => sgv.readDateMills >= minDate);
 
   // get the list of which SGVs we have
   // that haven't been verified to be in NS
-  const nsMisses = rigSGVs.filter(sgv => !sgv.inNS);
+  const nsMisses = rigSGVs.filter((sgv) => !sgv.inNS);
 
   const nsGaps = [];
 
@@ -247,10 +245,14 @@ const syncSGVs = async () => {
   await Promise.all(_.map(nsGaps, async (nsGap) => {
     let nsQueryError = false;
 
+    const gap = nsGap.gapEnd.valueOf() - nsGap.gapStart.valueOf();
+    const count = Math.round(((gap * 2) / 5) * 60000) + 1;
+
     // get the NS entries that are in the gap
     nsSGVs = await xDripAPS.SGVsBetween(
-      nsGap.gapStart, nsGap.gapEnd,
-      Math.round((nsGap.gapEnd.valueOf() - nsGap.gapStart.valueOf()) * 2 / 5 * 60000) + 1,
+      nsGap.gapStart,
+      nsGap.gapEnd,
+      count,
     ).catch((err) => {
       error(`Unable to get NS SGVs to match unfiltered with BG Check: ${err}`);
       nsQueryError = true;
@@ -275,7 +277,7 @@ const syncSGVs = async () => {
     // mark any matches we have so we don't re-upload them
     _.each(nsSGVs, (nsSGV) => {
       const matches = nsGap.gapSGVs.filter(
-        sgv => Math.abs(sgv.readDateMills - nsSGV.dateMills) < 60000,
+        (sgv) => Math.abs(sgv.readDateMills - nsSGV.dateMills) < 60000,
       );
 
       if (matches.length > 0) {
@@ -300,9 +302,13 @@ const syncSGVs = async () => {
   debug('rigGaps:\n%O', rigGaps);
 
   await Promise.all(_.map(rigGaps, async (gap) => {
+    const timeGap = gap.gapEnd.valueOf() - gap.gapStart.valueOf();
+    const count = Math.round((timeGap / 5) * 60000) + 1;
+
     nsSGVs = await xDripAPS.SGVsBetween(
-      gap.gapStart, gap.gapEnd,
-      Math.round((gap.gapEnd.valueOf() - gap.gapStart.valueOf()) / 5 * 60000) + 1,
+      gap.gapStart,
+      gap.gapEnd,
+      count,
     ).catch((err) => {
       error(`Unable to get NS SGVs to match unfiltered with BG Check: ${err}`);
     });

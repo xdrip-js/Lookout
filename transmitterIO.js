@@ -203,10 +203,8 @@ module.exports = async (options, storage, client, fakeMeter) => {
       const objects = await objectManager.GetManagedObjects();
 
       return Object.entries(objects)
-        .filter(([path, interfaces]) =>
-          interfaces['org.bluez.Device1']
-          && path.startsWith(`/org/bluez/${adapter}/`)
-        )
+        .filter(([path, interfaces]) => interfaces['org.bluez.Device1']
+          && path.startsWith(`/org/bluez/${adapter}/`))
         .map(([path, interfaces]) => ({
           path,
           ...interfaces['org.bluez.Device1'],
@@ -379,7 +377,11 @@ module.exports = async (options, storage, client, fakeMeter) => {
       }
 
       const haveValidCal = await calibration.validateCalibration(
-        options, storage, sensorInsert, sensorStop, latestBgCheckTime,
+        options,
+        storage,
+        sensorInsert,
+        sensorStop,
+        latestBgCheckTime,
       );
 
       if (haveCal && !haveValidCal) {
@@ -417,11 +419,13 @@ module.exports = async (options, storage, client, fakeMeter) => {
     if (!inSensorSession(sgv)) {
       // Only enter a sensorStart if we aren't
       // in either a transmitter session, extend session, or expired session
-      await storage.setEvent('sensorStart',
+      await storage.setEvent(
+        'sensorStart',
         {
           date: moment(),
           notes: reason,
-        })
+        },
+      )
         .catch((err) => {
           error(`Error setting rig sensorStart: ${err}`);
         });
@@ -903,7 +907,12 @@ module.exports = async (options, storage, client, fakeMeter) => {
       });
 
     sgv = await calibration.calibrateGlucose(
-      storage, options, sensorInsertDate, sensorStopDate, glucoseHist, sgv,
+      storage,
+      options,
+      sensorInsertDate,
+      sensorStopDate,
+      glucoseHist,
+      sgv,
     );
 
     if (sgv.inExtendedSession) {
@@ -991,7 +1000,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
       glucose: calData.glucose,
     };
 
-    log(`Last calibration: ${Math.round((Date.now() - newCal.dateMills) / 1000 / 60 / 60 * 10) / 10} hours ago, ${newCal.glucose} mg/dL`);
+    log(`Last calibration: ${Math.round(((Date.now() - newCal.dateMills) / 1000 / 60 / 60) * 10) / 10} hours ago, ${newCal.glucose} mg/dL`);
 
     if (newCal.glucose > 400 || newCal.glucose < 20) {
       log('Txmitter Last Calibration Data glucose out of range - ignoring');
@@ -1409,7 +1418,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
       if (txFailedReads >= 2 && (Date.now() - lastSuccessfulRead) > 11 * 60000) {
         // Automatically reboot on the 2nd failed read
-        // rebootRig();
+        rebootRig();
       }
 
       timerObj = setTimeout(() => {
@@ -1490,7 +1499,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
           error(`Unable to get glucoseHist storage item: ${err}`);
         });
 
-      return glucoseHist.map(sgv => ({ readDate: sgv.readDateMills, glucose: sgv.glucose }));
+      return glucoseHist.map((sgv) => ({ readDate: sgv.readDateMills, glucose: sgv.glucose }));
     },
 
     // provide the most recent Txmitter calibration
@@ -1606,7 +1615,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
       return inSensorSession(sgv);
     },
 
-    sgvGaps: rigSGVs => sgvGaps(rigSGVs),
+    sgvGaps: (rigSGVs) => sgvGaps(rigSGVs),
 
     getUnfiltered: async (valueTime) => {
       const rigSGVs = await storage.getArray('glucoseHist')

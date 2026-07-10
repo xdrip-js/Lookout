@@ -1,5 +1,3 @@
-
-
 const Debug = require('debug');
 
 /* eslint-disable no-unused-vars */
@@ -13,7 +11,9 @@ const storageLockExports = module.exports;
 
 let StorageLocked = false;
 
-const timeout = async ms => new Promise(resolve => setTimeout(resolve, ms));
+const timeout = (ms) => new Promise((resolve) => {
+  setTimeout(resolve, ms);
+});
 
 storageLockExports.lockStorage = async () => {
   let count = 0;

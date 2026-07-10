@@ -3,8 +3,7 @@
 const should = require('should');
 const moment = require('moment');
 
-const calibration = require('./../calibration');
-
+const calibration = require('../calibration');
 
 describe('Test Calibration', () => {
   it('should calculate Dexcom calibration values with Least Squares Regression', () => {
@@ -131,7 +130,13 @@ describe('Test Calibration', () => {
     };
 
     const lastCal = calibration.calculateTxmitterCalibration(
-      options, null, 0, null, null, glucoseHist, currSGV,
+      options,
+      null,
+      0,
+      null,
+      null,
+      glucoseHist,
+      currSGV,
     );
 
     lastCal.slope.should.be.greaterThan(800);
@@ -181,7 +186,13 @@ describe('Test Calibration', () => {
     };
 
     const lastCal = calibration.calculateTxmitterCalibration(
-      options, null, 0, null, null, glucoseHist, currSGV,
+      options,
+      null,
+      0,
+      null,
+      null,
+      glucoseHist,
+      currSGV,
     );
 
     should.not.exist(lastCal);
@@ -250,7 +261,13 @@ describe('Test Calibration', () => {
     };
 
     const lastCal = await calibration.expiredCalibration(
-      options, null, bgChecks, null, null, glucoseHist, null,
+      options,
+      null,
+      bgChecks,
+      null,
+      null,
+      glucoseHist,
+      null,
     );
 
     lastCal.type.should.equal('LeastSquaresRegression');
@@ -321,7 +338,13 @@ describe('Test Calibration', () => {
     };
 
     const lastCal = await calibration.expiredCalibration(
-      options, null, bgChecks, null, null, glucoseHist, null,
+      options,
+      null,
+      bgChecks,
+      null,
+      null,
+      glucoseHist,
+      null,
     );
 
     lastCal.type.should.equal('LeastSquaresRegression');
@@ -392,7 +415,13 @@ describe('Test Calibration', () => {
     };
 
     const lastCal = await calibration.expiredCalibration(
-      options, null, bgChecks, null, null, glucoseHist, null,
+      options,
+      null,
+      bgChecks,
+      null,
+      null,
+      glucoseHist,
+      null,
     );
 
     lastCal.type.should.equal('SinglePoint');
@@ -463,7 +492,13 @@ describe('Test Calibration', () => {
     };
 
     const lastCal = await calibration.expiredCalibration(
-      options, null, bgChecks, null, null, glucoseHist, null,
+      options,
+      null,
+      bgChecks,
+      null,
+      null,
+      glucoseHist,
+      null,
     );
 
     lastCal.type.should.equal('LeastSquaresRegression');
@@ -534,7 +569,13 @@ describe('Test Calibration', () => {
     };
 
     const lastCal = await calibration.expiredCalibration(
-      options, null, bgChecks, null, null, glucoseHist, null,
+      options,
+      null,
+      bgChecks,
+      null,
+      null,
+      glucoseHist,
+      null,
     );
 
     lastCal.type.should.equal('LeastSquaresRegression');
@@ -1090,7 +1131,13 @@ describe('Test Calibration', () => {
     };
 
     const lastCal = await calibration.expiredCalibration(
-      options, null, bgChecks, null, sensorInsert, glucoseHist, null,
+      options,
+      null,
+      bgChecks,
+      null,
+      sensorInsert,
+      glucoseHist,
+      null,
     );
 
     lastCal.type.should.equal('SinglePoint');

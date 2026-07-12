@@ -160,6 +160,13 @@ const init = async () => {
   lookoutDebug += ',pumpIO:*,storageLock:*,syncNS:*,transmitterIO:*,transmitterWorker:*';
   lookoutDebug += ',xDripAPS:*,transmitter,smp,bluetooth-manager,keks-plugin:*';
 
+  // Make GC more aggressive
+  global.gc && global.gc();
+
+  setInterval(() => {
+    if (global.gc) global.gc();
+  }, 8000); // Force GC every 8 seconds
+
   // Disable hangup signal so we don't terminate unexpectedly
   process.on('SIGHUP', (signal) => {
     log(`Received SIGHUP signal: ${signal}`);
@@ -172,7 +179,7 @@ const init = async () => {
     } else if (options.verbose === 1) {
       Debug.enable(lookoutDebug);
     } else if (options.verbose === 2) {
-      Debug.enable(`${lookoutDebug},keks-calc,signaling,bindings,acl-att-stream,att,gap`);
+      Debug.enable(`${lookoutDebug},transmitter:queue-doNext,keks-calc,signaling,bindings,acl-att-stream,att,gap,hci:connection`);
     } else {
       Debug.enable('*,*:*');
     }

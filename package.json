@@ -13,7 +13,7 @@
     "author": "Paul Dickens",
     "license": "MIT",
     "bin": {
-        "Lookout": "./index.js",
+        "Lookout": "./Lookout",
         "lookout": "./lookout.js",
         "lookout_fakemeter": "./lookout_fakemeter.sh",
         "lookout_online": "./lookout_online.sh"

@@ -1255,10 +1255,14 @@ module.exports = async (options, storage, client, fakeMeter) => {
     } else {
       const workerOptions = { };
       const btChannel = options.alternate_bt_channel ? '1' : '0';
-      const key = sensorKey ? sensorKey.key : '';
-      const macAddress = sensorKey ? sensorKey.address : '';
+      const key = sensorKey?.key;
+      const macAddress = sensorKey?.address;
 
-      worker = cp.fork(`${__dirname}/transmitterWorker`, [id, btChannel, key, macAddress], workerOptions);
+      if (key) {
+        worker = cp.fork(`${__dirname}/transmitterWorker`, [id, btChannel, key, macAddress], workerOptions);
+      } else {
+        worker = cp.fork(`${__dirname}/transmitterWorker`, [id, btChannel], workerOptions);
+      }
     }
 
     worker.on('message', async (m) => {

@@ -489,7 +489,7 @@ module.exports = () => ({
       'Content-Type': 'application/json',
     };
 
-    if (secret.startsWith('token=')) {
+    if (secret?.startsWith('token=')) {
       nsUrl = `${nsUrl}?${secret}`;
     } else {
       nsHeaders['API-SECRET'] = secret;

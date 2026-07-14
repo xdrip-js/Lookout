@@ -161,7 +161,9 @@ const init = async () => {
   lookoutDebug += ',xDripAPS:*,transmitter,smp,bluetooth-manager,keks-plugin:*';
 
   // Make GC more aggressive
-  global.gc && global.gc();
+  if (global?.gc) {
+    global.gc();
+  }
 
   setInterval(() => {
     if (global.gc) global.gc();

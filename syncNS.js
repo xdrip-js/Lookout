@@ -178,7 +178,7 @@ const syncEvent = async (itemName, eventType) => {
     latestEvent.date = moment(latestEvent.event.date);
   }
 
-  return latestEvent;
+  return latestEvent?.event ? latestEvent : null;
 };
 
 const syncSGVs = async () => {
@@ -642,7 +642,7 @@ const syncNS = async (options_, storage_, transmitter_) => {
   });
 
   const syncBGChecksPromise = new TimeLimitedPromise(4 * 60 * 1000, async (resolve) => {
-    bgChecks = await syncBGChecks(sensorInsert.date, sensorStop.date);
+    bgChecks = await syncBGChecks(sensorInsert?.date, sensorStop?.date);
     resolve();
   });
 
@@ -653,7 +653,7 @@ const syncNS = async (options_, storage_, transmitter_) => {
 
   // have transmitterIO check if the sensor session should be ended.
   if (transmitter) {
-    transmitter.checkSensorSession(sensorInsert.date, sensorStop.date, bgChecks, latestSGV);
+    transmitter.checkSensorSession(sensorInsert?.date, sensorStop?.date, bgChecks, latestSGV);
   }
 
   const timeDelay = calcNextSyncTimeDelay(latestSGV);

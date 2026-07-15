@@ -174,7 +174,7 @@ const syncEvent = async (itemName, eventType) => {
 
   log(`Syncing rig ${itemName} and NS ${eventType} complete`);
 
-  if (latestEvent) {
+  if (latestEvent && latestEvent?.event) {
     latestEvent.date = moment(latestEvent.event.date);
   }
 

@@ -1289,7 +1289,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
         const now = moment();
 
         _.each(gaps, (gap) => {
-          if ((now.diff(gap.gapStart, 'minutes') < 120) && (!minGapDate || (minGapDate.diff(gap.gapStart) < 0))) {
+          if (!minGapDate || (minGapDate.diff(gap.gapStart) < 0)) {
             minGapDate = gap.gapStart;
           }
 
@@ -1298,12 +1298,20 @@ module.exports = async (options, storage, client, fakeMeter) => {
           }
         });
 
+        if (now.diff(minGapDate, 'minutes') >= 180) {
+          minGapDate = now.clone().subtract(179, 'minutes');
+        }
+
+        if (now.diff(maxGapDate, 'minutes') >= 180) {
+          maxGapDate = now.clone().subtract(179, 'minutes');
+        }
+
         // don't ask for a backfill of the reading glucose reading about to receive
         if (Math.abs(now.diff(maxGapDate, 'minutes')) < 1) {
           maxGapDate.subtract(2, 'minutes');
         }
 
-        if ((minGapDate !== null) && glucoseHist
+        if ((minGapDate !== null) && (maxGapDate.diff(minGapDate, 'minutes') > 2) && glucoseHist
           && transmitterInSession(glucoseHist[glucoseHist.length - 1])) {
           log(`Requesting backfill - start: ${minGapDate.format()} end: ${maxGapDate.format()}`);
           pending.push({ type: 'Backfill', date: minGapDate.valueOf(), endDate: maxGapDate.valueOf() });

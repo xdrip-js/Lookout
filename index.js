@@ -181,7 +181,7 @@ const init = async () => {
     } else if (options.verbose === 1) {
       Debug.enable(lookoutDebug);
     } else if (options.verbose === 2) {
-      Debug.enable(`${lookoutDebug},transmitter:queue-doNext,keks-calc,signaling,bindings,acl-att-stream,att,gap,hci:connection`);
+      Debug.enable(`${lookoutDebug},transmitter:queue-doNext,keks-calc,signaling,bindings,acl-att-stream,att,gap,hci:connection,backfill-parser`);
     } else {
       Debug.enable('*,*:*');
     }

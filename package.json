@@ -39,7 +39,7 @@
         "request-promise-native": "^1.0.8",
         "socket.io": "^2.4.0",
         "socket.io-client": "^2.3.0",
-        "xdrip-js": "file:../xdrip-js",
+        "xdrip-js": "github:xdrip-js/xdrip-js#g7-draft",
         "yargs": "^10.0.3"
     },
     "devDependencies": {

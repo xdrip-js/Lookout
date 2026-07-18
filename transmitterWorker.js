@@ -10,8 +10,8 @@ const Transmitter = require('xdrip-js');
 
 const id = process.argv[2];
 const altBtChannel = parseInt(process.argv[3], 10);
-const key = process.argv[4].length > 0 ? process.argv[4] : null;
-const macAddress = process.argv[5].length > 0 ? process.argv[5] : null;
+const key = process.argv[4]?.trim() || null;
+const macAddress = process.argv[5]?.trim() || null;
 
 /* eslint-disable-next-line no-unused-vars */
 const getMessages = () => new Promise((resolve, reject) => {

@@ -12,6 +12,9 @@ const _ = require('lodash');
 const calibration = require('./calibration');
 const xDripAPS = require('./xDripAPS')();
 
+const FIVE_MINUTES = 5 * 60 * 1000; // 300000 ms
+const ONE_MINUTE = 60 * 1000; // 60000 ms
+
 module.exports = async (options, storage, client, fakeMeter) => {
   let txId;
   let sensorKey;
@@ -1428,15 +1431,30 @@ module.exports = async (options, storage, client, fakeMeter) => {
         removeBTDevices();
       }
 
-      if (txFailedReads >= 2 && (Date.now() - lastSuccessfulRead) > 11 * 60000) {
+      const now = Date.now();
+
+      if (txFailedReads >= 2 && (now - lastSuccessfulRead) > 11 * 60000) {
         // Automatically reboot on the 2nd failed read
         rebootRig();
+      }
+
+      const elapsedMs = now - lastSuccessfulRead;
+
+      // Time until the next 5-minute boundary since lastSuccessfulRead
+      const timeUntilNextRead = (FIVE_MINUTES - (elapsedMs % FIVE_MINUTES)) % FIVE_MINUTES;
+
+      // Time until 1 minute BEFORE the next read
+      let timeUntilTarget = timeUntilNextRead - ONE_MINUTE;
+
+      // If we're already within 1 minute of the next read (or past it), go to the one after
+      if (timeUntilTarget < 0) {
+        timeUntilTarget = 0;
       }
 
       timerObj = setTimeout(() => {
         // Restart the worker after 1 minute
         listenToTransmitter(txId);
-      }, 1 * 60000);
+      }, timeUntilTarget);
     });
 
     timerObj = setTimeout(() => {
@@ -1460,6 +1478,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
     } else {
       sensorKey = null;
       storage.setItemSync('sensorKey', null);
+      lastSuccessfulRead = null;
 
       if (worker !== null) {
         // When worker exits, listenToTransmitter will

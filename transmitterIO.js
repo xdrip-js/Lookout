@@ -299,7 +299,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
     let stopWhen = stopTime || now;
 
     // if the commanded stop time is older than 2 hours, use current time - 120 minutes
-    if (stopTime.diff(now, 'minutes') > 132) {
+    if (stopTime?.diff(now, 'minutes') > 132) {
       stopWhen = moment(now.valueOf() - 120 * 60000);
     }
 

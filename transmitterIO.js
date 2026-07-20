@@ -1505,7 +1505,9 @@ module.exports = async (options, storage, client, fakeMeter) => {
     }
   };
 
-  const g6Txmitter = () => (txId.substr(0, 1) === '8');
+  const g7Txmitter = () => (txId.length < 6);
+
+  const g6Txmitter = () => (!g7Txmitter() && (txId.substr(0, 1) === '8'));
 
   // Create an object that can be used
   // to interact with the transmitter.

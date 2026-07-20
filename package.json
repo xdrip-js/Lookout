@@ -4,7 +4,7 @@
     "description": "A web app for controlling and monitoring an Dexcom CGM via Lookout.",
     "main": "index.js",
     "engines": {
-      "node": ">= 20.0.0"
+        "node": ">= 20.0.0"
     },
     "scripts": {
         "pretest": "eslint \"./**/*.js\"",
@@ -52,6 +52,9 @@
         "should": "^13.2.1"
     },
     "overrides": {
-      "node-gyp": "^10.2.0"
+        "node-gyp": "^10.2.0"
+    },
+    "allowScripts": {
+        "usocket@0.3.0": true
     }
 }

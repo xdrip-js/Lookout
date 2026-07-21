@@ -12,8 +12,9 @@ const _ = require('lodash');
 const calibration = require('./calibration');
 const xDripAPS = require('./xDripAPS')();
 
-const FIVE_MINUTES = 5 * 60 * 1000; // 300000 ms
-const ONE_MINUTE = 60 * 1000; // 60000 ms
+const FIVE_MINUTES = 5 * 60 * 1000;
+const SIX_MINUTES = 6 * 60 * 1000;
+const PRE_TX_WAKUP_BUFFER = 10 * 1000;
 
 module.exports = async (options, storage, client, fakeMeter) => {
   let txId;
@@ -159,9 +160,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
     return null;
   };
 
-  const removeBTDevice = async (btAddress, adapter = 'hci0') => {
-    const bus = dbus.systemBus();
-
+  const removeBTDevice = async (bus, btAddress, adapter = 'hci0') => {
     try {
       const devicePath = `/org/bluez/${adapter}/dev_${btAddress
         .toUpperCase()
@@ -185,14 +184,10 @@ module.exports = async (options, storage, client, fakeMeter) => {
     } catch (err) {
       debug(`Unable to remove BT Device: ${btAddress} - ${err.message}`);
       return false;
-    } finally {
-      bus.disconnect();
     }
   };
 
-  const findBTDevices = async (adapter = 'hci0') => {
-    const bus = dbus.systemBus();
-
+  const findBTDevices = async (bus, adapter = 'hci0') => {
     try {
       const obj = await bus.getProxyObject(
         'org.bluez',
@@ -216,8 +211,8 @@ module.exports = async (options, storage, client, fakeMeter) => {
           Address: device.Address.value,
           Name: device.Name?.value,
         }));
-    } finally {
-      bus.disconnect();
+    } catch (err) {
+      debug(`Unable to find BT Devices: ${err.message}`);
     }
   };
 
@@ -225,9 +220,11 @@ module.exports = async (options, storage, client, fakeMeter) => {
     const adapter = `hci${options.hci}`;
     const btName = `Dexcom${txId.slice(-2)}`;
 
+    const bus = dbus.systemBus();
+
     // bt-device accepted names, but BlueZ RemoveDevice requires the address.
     // Resolve the name to an address first.
-    const devices = await findBTDevices(adapter);
+    const devices = await findBTDevices(bus, adapter);
 
     const removals = [];
 
@@ -236,14 +233,16 @@ module.exports = async (options, storage, client, fakeMeter) => {
     );
 
     if (nameMatch?.Address) {
-      removals.push(removeBTDevice(nameMatch.Address, adapter));
+      removals.push(removeBTDevice(bus, nameMatch.Address, adapter));
     }
 
     if (txAddress) {
-      removals.push(removeBTDevice(txAddress, adapter));
+      removals.push(removeBTDevice(bus, txAddress, adapter));
     }
 
     await Promise.all(removals);
+
+    bus.disconnect();
   };
 
   // Return true if there is no SGV or the most recent SGV was received from transmitter
@@ -1444,12 +1443,18 @@ module.exports = async (options, storage, client, fakeMeter) => {
       const timeUntilNextRead = (FIVE_MINUTES - (elapsedMs % FIVE_MINUTES)) % FIVE_MINUTES;
 
       // Time until 1 minute BEFORE the next read
-      let timeUntilTarget = timeUntilNextRead - ONE_MINUTE;
+      let timeUntilTarget = timeUntilNextRead - PRE_TX_WAKUP_BUFFER;
 
-      // If we're already within 1 minute of the next read (or past it), go to the one after
+      // Cannot wait until a time before now - nobody has invented a time machine
       if (timeUntilTarget < 0) {
         timeUntilTarget = 0;
       }
+
+      const totalSeconds = Math.floor(timeUntilTarget / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+
+      log(`Starting new worker in ${minutes} minutes and ${seconds} seconds`);
 
       timerObj = setTimeout(() => {
         // Restart the worker after 1 minute
@@ -1469,7 +1474,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
           error(`Unable to kill existing worker: ${err}`);
         }
       }
-    }, 6 * 60000);
+    }, SIX_MINUTES);
   };
 
   const changeTxId = (value) => {

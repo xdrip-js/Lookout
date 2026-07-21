@@ -4,7 +4,7 @@
     "description": "A web app for controlling and monitoring an Dexcom CGM via Lookout.",
     "main": "index.js",
     "engines": {
-        "node": ">= 20.0.0"
+        "node": ">= 18.0.0"
     },
     "scripts": {
         "pretest": "eslint \"./**/*.js\"",
@@ -38,7 +38,7 @@
         "request-promise-native": "^1.0.8",
         "socket.io": "^2.4.0",
         "socket.io-client": "^2.3.0",
-        "xdrip-js": "github:jpcunningh/xdrip-js#g7-draft",
+        "xdrip-js": "file:../xdrip-js",
         "dbus-next": "^0.10.2",
         "yargs": "^10.0.3"
     },

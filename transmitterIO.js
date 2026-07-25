@@ -1,6 +1,5 @@
 const cp = require('child_process');
 const moment = require('moment');
-const dbus = require('dbus-next');
 
 const Debug = require('debug');
 
@@ -19,7 +18,6 @@ const PRE_TX_WAKUP_BUFFER = 10 * 1000;
 module.exports = async (options, storage, client, fakeMeter) => {
   let txId;
   let sensorKey;
-  let txAddress = null;
   let txFailedReads = 0;
   let txStatus = null;
   let txFirmware = null;
@@ -158,91 +156,6 @@ module.exports = async (options, storage, client, fakeMeter) => {
     }
 
     return null;
-  };
-
-  const removeBTDevice = async (bus, btAddress, adapter = 'hci0') => {
-    try {
-      const devicePath = `/org/bluez/${adapter}/dev_${btAddress
-        .toUpperCase()
-        .replace(/:/g, '_')}`;
-
-      const adapterPath = `/org/bluez/${adapter}`;
-
-      const obj = await bus.getProxyObject(
-        'org.bluez',
-        adapterPath,
-      );
-
-      const adapterInterface = obj.getInterface(
-        'org.bluez.Adapter1',
-      );
-
-      await adapterInterface.RemoveDevice(devicePath);
-
-      log(`Removed BT Device: ${btAddress}`);
-      return true;
-    } catch (err) {
-      debug(`Unable to remove BT Device: ${btAddress} - ${err.message}`);
-      return false;
-    }
-  };
-
-  const findBTDevices = async (bus, adapter = 'hci0') => {
-    try {
-      const obj = await bus.getProxyObject(
-        'org.bluez',
-        '/',
-      );
-
-      const objectManager = obj.getInterface(
-        'org.freedesktop.DBus.ObjectManager',
-      );
-
-      const objects = await objectManager.GetManagedObjects();
-
-      return Object.entries(objects)
-        .filter(([path, interfaces]) => interfaces['org.bluez.Device1']
-          && path.startsWith(`/org/bluez/${adapter}/`))
-        .map(([path, interfaces]) => ({
-          path,
-          ...interfaces['org.bluez.Device1'],
-        }))
-        .map((device) => ({
-          Address: device.Address.value,
-          Name: device.Name?.value,
-        }));
-    } catch (err) {
-      debug(`Unable to find BT Devices: ${err.message}`);
-    }
-  };
-
-  const removeBTDevices = async () => {
-    const adapter = `hci${options.hci}`;
-    const btName = `Dexcom${txId.slice(-2)}`;
-
-    const bus = dbus.systemBus();
-
-    // bt-device accepted names, but BlueZ RemoveDevice requires the address.
-    // Resolve the name to an address first.
-    const devices = await findBTDevices(bus, adapter);
-
-    const removals = [];
-
-    const nameMatch = devices.find(
-      (device) => device.Name === btName,
-    );
-
-    if (nameMatch?.Address) {
-      removals.push(removeBTDevice(bus, nameMatch.Address, adapter));
-    }
-
-    if (txAddress) {
-      removals.push(removeBTDevice(bus, txAddress, adapter));
-    }
-
-    await Promise.all(removals);
-
-    bus.disconnect();
   };
 
   // Return true if there is no SGV or the most recent SGV was received from transmitter
@@ -1245,9 +1158,6 @@ module.exports = async (options, storage, client, fakeMeter) => {
     let startingSession = false;
     let stoppingSession = false;
 
-    // Remove the BT device so it starts from scratch
-    removeBTDevices();
-
     if (options.sim) {
       let prevGlucose = await getGlucose();
 
@@ -1400,7 +1310,6 @@ module.exports = async (options, storage, client, fakeMeter) => {
       } else if (m.msg === 'sawTransmitter') {
         // increment failed reads counter so we know how many
         // times we saw the transmitter
-        txAddress = m.data.address;
         txFailedReads += 1;
       } else if (m.msg === 'backfillData') {
         processBackfillData(m.data);
@@ -1424,10 +1333,6 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
       if (timerObj !== null) {
         clearTimeout(timerObj);
-      }
-
-      if (id && id !== txId && txId) {
-        removeBTDevices();
       }
 
       const now = Date.now();

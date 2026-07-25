@@ -39,7 +39,6 @@
         "socket.io": "^2.4.0",
         "socket.io-client": "^2.3.0",
         "xdrip-js": "file:../xdrip-js",
-        "dbus-next": "^0.10.2",
         "yargs": "^10.0.3"
     },
     "devDependencies": {

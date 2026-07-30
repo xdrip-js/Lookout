@@ -68,11 +68,15 @@ const validTxId = (id) => {
 
   const prefix = id.substr(0, 1);
 
-  if (id.length !== 6 || (prefix !== '8' && prefix !== '4')) {
-    return false;
+  if (id.length === 6 && (prefix === '8' || prefix === '4')) {
+    return true;
   }
 
-  return true;
+  if (id.length === 4 && !Number.isNaN(id) && !Number.isNaN(parseInt(id, 10))) {
+    return true;
+  }
+
+  return false;
 };
 
 const processGlucose = (glucose) => {
@@ -88,7 +92,7 @@ const processGlucose = (glucose) => {
   let sgv = glucose.glucose;
 
   if (params.mmol) {
-    sgv = Math.round(sgv / 18 * 10) / 10;
+    sgv = Math.round((sgv / 18) * 10) / 10;
   }
 
   console.log(`          glucose: ${sgv}`);

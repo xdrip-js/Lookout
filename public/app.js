@@ -50,9 +50,7 @@ angular.module('AngularOpenAPS', [
 //   SharedState.initialize($scope, 'myId');
 // });
 
-
 // $cookies.put('myFavorite', 'oatmeal');
-
 
   /* eslint-disable-next-line prefer-arrow-callback */
   .filter('time', function filterTime() {

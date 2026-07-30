@@ -52,10 +52,11 @@ const convertEntryToNS = (glucose) => {
     noise: glucose.nsNoise,
     trend: glucose.trend,
     glucose: sgv,
+    state: glucose.state,
   };
 };
 
-const convertEntryToxDrip = glucose => ({
+const convertEntryToxDrip = (glucose) => ({
   readDateMills: glucose.date,
   readDate: glucose.dateString,
   filtered: glucose.filtered,
@@ -65,7 +66,6 @@ const convertEntryToxDrip = glucose => ({
   trend: glucose.trend,
   glucose: glucose.glucose,
 });
-
 
 const postToXdrip = (entry) => {
   const secret = process.env.API_SECRET;
@@ -340,7 +340,7 @@ const queryBGChecksSince = (startTime) => {
   return requestPromise(optionsNS);
 };
 
-const convertBGCheck = BGCheck => [{
+const convertBGCheck = (BGCheck) => [{
   enteredBy: `xdripjs://${os.hostname()}`,
   eventType: 'BG Check',
   glucose: BGCheck.glucose,
@@ -489,7 +489,7 @@ module.exports = () => ({
       'Content-Type': 'application/json',
     };
 
-    if (secret.startsWith('token=')) {
+    if (secret?.startsWith('token=')) {
       nsUrl = `${nsUrl}?${secret}`;
     } else {
       nsHeaders['API-SECRET'] = secret;
@@ -658,17 +658,15 @@ module.exports = () => ({
     return formattedCal;
   },
 
-  latestSGVs: async numResults => queryLatestSGVs(numResults),
+  latestSGVs: queryLatestSGVs,
 
-  SGVsSince: async (startTime, numResults) => querySGVsSince(startTime, numResults),
+  SGVsSince: querySGVsSince,
 
-  SGVsBefore: async (startTime, numResults) => querySGVsBefore(startTime, numResults),
+  SGVsBefore: querySGVsBefore,
 
-  SGVsBetween: async (startTime, endTime, numResults) => querySGVsBetween(
-    startTime, endTime, numResults,
-  ),
+  SGVsBetween: querySGVsBetween,
 
-  BGChecksSince: async startTime => queryBGChecksSince(startTime),
+  BGChecksSince: queryBGChecksSince,
 
   latestEvent: async (type) => {
     let nsEvent = null;
@@ -689,15 +687,7 @@ module.exports = () => ({
     return nsEvent;
   },
 
-  convertEntryToNS: (glucose) => {
-    const retVal = convertEntryToNS(glucose);
+  convertEntryToNS,
 
-    return retVal;
-  },
-
-  convertEntryToxDrip: (glucose) => {
-    const retVal = convertEntryToxDrip(glucose);
-
-    return retVal;
-  },
+  convertEntryToxDrip,
 });

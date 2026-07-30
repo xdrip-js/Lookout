@@ -3,14 +3,17 @@
     "version": "2.0.8",
     "description": "A web app for controlling and monitoring an Dexcom CGM via Lookout.",
     "main": "index.js",
+    "engines": {
+        "node": ">= 18.0.0"
+    },
     "scripts": {
-        "pretest": "./node_modules/.bin/eslint \"./**/*.js\"",
+        "pretest": "eslint \"./**/*.js\"",
         "test": "mocha"
     },
     "author": "Paul Dickens",
     "license": "MIT",
     "bin": {
-        "Lookout": "./index.js",
+        "Lookout": "./Lookout",
         "lookout": "./lookout.js",
         "lookout_fakemeter": "./lookout_fakemeter.sh",
         "lookout_online": "./lookout_online.sh"
@@ -35,16 +38,22 @@
         "request-promise-native": "^1.0.8",
         "socket.io": "^2.4.0",
         "socket.io-client": "^2.3.0",
-        "xdrip-js": "github:xdrip-js/xdrip-js#v2.1.8",
+        "xdrip-js": "github:xdrip-js/xdrip-js#dev"
         "yargs": "^10.0.3"
     },
     "devDependencies": {
         "chai": "^3.5.0",
         "chai-spies": "^0.7.1",
-        "eslint": "^5.16.0",
-        "eslint-config-airbnb-base": "^13.2.0",
-        "eslint-plugin-import": "^2.18.2",
+        "eslint": "^8.57.1",
+        "eslint-config-airbnb-base": "^15.0.0",
+        "eslint-plugin-import": "^2.32.0",
         "mocha": "^5.2.0",
         "should": "^13.2.1"
+    },
+    "overrides": {
+        "node-gyp": "^10.2.0"
+    },
+    "allowScripts": {
+        "usocket@0.3.0": true
     }
 }

@@ -103,11 +103,11 @@ module.exports = {
     storage = newStorage;
   },
 
-  getItem: async name => getItem(name),
+  getItem: async (name) => getItem(name),
 
-  getEvent: async name => getEvent(name),
+  getEvent: async (name) => getEvent(name),
 
-  getArray: async name => getArray(name),
+  getArray: async (name) => getArray(name),
 
   setItem: async (name, value) => setItem(name, value),
 
@@ -115,7 +115,7 @@ module.exports = {
 
   setItemSync: (name, value) => setItemSync(name, value),
 
-  delItem: async name => delItem(name),
+  delItem: async (name) => delItem(name),
 
   lock: async () => storageLock.lockStorage(),
 

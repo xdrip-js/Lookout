@@ -2,7 +2,7 @@
 
 const _ = require('lodash');
 const store = require('node-persist');
-const storage = require('./../storage');
+const storage = require('../storage');
 
 describe('Test Storage', () => {
   it('should initialize', async () => {

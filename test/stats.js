@@ -1,8 +1,7 @@
 /* global describe it */
 
-const stats = require('./../calcStats');
-const calibration = require('./../calibration');
-
+const stats = require('../calcStats');
+const calibration = require('../calibration');
 
 describe('Test Stats', () => {
   it('should calculate Sensor Noise', () => {

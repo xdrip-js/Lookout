@@ -94,7 +94,6 @@ const lsrCalibration = (calibrationPairs) => {
   stddevX = Math.sqrt(sumSqDiffX / (n - 1));
   stddevY = Math.sqrt(sumSqDiffY / (n - 1));
 
-
   const firstDate = calibrationPairs[0].readDateMills;
 
   for (let i = 0; i < n; i += 1) {
@@ -127,7 +126,7 @@ const lsrCalibration = (calibrationPairs) => {
   }
   const r = (n * sumXY - sumX * sumY) / denominator;
 
-  returnVal.slope = r * stddevY / stddevX;
+  returnVal.slope = (r * stddevY) / stddevX;
   returnVal.intercept = meanY - returnVal.slope * meanX;
 
   // calculate error
@@ -149,10 +148,10 @@ const lsrCalibration = (calibrationPairs) => {
   }
 
   const delta = n * sumXSq - sumX * sumX;
-  const vari = 1.0 / (n - 2.0) * varSum;
+  const vari = (1.0 / (n - 2.0)) * varSum;
 
-  yError = Math.sqrt(vari / delta * sumXSq);
-  slopeError = Math.sqrt(n / delta * vari);
+  yError = Math.sqrt((vari / delta) * sumXSq);
+  slopeError = Math.sqrt((n / delta) * vari);
 
   debug(`LSR Calibration yError: ${yError}, slopeError: ${slopeError}`);
 
@@ -175,7 +174,13 @@ const singlePointCalibration = (calibrationPairs) => {
 };
 
 const calculateTxmitterCalibration = (
-  options, lastCal, lastTxmitterCalTime, latestBgCheckTime, sensorInsert, glucoseHist, currSGV,
+  options,
+  lastCal,
+  lastTxmitterCalTime,
+  latestBgCheckTime,
+  sensorInsert,
+  glucoseHist,
+  currSGV,
 ) => {
   log('Calculating transmitter calibration');
 
@@ -374,7 +379,9 @@ const getUnfilteredFromNS = async (valueTime) => {
 
   if (SGVBefore && SGVAfter) {
     return interpolateUnfiltered(
-      xDripAPS.convertEntryToxDrip(SGVBefore), xDripAPS.convertEntryToxDrip(SGVAfter), valueTime,
+      xDripAPS.convertEntryToxDrip(SGVBefore),
+      xDripAPS.convertEntryToxDrip(SGVAfter),
+      valueTime,
     );
   }
   debug(`Unable to find bounding SGVs for BG Check at ${valueTime.format()}`);
@@ -382,7 +389,7 @@ const getUnfilteredFromNS = async (valueTime) => {
 };
 
 const getUnfiltered = async (valueTime, glucoseHist, sgv) => {
-  const rigSGVs = _.map(glucoseHist, value => ({
+  const rigSGVs = _.map(glucoseHist, (value) => ({
     readDateMills: value.readDateMills,
     unfiltered: value.unfiltered,
     filtered: value.filtered,
@@ -433,7 +440,13 @@ const getUnfiltered = async (valueTime, glucoseHist, sgv) => {
 calibrationExports.getUnfiltered = getUnfiltered;
 
 const expiredCalibration = async (
-  options, storage, bgChecks, lastExpiredCal, sensorInsert, glucoseHist, sgv,
+  options,
+  storage,
+  bgChecks,
+  lastExpiredCal,
+  sensorInsert,
+  glucoseHist,
+  sgv,
 ) => {
   let calPairs = [];
   let calReturn = null;
@@ -720,7 +733,13 @@ const validateTxmitterCalibration = (sensorInsert, sensorStop, latestBgCheckTime
 };
 
 const validateExpiredCalibration = async (
-  sensorInsert, sensorStop, lastExpiredCal, options, storage, bgChecks, glucoseHist,
+  sensorInsert,
+  sensorStop,
+  lastExpiredCal,
+  options,
+  storage,
+  bgChecks,
+  glucoseHist,
 ) => {
   let sensorInsertTime = null;
   let sensorInsertDelta = 0;
@@ -733,7 +752,12 @@ const validateExpiredCalibration = async (
     // Try to generate an expired calibration
     // This is needed on fresh startups when we haven't tried to generate one yet
     expiredCal = await expiredCalibration(
-      options, storage, bgChecks, lastExpiredCal, sensorInsert, glucoseHist,
+      options,
+      storage,
+      bgChecks,
+      lastExpiredCal,
+      sensorInsert,
+      glucoseHist,
     );
 
     if (!expiredCal) {
@@ -773,7 +797,11 @@ const validateExpiredCalibration = async (
 };
 
 const validateCalibration = async (
-  options, storage, sensorInsert, sensorStop, latestBgCheckTime,
+  options,
+  storage,
+  sensorInsert,
+  sensorStop,
+  latestBgCheckTime,
 ) => {
   const lastCal = await getTxmitterCal(storage);
   const lastExpiredCal = await getExpiredCal(storage);
@@ -790,14 +818,25 @@ const validateCalibration = async (
 
   return (validateTxmitterCalibration(sensorInsert, sensorStop, latestBgCheckTime, lastCal)
     || validateExpiredCalibration(
-      sensorInsert, sensorStop, lastExpiredCal, options, storage, bgChecks, glucoseHist,
+      sensorInsert,
+      sensorStop,
+      lastExpiredCal,
+      options,
+      storage,
+      bgChecks,
+      glucoseHist,
     ));
 };
 
 calibrationExports.validateCalibration = validateCalibration;
 
 calibrationExports.calibrateGlucose = async (
-  storage, options, sensorInsert, sensorStop, glucoseHist, uncalibratedSgv,
+  storage,
+  options,
+  sensorInsert,
+  sensorStop,
+  glucoseHist,
+  uncalibratedSgv,
 ) => {
   let lastCal = await getTxmitterCal(storage);
   let expiredCal = await getExpiredCal(storage);
@@ -836,11 +875,23 @@ calibrationExports.calibrateGlucose = async (
 
   if (glucoseHist.length > 0) {
     newCal = calculateTxmitterCalibration(
-      options, lastCal, lastTxmitterCalTime, latestBgCheckTime, sensorInsert, glucoseHist, sgv,
+      options,
+      lastCal,
+      lastTxmitterCalTime,
+      latestBgCheckTime,
+      sensorInsert,
+      glucoseHist,
+      sgv,
     );
 
     expiredCal = await expiredCalibration(
-      options, storage, bgChecks, expiredCal, sensorInsert, glucoseHist, sgv,
+      options,
+      storage,
+      bgChecks,
+      expiredCal,
+      sensorInsert,
+      glucoseHist,
+      sgv,
     );
   }
 
@@ -863,7 +914,13 @@ calibrationExports.calibrateGlucose = async (
 
   if (options.expired_cal
     && await validateExpiredCalibration(
-      sensorInsert, sensorStop, expiredCal, options, storage, bgChecks, glucoseHist,
+      sensorInsert,
+      sensorStop,
+      expiredCal,
+      options,
+      storage,
+      bgChecks,
+      glucoseHist,
     )) {
     const expiredCalGlucose = calcGlucose(sgv, expiredCal);
 

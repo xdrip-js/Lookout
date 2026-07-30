@@ -11,9 +11,13 @@ const _ = require('lodash');
 const calibration = require('./calibration');
 const xDripAPS = require('./xDripAPS')();
 
+const FIVE_MINUTES = 5 * 60 * 1000;
+const SIX_MINUTES = 6 * 60 * 1000;
+const PRE_TX_WAKUP_BUFFER = 10 * 1000;
+
 module.exports = async (options, storage, client, fakeMeter) => {
   let txId;
-  let txAddress = null;
+  let sensorKey;
   let txFailedReads = 0;
   let txStatus = null;
   let txFirmware = null;
@@ -34,6 +38,10 @@ module.exports = async (options, storage, client, fakeMeter) => {
     // G6s are 10 days
     if (txId.substr(0, 1) === '8') {
       return 10 * 24 * 60;
+    }
+
+    if (txId.length === 4) {
+      return 15 * 25 * 60;
     }
 
     // default to G5's 7 days
@@ -150,31 +158,6 @@ module.exports = async (options, storage, client, fakeMeter) => {
     return null;
   };
 
-  const removeBTDevice = (btName) => {
-    cp.exec(`bt-device -a hci${options.hci} -r ${btName}`, (err, stdout, stderr) => {
-      if (err) {
-        debug(`Unable to remove BT Device: ${btName} - ${err}`);
-        return;
-      }
-
-      log(`Removed BT Device: ${btName}`);
-      debug(`stdout: ${stdout}`);
-      debug(`stderr: ${stderr}`);
-    });
-  };
-
-  const removeBTDevices = () => {
-    const btName = `Dexcom${txId.slice(-2)}`;
-
-    removeBTDevice(btName);
-
-    if (txAddress) {
-      const btAddressName = txAddress.split(':').join('-').toUpperCase();
-
-      removeBTDevice(btAddressName);
-    }
-  };
-
   // Return true if there is no SGV or the most recent SGV was received from transmitter
   // Also return true if the latest SGV we have is more than 15 minutes old
   // Return false if most recent SGV was received from NS
@@ -228,7 +211,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
     let stopWhen = stopTime || now;
 
     // if the commanded stop time is older than 2 hours, use current time - 120 minutes
-    if (stopTime.diff(now, 'minutes') > 132) {
+    if (stopTime?.diff(now, 'minutes') > 132) {
       stopWhen = moment(now.valueOf() - 120 * 60000);
     }
 
@@ -309,7 +292,11 @@ module.exports = async (options, storage, client, fakeMeter) => {
       }
 
       const haveValidCal = await calibration.validateCalibration(
-        options, storage, sensorInsert, sensorStop, latestBgCheckTime,
+        options,
+        storage,
+        sensorInsert,
+        sensorStop,
+        latestBgCheckTime,
       );
 
       if (haveCal && !haveValidCal) {
@@ -347,11 +334,13 @@ module.exports = async (options, storage, client, fakeMeter) => {
     if (!inSensorSession(sgv)) {
       // Only enter a sensorStart if we aren't
       // in either a transmitter session, extend session, or expired session
-      await storage.setEvent('sensorStart',
+      await storage.setEvent(
+        'sensorStart',
         {
           date: moment(),
           notes: reason,
-        })
+        },
+      )
         .catch((err) => {
           error(`Error setting rig sensorStart: ${err}`);
         });
@@ -527,6 +516,30 @@ module.exports = async (options, storage, client, fakeMeter) => {
         break;
       case 0x16:
         state = 'Sensor Failed Start';
+        break;
+      case 0x17:
+        state = 'Sensor Failed Start2';
+        break;
+      case 0x18:
+        state = 'Sensor Expired';
+        break;
+      case 0x19:
+        state = 'Sensor Failed 7';
+        break;
+      case 0x1A:
+        state = 'Sensor Stopped 2';
+        break;
+      case 0x1B:
+        state = 'Sensor Failed 8';
+        break;
+      case 0x1C:
+        state = 'Sensor Failed 9';
+        break;
+      case 0x1D:
+        state = 'Sensor Failed 10';
+        break;
+      case 0x1E:
+        state = 'Sensor Failed 11';
         break;
       case 0x80:
         state = 'Calibration State - Start';
@@ -809,7 +822,12 @@ module.exports = async (options, storage, client, fakeMeter) => {
       });
 
     sgv = await calibration.calibrateGlucose(
-      storage, options, sensorInsertDate, sensorStopDate, glucoseHist, sgv,
+      storage,
+      options,
+      sensorInsertDate,
+      sensorStopDate,
+      glucoseHist,
+      sgv,
     );
 
     if (sgv.inExtendedSession) {
@@ -853,7 +871,8 @@ module.exports = async (options, storage, client, fakeMeter) => {
     if (glucoseHist.length > 0) {
       const prevSgv = await getGlucose();
 
-      if ((!prevSgv || (sgv.state !== prevSgv.state)) && options.nightscout) {
+      // Only test if there is a validate state in the prevSgv
+      if ((!prevSgv || (prevSgv.state && (sgv.state !== prevSgv.state))) && options.nightscout) {
         xDripAPS.postAnnouncement(`Sensor: ${sgv.stateString}`);
       } else if (startingSession && sgv.state !== 0x02) {
         xDripAPS.postAnnouncement(`Unable to Start Session: ${sgv.stateString} should have been 'Warmup'`);
@@ -896,7 +915,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
       glucose: calData.glucose,
     };
 
-    log(`Last calibration: ${Math.round((Date.now() - newCal.dateMills) / 1000 / 60 / 60 * 10) / 10} hours ago, ${newCal.glucose} mg/dL`);
+    log(`Last calibration: ${Math.round(((Date.now() - newCal.dateMills) / 1000 / 60 / 60) * 10) / 10} hours ago, ${newCal.glucose} mg/dL`);
 
     if (newCal.glucose > 400 || newCal.glucose < 20) {
       log('Txmitter Last Calibration Data glucose out of range - ignoring');
@@ -1139,9 +1158,6 @@ module.exports = async (options, storage, client, fakeMeter) => {
     let startingSession = false;
     let stoppingSession = false;
 
-    // Remove the BT device so it starts from scratch
-    removeBTDevices();
-
     if (options.sim) {
       let prevGlucose = await getGlucose();
 
@@ -1151,8 +1167,14 @@ module.exports = async (options, storage, client, fakeMeter) => {
     } else {
       const workerOptions = { };
       const btChannel = options.alternate_bt_channel ? '1' : '0';
+      const key = sensorKey?.key || '';
+      const macAddress = sensorKey?.address;
 
-      worker = cp.fork(`${__dirname}/transmitterWorker`, [id, btChannel], workerOptions);
+      if (macAddress) {
+        worker = cp.fork(`${__dirname}/transmitterWorker`, [id, btChannel, key, macAddress], workerOptions);
+      } else {
+        worker = cp.fork(`${__dirname}/transmitterWorker`, [id, btChannel], workerOptions);
+      }
     }
 
     worker.on('message', async (m) => {
@@ -1179,7 +1201,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
         const now = moment();
 
         _.each(gaps, (gap) => {
-          if ((now.diff(gap.gapStart, 'minutes') < 120) && (!minGapDate || (minGapDate.diff(gap.gapStart) < 0))) {
+          if (!minGapDate || (minGapDate.diff(gap.gapStart) < 0)) {
             minGapDate = gap.gapStart;
           }
 
@@ -1188,12 +1210,20 @@ module.exports = async (options, storage, client, fakeMeter) => {
           }
         });
 
+        if (now.diff(minGapDate, 'minutes') >= 180) {
+          minGapDate = now.clone().subtract(179, 'minutes');
+        }
+
+        if (now.diff(maxGapDate, 'minutes') >= 180) {
+          maxGapDate = now.clone().subtract(179, 'minutes');
+        }
+
         // don't ask for a backfill of the reading glucose reading about to receive
         if (Math.abs(now.diff(maxGapDate, 'minutes')) < 1) {
           maxGapDate.subtract(2, 'minutes');
         }
 
-        if ((minGapDate !== null) && glucoseHist
+        if ((minGapDate !== null) && (maxGapDate.diff(minGapDate, 'minutes') > 2) && glucoseHist
           && transmitterInSession(glucoseHist[glucoseHist.length - 1])) {
           log(`Requesting backfill - start: ${minGapDate.format()} end: ${maxGapDate.format()}`);
           pending.push({ type: 'Backfill', date: minGapDate.valueOf(), endDate: maxGapDate.valueOf() });
@@ -1280,10 +1310,18 @@ module.exports = async (options, storage, client, fakeMeter) => {
       } else if (m.msg === 'sawTransmitter') {
         // increment failed reads counter so we know how many
         // times we saw the transmitter
-        txAddress = m.data.address;
         txFailedReads += 1;
       } else if (m.msg === 'backfillData') {
         processBackfillData(m.data);
+      } else if (m.msg === 'sensorKey') {
+        sensorKey = m.data;
+
+        await storage.lock();
+        await storage.setItem('sensorKey', m.data)
+          .catch((err) => {
+            error(`Unable to store sensorKey: ${err}`);
+          });
+        await storage.unlock();
       }
     });
 
@@ -1297,19 +1335,36 @@ module.exports = async (options, storage, client, fakeMeter) => {
         clearTimeout(timerObj);
       }
 
-      if (id && id !== txId && txId) {
-        removeBTDevices();
-      }
+      const now = Date.now();
 
-      if (txFailedReads >= 2 && (Date.now() - lastSuccessfulRead) > 11 * 60000) {
+      if (txFailedReads >= 2 && (now - lastSuccessfulRead) > 11 * 60000) {
         // Automatically reboot on the 2nd failed read
         rebootRig();
       }
 
+      const elapsedMs = now - lastSuccessfulRead;
+
+      // Time until the next 5-minute boundary since lastSuccessfulRead
+      const timeUntilNextRead = (FIVE_MINUTES - (elapsedMs % FIVE_MINUTES)) % FIVE_MINUTES;
+
+      // Time until 1 minute BEFORE the next read
+      let timeUntilTarget = timeUntilNextRead - PRE_TX_WAKUP_BUFFER;
+
+      // Cannot wait until a time before now - nobody has invented a time machine
+      if (timeUntilTarget < 0) {
+        timeUntilTarget = 0;
+      }
+
+      const totalSeconds = Math.floor(timeUntilTarget / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+
+      log(`Starting new worker in ${minutes} minutes and ${seconds} seconds`);
+
       timerObj = setTimeout(() => {
         // Restart the worker after 1 minute
         listenToTransmitter(txId);
-      }, 1 * 60000);
+      }, timeUntilTarget);
     });
 
     timerObj = setTimeout(() => {
@@ -1324,13 +1379,17 @@ module.exports = async (options, storage, client, fakeMeter) => {
           error(`Unable to kill existing worker: ${err}`);
         }
       }
-    }, 6 * 60000);
+    }, SIX_MINUTES);
   };
 
   const changeTxId = (value) => {
-    if (value.length !== 6) {
+    if ((value.length !== 6) && (value.length !== 4)) {
       error(`received invalid transmitter id of ${value}`);
     } else {
+      sensorKey = null;
+      storage.setItemSync('sensorKey', null);
+      lastSuccessfulRead = null;
+
       if (worker !== null) {
         // When worker exits, listenToTransmitter will
         // be scheduled
@@ -1356,7 +1415,9 @@ module.exports = async (options, storage, client, fakeMeter) => {
     }
   };
 
-  const g6Txmitter = () => (txId.substr(0, 1) === '8');
+  const g7Txmitter = () => (txId.length < 6);
+
+  const g6Txmitter = () => (!g7Txmitter() && (txId.substr(0, 1) === '8'));
 
   // Create an object that can be used
   // to interact with the transmitter.
@@ -1381,7 +1442,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
           error(`Unable to get glucoseHist storage item: ${err}`);
         });
 
-      return glucoseHist.map(sgv => ({ readDate: sgv.readDateMills, glucose: sgv.glucose }));
+      return glucoseHist.map((sgv) => ({ readDate: sgv.readDateMills, glucose: sgv.glucose }));
     },
 
     // provide the most recent Txmitter calibration
@@ -1497,7 +1558,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
       return inSensorSession(sgv);
     },
 
-    sgvGaps: rigSGVs => sgvGaps(rigSGVs),
+    sgvGaps: (rigSGVs) => sgvGaps(rigSGVs),
 
     getUnfiltered: async (valueTime) => {
       const rigSGVs = await storage.getArray('glucoseHist')
@@ -1514,9 +1575,10 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
   // Read the current stored transmitter value
   txId = await storage.getItem('id');
+  sensorKey = await storage.getItem('sensorKey');
 
   // Start the transmitter loop task
-  listenToTransmitter(txId);
+  listenToTransmitter(txId, sensorKey);
 
   return transmitterIO;
 };

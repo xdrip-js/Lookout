@@ -1,5 +1,3 @@
-
-
 const moment = require('moment');
 
 const Debug = require('debug');
@@ -35,15 +33,15 @@ const calcNoise = (sgvArr) => {
   const n = sgvArr.length;
 
   const firstSGV = sgvArr[0].glucose * 1000.0;
-  const firstTime = sgvArr[0].readDate / 1000.0 * 30.0;
+  const firstTime = (sgvArr[0].readDate / 1000.0) * 30.0;
 
   const lastSGV = sgvArr[n - 1].glucose * 1000.0;
-  const lastTime = sgvArr[n - 1].readDate / 1000.0 * 30.0;
+  const lastTime = (sgvArr[n - 1].readDate / 1000.0) * 30.0;
 
   const xarr = [];
 
   for (let i = 0; i < n; i += 1) {
-    xarr.push(sgvArr[i].readDate / 1000.0 * 30.0 - firstTime);
+    xarr.push((sgvArr[i].readDate / 1000.0) * 30.0 - firstTime);
   }
 
   // sod = sum of distances
@@ -68,11 +66,11 @@ const calcNoise = (sgvArr) => {
     lastDelta = y2y1Delta;
 
     // eslint-disable-next-line no-restricted-properties
-    sod += Math.sqrt(Math.pow(x2x1Delta, 2) + Math.pow(y2y1Delta, 2));
+    sod += Math.sqrt(x2x1Delta ** 2 + y2y1Delta ** 2);
   }
 
   // eslint-disable-next-line no-restricted-properties
-  const overallsod = Math.sqrt(Math.pow(lastSGV - firstSGV, 2) + Math.pow(lastTime - firstTime, 2));
+  const overallsod = Math.sqrt((lastSGV - firstSGV) ** 2 + (lastTime - firstTime) ** 2);
 
   if (sod === 0) {
     // protect from divide by 0
@@ -185,7 +183,7 @@ calcStatsExports.calcTrend = (calcGlucose, glucoseHist, lastCal, sgv) => {
 
       timeSpan = (maxDate - minDate) / 1000.0 / 60.0;
 
-      trend = 10 * totalDelta / timeSpan;
+      trend = (10 * totalDelta) / timeSpan;
     }
   } else {
     debug(`Not enough history for trend calculation: ${glucoseHist.length}`);

@@ -98,7 +98,8 @@ angular.module('AngularOpenAPS.home', [
         if (hist) {
           for (let i = 0; i < hist.length; i += 1) {
             const { readDate } = hist[i];
-            const y = Math.round(hist[i].glucose / factor * 10) / 10.0;
+            const scaledGlucose = hist[i].glucose / factor;
+            const y = Math.round(scaledGlucose * 10) / 10;
 
             if (!latestSGVReadDate || ((readDate - latestSGVReadDate) > 2 * 60 * 1000)) {
               scope.data[0].push({ readDate, y });

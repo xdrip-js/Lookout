@@ -1,4 +1,3 @@
-
 const Debug = require('debug');
 const exec = require('./childExecPromise');
 

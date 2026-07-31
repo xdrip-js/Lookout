@@ -13,7 +13,7 @@ const xDripAPS = require('./xDripAPS')();
 
 const FIVE_MINUTES = 5 * 60 * 1000;
 const SIX_MINUTES = 6 * 60 * 1000;
-const PRE_TX_WAKUP_BUFFER = 10 * 1000;
+const PRE_TX_WAKUP_BUFFER = 0 * 1000;
 
 module.exports = async (options, storage, client, fakeMeter) => {
   let txId;

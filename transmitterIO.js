@@ -12,7 +12,7 @@ const calibration = require('./calibration');
 const xDripAPS = require('./xDripAPS')();
 
 const FIVE_MINUTES = 5 * 60 * 1000;
-const SIX_MINUTES = 6 * 60 * 1000;
+const RESTART_LISTEN_TIME = 6.5 * 60 * 1000;
 const PRE_TX_WAKUP_BUFFER = 0 * 1000;
 
 module.exports = async (options, storage, client, fakeMeter) => {
@@ -1379,7 +1379,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
           error(`Unable to kill existing worker: ${err}`);
         }
       }
-    }, SIX_MINUTES);
+    }, RESTART_LISTEN_TIME);
   };
 
   const changeTxId = (value) => {

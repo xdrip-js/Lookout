@@ -1,0 +1,30 @@
+# Lookout (Dexcom G7 collector via xdrip-js) -> Nightscout.
+# Installed by deploy/install.sh, which fills in @USER@, @DIR@ and @NODE_BIN@.
+# NOTE: Lookout's web UI listens on :3000 with NO authentication; keep the rig
+# on a trusted network.
+[Unit]
+Description=Lookout Dexcom collector (xdrip-js) -> Nightscout
+Wants=network-online.target bluetooth.service
+After=network-online.target bluetooth.service dbus.service
+
+[Service]
+Type=simple
+User=@USER@
+Group=@USER@
+WorkingDirectory=@DIR@
+EnvironmentFile=/etc/lookout.env
+Environment=PATH=@NODE_BIN@:@DIR@:/usr/local/bin:/usr/bin:/bin
+# The Lookout launcher sets the Node memory flags and execs node index.js
+ExecStart=@DIR@/Lookout $LOOKOUT_ARGS
+Restart=always
+RestartSec=15
+# Lookout ignores SIGHUP; stop with SIGTERM
+KillMode=mixed
+TimeoutStopSec=20
+MemoryMax=300M
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

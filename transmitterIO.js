@@ -9,6 +9,7 @@ const debug = Debug('transmitterIO:debug');
 
 const _ = require('lodash');
 const calibration = require('./calibration');
+const displaySlot = require('./displaySlot');
 const xDripAPS = require('./xDripAPS')();
 
 const FIVE_MINUTES = 5 * 60 * 1000;
@@ -21,6 +22,8 @@ module.exports = async (options, storage, client, fakeMeter) => {
   let txFailedReads = 0;
   let txStatus = null;
   let txFirmware = null;
+  // G7 display slot the current worker uses (for failure hints)
+  let currentDisplayType = null;
   let pending = [];
   let worker = null;
   let timerObj = null;
@@ -1168,13 +1171,31 @@ module.exports = async (options, storage, client, fakeMeter) => {
       const workerOptions = { };
       const btChannel = options.alternate_bt_channel ? '1' : '0';
       const key = sensorKey?.key || '';
-      const macAddress = sensorKey?.address;
+      const macAddress = sensorKey?.address || '';
 
-      if (macAddress) {
-        worker = cp.fork(`${__dirname}/transmitterWorker`, [id, btChannel, key, macAddress], workerOptions);
-      } else {
-        worker = cp.fork(`${__dirname}/transmitterWorker`, [id, btChannel], workerOptions);
+      let displayType;
+      try {
+        displayType = displaySlot.resolveDisplayType({
+          txId: id,
+          displayType: options.display_type,
+          alternate: options.alternate_bt_channel,
+          forceMedical: options.force_medical_slot,
+        });
+      } catch (err) {
+        error(`Not starting transmitter worker: ${err.message}`);
+        return;
       }
+      if (displayType) {
+        log(`Using G7 display slot ${displayType}`);
+      }
+      currentDisplayType = displayType;
+
+      worker = cp.fork(
+        `${__dirname}/transmitterWorker`,
+        [id, btChannel, key, macAddress, displayType ? String(displayType) : '',
+          options.sensor_address || ''],
+        workerOptions,
+      );
     }
 
     worker.on('message', async (m) => {
@@ -1336,6 +1357,13 @@ module.exports = async (options, storage, client, fakeMeter) => {
       }
 
       const now = Date.now();
+
+      const slotHint = displaySlot.slotFailureHint({
+        txId, displayType: currentDisplayType, failedReads: txFailedReads,
+      });
+      if (slotHint) {
+        error(slotHint);
+      }
 
       if (txFailedReads >= 2 && (now - lastSuccessfulRead) > 11 * 60000) {
         // Automatically reboot on the 2nd failed read

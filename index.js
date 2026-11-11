@@ -9,6 +9,7 @@ const error = Debug('Lookout:error');
 
 const yargs = require('yargs');
 const storage = require('./storage');
+const debugNamespaces = require('./debugNamespaces');
 const syncNS = require('./syncNS');
 const FakeMeter = require('./fakemeter');
 const TransmitterIO = require('./transmitterIO');
@@ -31,6 +32,21 @@ const argv = yargs
     describe: 'Enable Alternate Bluetooth Channel',
     alias: 'c',
     default: false,
+  })
+  .option('display_type', {
+    string: true,
+    describe: 'G7 sensor slot to use: watch (default), phone, or medical',
+    default: '',
+  })
+  .option('force_medical_slot', {
+    boolean: true,
+    describe: 'Allow the G7 medical slot (used by a receiver or a pump such as Omnipod 5)',
+    default: false,
+  })
+  .option('sensor_address', {
+    string: true,
+    describe: 'Only connect to the G7 with this Bluetooth address (never pair with other sensors nearby)',
+    default: '',
   })
   .option('read_only', {
     boolean: true,
@@ -85,6 +101,11 @@ const argv = yargs
     describe: 'OpenAPS directory',
     alias: 'd',
     default: '/root/myopenaps',
+  })
+  .option('no_xdripaps', {
+    boolean: true,
+    describe: 'Do not post readings to a local OpenAPS xDripAPS server (127.0.0.1:5000)',
+    default: false,
   })
   .option('no_nightscout', {
     boolean: true,
@@ -144,22 +165,22 @@ const options = {
   offline_fakemeter: params.offline_fakemeter,
   verbose: params.verbose,
   nightscout: !params.no_nightscout,
+  xdripaps: !params.no_xdripaps,
   min_lsr_pairs: params.min_lsr_pairs,
   max_lsr_pairs: params.max_lsr_pairs,
   max_lsr_pairs_age: params.max_lsr_pairs_age,
   include_mode: params.include_mode,
   hci: params.hci,
   alternate_bt_channel: params.alternate,
+  display_type: params.display_type,
+  force_medical_slot: params.force_medical_slot,
+  sensor_address: params.sensor_address,
   read_only: params.read_only,
   auto_stop: params.auto_stop,
   battery: params.uploader_battery,
 };
 
 const init = async () => {
-  let lookoutDebug = 'Lookout:*,calcStats:*,calibration:*,clientIO:*,fakemeter:*,loopIO:*';
-  lookoutDebug += ',pumpIO:*,storageLock:*,syncNS:*,transmitterIO:*,transmitterWorker:*';
-  lookoutDebug += ',xDripAPS:*,transmitter,smp,bluetooth-manager,keks-plugin:*';
-
   // Make GC more aggressive
   if (global?.gc) {
     global.gc();
@@ -176,15 +197,7 @@ const init = async () => {
 
   // DEBUG environment variable takes precedence over verbose flag
   if (typeof process.env.DEBUG === 'undefined') {
-    if (options.verbose === 0) {
-      Debug.enable(`${lookoutDebug},-*:debug`);
-    } else if (options.verbose === 1) {
-      Debug.enable(lookoutDebug);
-    } else if (options.verbose === 2) {
-      Debug.enable(`${lookoutDebug},transmitter:queue-doNext,keks-calc,signaling,bindings,acl-att-stream,att,gap,hci:connection,backfill-parser`);
-    } else {
-      Debug.enable('*,*:*');
-    }
+    Debug.enable(debugNamespaces(options.verbose));
   }
 
   // Set which device for noble to use

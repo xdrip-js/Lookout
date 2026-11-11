@@ -9,11 +9,20 @@ const debug = Debug('transmitterIO:debug');
 
 const _ = require('lodash');
 const calibration = require('./calibration');
+const sensorSession = require('./sensorSession');
+const rigHealth = require('./rigHealth');
+const displaySlot = require('./displaySlot');
+const { backfillRequest } = require('./backfillRequest');
+const { WORKER_EXEC_ARGV } = require('./workerArgs');
 const xDripAPS = require('./xDripAPS')();
 
-const FIVE_MINUTES = 5 * 60 * 1000;
-const RESTART_LISTEN_TIME = 6.5 * 60 * 1000;
-const PRE_TX_WAKUP_BUFFER = 0 * 1000;
+// reading interval and derived timeouts (5 min / 6.5 min unless
+// LOOKOUT_CYCLE_SECONDS is set for a lab simulator)
+const { timing } = require('./cycle');
+const { postToLocalXdrip } = require('./rigOutputs');
+
+const FIVE_MINUTES = timing.cycleMs;
+const RESTART_LISTEN_TIME = timing.workerTimeoutMs;
 
 module.exports = async (options, storage, client, fakeMeter) => {
   let txId;
@@ -21,6 +30,12 @@ module.exports = async (options, storage, client, fakeMeter) => {
   let txFailedReads = 0;
   let txStatus = null;
   let txFirmware = null;
+  // G7 session length (incl. grace) reported by the sensor; distinguishes 10/15-day
+  let txSessionLengthSeconds = null;
+  // G7 display slot the current worker uses (for failure hints)
+  let currentDisplayType = null;
+  // when BatteryStatus was last queued (it may never be answered)
+  let lastBatteryRequest = null;
   let pending = [];
   let worker = null;
   let timerObj = null;
@@ -34,22 +49,10 @@ module.exports = async (options, storage, client, fakeMeter) => {
     return false;
   };
 
-  const sessionLength = () => {
-    // G6s are 10 days
-    if (txId.substr(0, 1) === '8') {
-      return 10 * 24 * 60;
-    }
-
-    if (txId.length === 4) {
-      return 15 * 25 * 60;
-    }
-
-    // default to G5's 7 days
-    return 7 * 24 * 60;
-  };
+  const sessionLength = () => sensorSession.sessionLengthMinutes(txId, txSessionLengthSeconds);
 
   const autoStopSession = (glucoseHist) => {
-    if (!options.auto_stop || (glucoseHist.length === 0)) {
+    if (!options.auto_stop || (glucoseHist.length === 0) || !sensorSession.canStopSession(txId)) {
       return false;
     }
 
@@ -93,7 +96,8 @@ module.exports = async (options, storage, client, fakeMeter) => {
       }
 
       if (msg.type === 'BatteryStatus') {
-        if (haveBatteryStatus) {
+        // informational: try it on one connection only, don't retry each cycle
+        if (haveBatteryStatus || (Date.now() - msg.date) > 2 * FIVE_MINUTES) {
           return false;
         }
 
@@ -126,19 +130,19 @@ module.exports = async (options, storage, client, fakeMeter) => {
       for (let i = 1; i < rigSGVs.length; i += 1) {
         // Add 1 minute to gapStart and subtract 1 minute from gapEnd to prevent duplicats
         const gap = {
-          gapStart: moment(prevTime + 60000),
-          gapEnd: moment(rigSGVs[i].readDateMills - 60000),
+          gapStart: moment(prevTime + timing.gapMarginMs),
+          gapEnd: moment(rigSGVs[i].readDateMills - timing.gapMarginMs),
         };
-        if ((rigSGVs[i].readDateMills - prevTime) > 6 * 60000) {
+        if ((rigSGVs[i].readDateMills - prevTime) > timing.gapMs) {
           rigGaps.push(gap);
         }
 
         prevTime = rigSGVs[i].readDateMills;
       }
 
-      if ((now - prevTime) > 6 * 60000) {
+      if ((now - prevTime) > timing.gapMs) {
         // Add 1 minute to gapStart to prevent duplicats
-        rigGaps.push({ gapStart: moment(prevTime + 60000), gapEnd: moment(now) });
+        rigGaps.push({ gapStart: moment(prevTime + timing.gapMarginMs), gapEnd: moment(now) });
       }
     } else {
       // Add 1 minute to gapStart to prevent duplicats
@@ -245,27 +249,23 @@ module.exports = async (options, storage, client, fakeMeter) => {
   // Checks whether the current sensor session should end based on
   // the latest sensor stop and sensor insert records.
   const checkSensorSession = async (sensorInsert, sensorStop, bgChecks, sgv) => {
-    let sessionStart = 0;
-    let sensorStartDelta = 0;
-    let sensorStopDelta = 0;
+    let sessionStart = null;
     let reason = null;
     const txmitterInSession = transmitterInSession(sgv);
 
     if (txmitterInSession) {
       // this is only true if we are the controlling rig AND the transmitter has an active session
       sessionStart = moment(sgv.sessionStartDate);
-
-      // Give 6 minutes extra time
-      sensorStartDelta = sensorInsert
-        ? (sensorInsert.valueOf() - sessionStart.valueOf() - 6 * 60000) : 0;
-
-      sensorStopDelta = sensorStop ? (sensorStop.valueOf() - sessionStart.valueOf()) : 0;
     }
 
-    if (txmitterInSession && (sensorStartDelta > 0 || sensorStopDelta > 0)) {
+    const stopReason = sensorSession.nsStopReason({
+      txId, sessionStart, sensorInsert, sensorStop,
+    });
+
+    if (txmitterInSession && stopReason) {
       // give a 2 hour play between the sensor insert record
       // and the session start date from the transmitter
-      if (sensorStartDelta > 0) {
+      if (stopReason === 'insert') {
         reason = '\n===================================='
           + `\nSensor Insert, ${sensorInsert.format()}, is after Sensor Start, ${sessionStart.format()}`
           + '\nStopping Sensor Session'
@@ -374,7 +374,8 @@ module.exports = async (options, storage, client, fakeMeter) => {
       await fakeMeter.glucose(sgv.glucose);
     }
 
-    xDripAPS.post(sgv, sendToXdrip, options.nightscout && !options.read_only);
+    const toNS = options.nightscout && !options.read_only;
+    xDripAPS.post(sgv, postToLocalXdrip(options, sendToXdrip), toNS);
   };
 
   const sendCGMStatus = async (sgv, bgChecks) => {
@@ -1071,7 +1072,8 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
             glucoseHist.push(newSGV);
 
-            xDripAPS.post(newSGV, true, options.nightscout && !options.read_only);
+            const toNS = options.nightscout && !options.read_only;
+            xDripAPS.post(newSGV, postToLocalXdrip(options, true), toNS);
           }
         });
       }
@@ -1165,29 +1167,53 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
       worker = cp.fork(`${__dirname}/transmitterSimulator`, [prevGlucose], { });
     } else {
-      const workerOptions = { };
+      // own Node flags: the launcher's tiny heap makes the G7 crypto ~2x slower
+      const workerOptions = { execArgv: WORKER_EXEC_ARGV };
       const btChannel = options.alternate_bt_channel ? '1' : '0';
       const key = sensorKey?.key || '';
-      const macAddress = sensorKey?.address;
+      const macAddress = sensorKey?.address || '';
 
-      if (macAddress) {
-        worker = cp.fork(`${__dirname}/transmitterWorker`, [id, btChannel, key, macAddress], workerOptions);
-      } else {
-        worker = cp.fork(`${__dirname}/transmitterWorker`, [id, btChannel], workerOptions);
+      let displayType;
+      try {
+        displayType = displaySlot.resolveDisplayType({
+          txId: id,
+          displayType: options.display_type,
+          alternate: options.alternate_bt_channel,
+          forceMedical: options.force_medical_slot,
+        });
+      } catch (err) {
+        error(`Not starting transmitter worker: ${err.message}`);
+        return;
       }
+      if (displayType) {
+        log(`Using G7 display slot ${displayType}`);
+      }
+      currentDisplayType = displayType;
+
+      worker = cp.fork(
+        `${__dirname}/transmitterWorker`,
+        [id, btChannel, key, macAddress, displayType ? String(displayType) : '',
+          options.sensor_address || ''],
+        workerOptions,
+      );
     }
 
     worker.on('message', async (m) => {
       let pendingCalTime;
 
       if (m.msg === 'getMessages') {
-        if (!txStatus || (moment().diff(txStatus.timestamp, 'minutes') > 25)) {
+        if (sensorSession.batteryRequestDue({
+          statusTime: txStatus ? txStatus.timestamp.valueOf() : null,
+          lastRequestTime: lastBatteryRequest,
+          now: Date.now(),
+        })) {
+          lastBatteryRequest = Date.now();
           pending.push({ type: 'BatteryStatus', date: moment().valueOf() });
         }
 
         pendingCalTime = await calibrateFromNS();
 
-        if (!txFirmware) {
+        if (!txFirmware && !txSessionLengthSeconds) {
           pending.push({ type: 'VersionRequest', date: moment().valueOf() });
         }
 
@@ -1196,41 +1222,19 @@ module.exports = async (options, storage, client, fakeMeter) => {
         const glucoseHist = await storage.getArray('glucoseHist');
         const gaps = sgvGaps(glucoseHist);
 
-        let minGapDate = null;
-        let maxGapDate = null;
-        const now = moment();
-
-        _.each(gaps, (gap) => {
-          if (!minGapDate || (minGapDate.diff(gap.gapStart) < 0)) {
-            minGapDate = gap.gapStart;
-          }
-
-          if (!maxGapDate || (maxGapDate.diff(gap.gapEnd) < 0)) {
-            maxGapDate = gap.gapEnd;
-          }
+        const backfill = backfillRequest({
+          gaps,
+          now: moment(),
+          inSession: Boolean(glucoseHist && glucoseHist.length
+            && transmitterInSession(glucoseHist[glucoseHist.length - 1])),
+          hasHistory: Boolean(glucoseHist && glucoseHist.length),
+          cycleMs: FIVE_MINUTES,
         });
-
-        if (now.diff(minGapDate, 'minutes') >= 180) {
-          minGapDate = now.clone().subtract(179, 'minutes');
-        }
-
-        if (now.diff(maxGapDate, 'minutes') >= 180) {
-          maxGapDate = now.clone().subtract(179, 'minutes');
-        }
-
-        // don't ask for a backfill of the reading glucose reading about to receive
-        if (Math.abs(now.diff(maxGapDate, 'minutes')) < 1) {
-          maxGapDate.subtract(2, 'minutes');
-        }
-
-        if ((minGapDate !== null) && (maxGapDate.diff(minGapDate, 'minutes') > 2) && glucoseHist
-          && transmitterInSession(glucoseHist[glucoseHist.length - 1])) {
-          log(`Requesting backfill - start: ${minGapDate.format()} end: ${maxGapDate.format()}`);
-          pending.push({ type: 'Backfill', date: minGapDate.valueOf(), endDate: maxGapDate.valueOf() });
-        } else if ((minGapDate !== null) && glucoseHist) {
-          log('Not requesting backfill - transmitter not in session');
-        } else if (minGapDate !== null) {
-          log('Not requesting backfill - no glucose history');
+        if (backfill && backfill.start) {
+          log(`Requesting backfill - start: ${backfill.start.format()} end: ${backfill.end.format()}`);
+          pending.push({ type: 'Backfill', date: backfill.start.valueOf(), endDate: backfill.end.valueOf() });
+        } else if (backfill) {
+          log(`Not requesting backfill - ${backfill.skip}`);
         }
 
         _.each(pending, (msg) => {
@@ -1306,6 +1310,9 @@ module.exports = async (options, storage, client, fakeMeter) => {
         processBatteryStatus(m.data);
       } else if (m.msg === 'version') {
         txFirmware = m.data.firmwareVersion;
+        if (m.data.sessionLengthSeconds > 0) {
+          txSessionLengthSeconds = m.data.sessionLengthSeconds;
+        }
         log('Version message:\n%O', m.data);
       } else if (m.msg === 'sawTransmitter') {
         // increment failed reads counter so we know how many
@@ -1337,7 +1344,16 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
       const now = Date.now();
 
-      if (txFailedReads >= 2 && (now - lastSuccessfulRead) > 11 * 60000) {
+      const slotHint = displaySlot.slotFailureHint({
+        txId, displayType: currentDisplayType, failedReads: txFailedReads,
+      });
+      if (slotHint) {
+        error(slotHint);
+      }
+
+      if (rigHealth.shouldRebootRig({
+        txFailedReads, lastSuccessfulRead, now, rebootAfterMs: timing.rebootAfterMs,
+      })) {
         // Automatically reboot on the 2nd failed read
         rebootRig();
       }
@@ -1347,8 +1363,8 @@ module.exports = async (options, storage, client, fakeMeter) => {
       // Time until the next 5-minute boundary since lastSuccessfulRead
       const timeUntilNextRead = (FIVE_MINUTES - (elapsedMs % FIVE_MINUTES)) % FIVE_MINUTES;
 
-      // Time until 1 minute BEFORE the next read
-      let timeUntilTarget = timeUntilNextRead - PRE_TX_WAKUP_BUFFER;
+      // Start the worker timing.preWakeMs before the next read
+      let timeUntilTarget = timeUntilNextRead - timing.preWakeMs;
 
       // Cannot wait until a time before now - nobody has invented a time machine
       if (timeUntilTarget < 0) {
@@ -1408,6 +1424,7 @@ module.exports = async (options, storage, client, fakeMeter) => {
       log(`received id of ${value}`);
       txId = value;
       txFirmware = null;
+      txSessionLengthSeconds = null;
 
       calibration.clearCalibration(storage);
 
@@ -1464,6 +1481,11 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
     // Start a sensor session at time
     startSensorTime: (startTime, reason) => {
+      if (!sensorSession.canStartSession(txId)) {
+        // G7 (starts itself) or no transmitter id yet
+        debug(`Not starting a session for transmitter ${txId}`);
+        return;
+      }
       if (g6Txmitter()) {
         xDripAPS.postAnnouncement('G6 Start Unsupported by NS');
       } else {

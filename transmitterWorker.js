@@ -18,6 +18,12 @@ if (key?.length === 0) {
 
 const macAddress = process.argv[5]?.trim() || null;
 
+// G7 sensor slot (1 medical, 2 phone, 3 watch), chosen by transmitterIO
+const displayType = parseInt(process.argv[6], 10) || null;
+
+// Only connect to this sensor address, if given (never pair with other people's sensors nearby)
+const sensorAddress = process.argv[7]?.trim() || null;
+
 /* eslint-disable-next-line no-unused-vars */
 const getMessages = () => new Promise((resolve, reject) => {
   process.on('message', (messages) => {
@@ -31,7 +37,12 @@ const btChannel = altBtChannel ? 'alternate' : 'standard';
 
 log(`kicking off using ${btChannel} Bluetooth channel`);
 
-const transmitter = new Transmitter(id, getMessages, altBtChannel, key, macAddress);
+const transmitter = new Transmitter(id, getMessages, altBtChannel, key, macAddress, {
+  displayType,
+  sensorAddress,
+  // no saved key => next connection is a first G7 pairing; pre-warm the crypto
+  warmUp: !key,
+});
 
 transmitter.on('glucose', (glucose) => {
   process.send({ msg: 'glucose', data: glucose });

@@ -32,6 +32,21 @@ const argv = yargs
     alias: 'c',
     default: false,
   })
+  .option('display_type', {
+    string: true,
+    describe: 'G7 sensor slot to use: watch (default), phone, or medical',
+    default: '',
+  })
+  .option('force_medical_slot', {
+    boolean: true,
+    describe: 'Allow the G7 medical slot (used by a receiver or a pump such as Omnipod 5)',
+    default: false,
+  })
+  .option('sensor_address', {
+    string: true,
+    describe: 'Only connect to the G7 with this Bluetooth address (never pair with other sensors nearby)',
+    default: '',
+  })
   .option('read_only', {
     boolean: true,
     describe: 'Read Only Mode (for backup rig)',
@@ -150,6 +165,9 @@ const options = {
   include_mode: params.include_mode,
   hci: params.hci,
   alternate_bt_channel: params.alternate,
+  display_type: params.display_type,
+  force_medical_slot: params.force_medical_slot,
+  sensor_address: params.sensor_address,
   read_only: params.read_only,
   auto_stop: params.auto_stop,
   battery: params.uploader_battery,

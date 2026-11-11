@@ -314,8 +314,12 @@ const queryBGChecksSince = (startTime) => {
   const secret = process.env.API_SECRET;
   let nsUrl = `${process.env.NIGHTSCOUT_HOST}/api/v1/treatments.json?`;
 
+  // No sensor start/stop known yet (e.g. a G7 on a fresh Nightscout): look
+  // back a day rather than failing.
+  const since = startTime ? moment(startTime) : moment().subtract(24, 'hours');
+
   // time format needs to match the output of 'date -d "3 hours ago" -Iminutes -u'
-  const nsQuery = `find[eventType][$regex]=Check&find[created_at][$gte]=${startTime.format()}`;
+  const nsQuery = `find[eventType][$regex]=Check&find[created_at][$gte]=${since.format()}`;
 
   const nsHeaders = {
     'Content-Type': 'application/json',

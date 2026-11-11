@@ -34,7 +34,10 @@ module.exports = (io, options) => {
   };
   chokidar.watch(`${openapsDir}/monitor/iob.json`)
     .on('change', readIOB)
-    .on('add', readIOB);
+    .on('add', readIOB)
+    // an unreadable OpenAPS dir (e.g. /root/myopenaps as a non-root user)
+    // must not crash the collector
+    .on('error', (err) => error(`Unable to watch OpenAPS files: ${err.message}`));
 
   const readEnacted = (path) => {
     debug(`Reading file ${path}`);
@@ -68,7 +71,10 @@ module.exports = (io, options) => {
   };
   chokidar.watch(`${openapsDir}/enact/enacted.json`)
     .on('change', readEnacted)
-    .on('add', readEnacted);
+    .on('add', readEnacted)
+    // an unreadable OpenAPS dir (e.g. /root/myopenaps as a non-root user)
+    // must not crash the collector
+    .on('error', (err) => error(`Unable to watch OpenAPS files: ${err.message}`));
 
   io.on('connection', (socket) => {
     socket.emit('iob', iob);

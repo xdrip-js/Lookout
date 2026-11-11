@@ -632,7 +632,7 @@ const syncNS = async (options_, storage_, transmitter_) => {
   // call resolve so the Promise.all works as it
   // should and doesn't trigger early because of an error
   const syncCalPromise = new TimeLimitedPromise(4 * 60 * 1000, async (resolve) => {
-    await syncCal(sensorInsert.date);
+    await syncCal(sensorInsert?.date);
     resolve();
   });
 

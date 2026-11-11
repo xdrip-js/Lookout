@@ -13,11 +13,13 @@ const sensorSession = require('./sensorSession');
 const rigHealth = require('./rigHealth');
 const displaySlot = require('./displaySlot');
 const { backfillRequest } = require('./backfillRequest');
+const { WORKER_EXEC_ARGV } = require('./workerArgs');
 const xDripAPS = require('./xDripAPS')();
 
 // reading interval and derived timeouts (5 min / 6.5 min unless
 // LOOKOUT_CYCLE_SECONDS is set for a lab simulator)
 const { timing } = require('./cycle');
+const { postToLocalXdrip } = require('./rigOutputs');
 
 const FIVE_MINUTES = timing.cycleMs;
 const RESTART_LISTEN_TIME = timing.workerTimeoutMs;
@@ -372,7 +374,8 @@ module.exports = async (options, storage, client, fakeMeter) => {
       await fakeMeter.glucose(sgv.glucose);
     }
 
-    xDripAPS.post(sgv, sendToXdrip, options.nightscout && !options.read_only);
+    const toNS = options.nightscout && !options.read_only;
+    xDripAPS.post(sgv, postToLocalXdrip(options, sendToXdrip), toNS);
   };
 
   const sendCGMStatus = async (sgv, bgChecks) => {
@@ -1069,7 +1072,8 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
             glucoseHist.push(newSGV);
 
-            xDripAPS.post(newSGV, true, options.nightscout && !options.read_only);
+            const toNS = options.nightscout && !options.read_only;
+            xDripAPS.post(newSGV, postToLocalXdrip(options, true), toNS);
           }
         });
       }
@@ -1163,7 +1167,8 @@ module.exports = async (options, storage, client, fakeMeter) => {
 
       worker = cp.fork(`${__dirname}/transmitterSimulator`, [prevGlucose], { });
     } else {
-      const workerOptions = { };
+      // own Node flags: the launcher's tiny heap makes the G7 crypto ~2x slower
+      const workerOptions = { execArgv: WORKER_EXEC_ARGV };
       const btChannel = options.alternate_bt_channel ? '1' : '0';
       const key = sensorKey?.key || '';
       const macAddress = sensorKey?.address || '';

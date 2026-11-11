@@ -78,9 +78,12 @@ module.exports = (_options, _storage, client) => {
     glucose: async (value) => {
       // trigger online status update. It lags by 1 glucose reading, but
       // doesn't waste time waiting for response from Internet
-      testOnline().then((onlineValue) => {
-        online = onlineValue;
-      });
+      // Only --offline_fakemeter needs it; skip the exec on other rigs.
+      if (options.offline_fakemeter) {
+        testOnline().then((onlineValue) => {
+          online = onlineValue;
+        });
+      }
 
       const meterId = await getMeterId();
 

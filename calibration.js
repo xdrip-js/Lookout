@@ -959,11 +959,22 @@ calibrationExports.calibrateGlucose = async (
       sgv.noise = 0.4;
     }
   } else {
-    // No way to calculate a trend since we don't know the calibration slope
-    sgv.trend = 0;
+    // No transmitter calibration: derive a trend from the glucose history
+    // (replaced below by the sensor's own trend when it has one).
+    sgv.trend = stats.calcTrend(calcGlucose, glucoseHist, null, sgv);
 
     // Put in light noise to account for uncertainty
     sgv.noise = 0.4;
+  }
+
+  // A sensor without raw data (G7) reports its own trend (tenths of
+  // mg/dL/min; 127 = none). Lookout's calibration maths does not apply to it,
+  // and a stored calibration (even the "Unity" placeholder written on an id
+  // change) must not replace that trend with one computed from history.
+  const sensorTrend = uncalibratedSgv.trend;
+  if (!Number.isFinite(uncalibratedSgv.unfiltered)
+    && Number.isFinite(sensorTrend) && sensorTrend !== 127) {
+    sgv.trend = sensorTrend;
   }
 
   sgv.nsNoise = stats.calcNSNoise(sgv.noise, glucoseHist);
